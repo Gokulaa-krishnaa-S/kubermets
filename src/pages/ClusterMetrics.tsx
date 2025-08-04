@@ -2,7 +2,29 @@ import { Layout } from "@/components/layout/Layout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Server, Cpu, HardDrive, Network, Activity } from "lucide-react";
+
+import {
+  Server,
+  Cpu,
+  HardDrive,
+  Activity,
+  CheckCircle,
+} from "lucide-react";
+
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  BarChart,
+  Bar,
+} from "recharts";
 
 export default function ClusterMetrics() {
   const clusterStats = [
@@ -40,6 +62,27 @@ export default function ClusterMetrics() {
     },
   ];
 
+  const clusterHealthData = [
+    { name: "Healthy", value: 95, color: "#10B981" },
+    { name: "Warning", value: 3, color: "#F59E0B" },
+    { name: "Critical", value: 2, color: "#EF4444" },
+  ];
+
+  const resourceUsageData = [
+    { time: "00:00", cpu: 65, memory: 72, disk: 45 },
+    { time: "04:00", cpu: 58, memory: 68, disk: 47 },
+    { time: "08:00", cpu: 78, memory: 82, disk: 52 },
+    { time: "12:00", cpu: 85, memory: 88, disk: 58 },
+    { time: "16:00", cpu: 72, memory: 75, disk: 55 },
+    { time: "20:00", cpu: 68, memory: 71, disk: 49 },
+  ];
+
+  const nodeStatusData = [
+    { name: "Healthy", count: 12, color: "#10B981" },
+    { name: "Unhealthy", count: 2, color: "#EF4444" },
+    { name: "Unschedulable", count: 1, color: "#6B7280" },
+  ];
+
   const clusters = [
     {
       name: "Production-US-East",
@@ -51,7 +94,7 @@ export default function ClusterMetrics() {
       version: "v1.28.2",
     },
     {
-      name: "Staging-US-West", 
+      name: "Staging-US-West",
       status: "healthy" as const,
       nodes: 6,
       cpu: "45%",
@@ -76,14 +119,14 @@ export default function ClusterMetrics() {
       subtitle="Node counts, status, and overall resource utilization"
     >
       <div className="space-y-6">
-        {/* Overview Stats */}
+        {/* Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {clusterStats.map((stat, index) => (
             <MetricCard key={index} {...stat} />
           ))}
         </div>
 
-        {/* Cluster Details */}
+        {/* Cluster Overview List */}
         <Card>
           <CardHeader>
             <CardTitle>Cluster Overview</CardTitle>
@@ -106,7 +149,7 @@ export default function ClusterMetrics() {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-4 gap-6 text-sm">
                     <div className="text-center">
                       <p className="font-medium">{cluster.nodes}</p>
@@ -125,11 +168,100 @@ export default function ClusterMetrics() {
                       <p className="text-muted-foreground">Pods</p>
                     </div>
                   </div>
-                  
+
                   <StatusBadge status={cluster.status} />
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Cluster Health PieChart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Cluster Health Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={clusterHealthData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    dataKey="value"
+                  >
+                    {clusterHealthData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Resource Usage LineChart */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Resource Usage Trends</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={resourceUsageData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="cpu"
+                    stroke="#EF4444"
+                    strokeWidth={2}
+                    name="CPU %"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="memory"
+                    stroke="#3B82F6"
+                    strokeWidth={2}
+                    name="Memory %"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="disk"
+                    stroke="#10B981"
+                    strokeWidth={2}
+                    name="Disk %"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Node Status BarChart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Node Status Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={nodeStatusData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="count">
+                  {nodeStatusData.map((entry, index) => (
+                    <Cell key={`bar-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>

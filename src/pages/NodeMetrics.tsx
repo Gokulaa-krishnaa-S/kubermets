@@ -2,7 +2,20 @@ import { Layout } from "@/components/layout/Layout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Server, Cpu, Activity, HardDrive, Wifi } from "lucide-react";
+import { Server, Cpu, Activity, HardDrive } from "lucide-react";
+
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  Cell,
+} from "recharts";
 
 export default function NodeMetrics() {
   const nodeStats = [
@@ -38,6 +51,21 @@ export default function NodeMetrics() {
       trend: { value: "+200MB/s", direction: "up" as const, label: "peak usage" },
       status: "info" as const,
     },
+  ];
+
+  const nodeStatusData = [
+    { name: "Running", count: 18, color: "#10B981" },
+    { name: "Warning", count: 3, color: "#F59E0B" },
+    { name: "Pending", count: 1, color: "#6B7280" },
+  ];
+
+  const resourceUsageData = [
+    { time: "00:00", cpu: 64, memory: 70, disk: 38, network: 98 },
+    { time: "04:00", cpu: 68, memory: 72, disk: 45, network: 125 },
+    { time: "08:00", cpu: 78, memory: 82, disk: 52, network: 87 },
+    { time: "12:00", cpu: 85, memory: 88, disk: 58, network: 120 },
+    { time: "16:00", cpu: 72, memory: 75, disk: 55, network: 110 },
+    { time: "20:00", cpu: 68, memory: 71, disk: 49, network: 105 },
   ];
 
   const nodes = [
@@ -89,14 +117,61 @@ export default function NodeMetrics() {
       subtitle="CPU, memory, disk, network, and node health monitoring"
     >
       <div className="space-y-6">
-        {/* Node Overview Stats */}
+
+        {/* Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {nodeStats.map((stat, index) => (
             <MetricCard key={index} {...stat} />
           ))}
         </div>
 
-        {/* Node Details Table */}
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Node Status BarChart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Node Status Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={nodeStatusData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count">
+                    {nodeStatusData.map((entry, index) => (
+                      <Cell key={`bar-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Resource Usage LineChart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Resource Usage Trends</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={resourceUsageData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="cpu" stroke="#EF4444" strokeWidth={2} name="CPU %" />
+                  <Line type="monotone" dataKey="memory" stroke="#3B82F6" strokeWidth={2} name="Memory %" />
+                  <Line type="monotone" dataKey="disk" stroke="#10B981" strokeWidth={2} name="Disk %" />
+                  <Line type="monotone" dataKey="network" stroke="#F59E0B" strokeWidth={2} name="Network MB/s" />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Node Details */}
         <Card>
           <CardHeader>
             <CardTitle>Node Details</CardTitle>
@@ -117,7 +192,7 @@ export default function NodeMetrics() {
                       <p className="text-xs text-muted-foreground">{node.uptime}</p>
                     </div>
                   </div>
-                  
+
                   <div className="lg:col-span-7 grid grid-cols-2 lg:grid-cols-5 gap-4 text-sm">
                     <div className="text-center">
                       <p className="font-medium">{node.cpu}</p>
@@ -140,7 +215,7 @@ export default function NodeMetrics() {
                       <p className="text-muted-foreground">Pods</p>
                     </div>
                   </div>
-                  
+
                   <div className="lg:col-span-2 flex items-center justify-end">
                     <StatusBadge status={node.status} />
                   </div>

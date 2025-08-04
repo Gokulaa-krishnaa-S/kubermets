@@ -14,6 +14,7 @@ import {
   Activity,
   Shield,
   TrendingUp,
+  DollarSign,
 } from "lucide-react";
 import {
   Sidebar,
@@ -43,9 +44,12 @@ const metricItems = [
   { title: "Resource Usage", url: "/resources", icon: TrendingUp },
   { title: "Networking", url: "/networking", icon: Network },
   { title: "Storage", url: "/storage", icon: HardDrive },
+  { title: "Alerts & Events", url: "/alerts-events", icon: BarChart3 },
+
 ];
 
 const platformItems = [
+  { title: "Billing & Cost", url: "/billing-cost", icon: DollarSign },
   { title: "Settings", url: "/settings", icon: Settings },
 ];
 

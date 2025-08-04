@@ -10,6 +10,9 @@ import NodeMetrics from "./pages/NodeMetrics";
 import PodMetrics from "./pages/PodMetrics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import K8sDashboard from "./pages/K8newDashbaord";
+import { AlertsAndCost } from "@/pages/AlertsAndCost";
+import { BillingAndCost } from "./pages/BillingAndCost";
 
 const queryClient = new QueryClient();
 
@@ -20,11 +23,14 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/new" element={<K8sDashboard />} />
           <Route path="/" element={<Dashboard />} />
           <Route path="/overview" element={<Overview />} />
           <Route path="/cluster" element={<ClusterMetrics />} />
           <Route path="/nodes" element={<NodeMetrics />} />
           <Route path="/pods" element={<PodMetrics />} />
+          <Route path="/alerts-events" element={<AlertsAndCost />} />
+          <Route path="/billing-cost" element={<BillingAndCost />} />
           <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
