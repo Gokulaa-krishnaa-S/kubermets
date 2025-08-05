@@ -22,10 +22,14 @@ import {
   Bar,
 } from "recharts";
 
+import { Button } from "@/components/ui/button";
+
 export default function ClusterMetrics() {
   const [clusterStats, setClusterStats] = useState<any[]>([]);
   const [clusters, setClusters] = useState<any[]>([]);
   const [timeRange, setTimeRange] = useState("24h");
+
+
   useEffect(() => {
     const queryParams = {
       window: "7d",
@@ -181,23 +185,22 @@ export default function ClusterMetrics() {
       title="Cluster Metrics"
       subtitle="Node counts, status, and overall resource utilization"
     >
-      <div className="flex bg-gray-100 rounded-lg p-1">
-        {["1h", "6h", "24h", "7d", "30d"].map((range) => (
-          <button
-            key={range}
-            onClick={() => {
-              handleTimeRangeChange(range);
-            }}
-            className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-              timeRange === range
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            {range}
-          </button>
-        ))}
-      </div>
+     
+
+      {/* Time Range Selector */}
+
+        <div className="flex items-center gap-2 mb-5">
+          {["1h", "6h", "24h", "7d", "30d"].map((range) => (
+            <Button
+              key={range}
+              variant={timeRange === range ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleTimeRangeChange(range)}
+            >
+              {range}
+            </Button>
+          ))}
+        </div>
       <div className="space-y-6">
         {/* Dynamic Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
