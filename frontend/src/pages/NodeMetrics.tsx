@@ -426,9 +426,11 @@ const NodeMetricsDashboard = () => {
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-          </div>
+          
 
-          <Card>
+         
+          </div>
+           <Card>
             <CardHeader>
               <CardTitle>Resource Utilization by Node</CardTitle>
             </CardHeader>
@@ -464,7 +466,6 @@ const NodeMetricsDashboard = () => {
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-          </div>
 
           <Card>
             <CardHeader>
@@ -548,6 +549,7 @@ const NodeMetricsDashboard = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
         </div>
     </Layout>
   );
