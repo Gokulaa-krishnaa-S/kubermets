@@ -1,7 +1,7 @@
 # clusters/routes.py
 
 from flask import Blueprint, jsonify
-from .controllers import get_cluster_status, get_node_info , summaryApi
+from .controllers import get_cluster_status, get_node_info , summaryApi, getPodDetails
 
 
 clusters_bp = Blueprint('clusters', __name__, url_prefix='/api/v1')
@@ -11,10 +11,13 @@ def cluster_status():
     return jsonify(get_cluster_status())
 
 
-
 @clusters_bp.route('/all', methods=['GET'])
 def summary():
     return jsonify(summaryApi())
+
+@clusters_bp.route('/get_pod_details', methods=['GET'])
+def getPodDetail():
+    return jsonify(getPodDetails())
 
 @clusters_bp.route('/clusters/nodes', methods=['GET'])
 def node_info():

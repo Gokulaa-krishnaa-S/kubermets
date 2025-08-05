@@ -2,9 +2,10 @@ import os
 import requests
 from flask import Flask, request, jsonify
 
+
 def get_cluster_status():
-    base_domain = os.getenv("domain")  
-    window = request.args.get("window", "7d")  
+    base_domain = os.getenv("domain")
+    window = request.args.get("window", "7d")
 
     base_path = "/model/allocation/summary"
     query_string = (
@@ -24,22 +25,16 @@ def get_cluster_status():
     )
 
     full_url = f"{base_domain}{base_path}{query_string}"
-    print(full_url,"---------")
+    print(full_url, "---------")
 
     try:
         res = requests.get(full_url)
         res.raise_for_status()
-        data = res.json()  
-        return {
-            "status": "success",
-            "data": data
-        }
+        data = res.json()
+        return {"status": "success", "data": data}
     except requests.exceptions.RequestException as e:
-        return {
-            "status": "failed",
-            "error": str(e),
-            "source": full_url
-        }, 500
+        return {"status": "failed", "error": str(e), "source": full_url}, 500
+
 
 def summaryApi():
     base_domain = os.getenv("domain")
@@ -62,15 +57,16 @@ def summaryApi():
         "shareTenancyCosts": "true",
         "window": "7d",
         "offset": "0",
-        "limit": "50"
+        "limit": "50",
     }
 
     query_params = {
-        key: request.args.get(key, default)
-        for key, default in default_params.items()
+        key: request.args.get(key, default) for key, default in default_params.items()
     }
 
-    query_string = "?" + "&".join(f"{key}={value}" for key, value in query_params.items())
+    query_string = "?" + "&".join(
+        f"{key}={value}" for key, value in query_params.items()
+    )
     full_url = f"{base_domain}{base_path}{query_string}"
     print(full_url, "---------")
 
@@ -78,17 +74,39 @@ def summaryApi():
         res = requests.get(full_url)
         res.raise_for_status()
         data = res.json()
-        return {
-            "status": "success",
-            "data": data
-        }
+        return {"status": "success", "data": data}
     except requests.exceptions.RequestException as e:
-        return {
-            "status": "failed",
-            "error": str(e),
-            "source": full_url
-        }, 500
+        return {"status": "failed", "error": str(e), "source": full_url}, 500
 
+
+def getPodDetails():
+    base_domain = os.getenv("domain")
+    print(base_domain, "---")
+    base_path = "/model/allocation"
+    default_params = {
+        "window": "7d",
+        "accumulate": "true",
+        "aggregate": "controller",
+        "external": "false",
+        "filterPods": "postgresql-0",
+    }
+    query_params = {
+        key: request.args.get(key, default) for key, default in default_params.items()
+    }
+
+    query_string = "?" + "&".join(
+        f"{key}={value}" for key, value in query_params.items()
+    )
+    full_url = f"{base_domain}{base_path}{query_string}"
+    print(full_url, "---------")
+
+    try:
+        res = requests.get(full_url)
+        res.raise_for_status()
+        data = res.json()
+        return {"status": "success", "data": data}
+    except requests.exceptions.RequestException as e:
+        return {"status": "failed", "error": str(e), "source": full_url}, 500
 
 
 def get_node_info():
