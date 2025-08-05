@@ -1,16 +1,25 @@
-FROM python:3.7.8-slim
+FROM python:3.11-slim
 
-COPY requirements/common.txt requirements/common.txt
-RUN pip install -U pip && pip install -r requirements/common.txt
-
-COPY ./api /app/api
-COPY ./bin /app/bin
-COPY wsgi.py /app/wsgi.py
+# Set working directory
 WORKDIR /app
 
-RUN useradd demo
-USER demo
+# Install system dependencies (optional: if you use Postgres, Pillow, etc.)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-EXPOSE 8080
 
-ENTRYPOINT ["bash", "/app/bin/run.sh"]
+COPY requirements/common.txt requirements/
+COPY requirements/develop.txt requirements/
+
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements/common.txt
+RUN pip install --no-cache-dir -r requirements/develop.txt
+
+# Copy the app
+COPY . .
+
+# Expose FastAPI port
+EXPOSE 8000
+
+CMD ["python", "wsgi.py"]
