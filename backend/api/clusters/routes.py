@@ -4,7 +4,7 @@ from flask import Blueprint, jsonify, Response
 from .controllers import get_cluster_status, get_node_info, summaryApi, getPodDetails
 
 
-clusters_bp = Blueprint("clusters", __name__, url_prefix="/api/v1")
+clusters_bp = Blueprint("clusters", __name__, url_prefix="/v1")
 
 
 @clusters_bp.route("/")
