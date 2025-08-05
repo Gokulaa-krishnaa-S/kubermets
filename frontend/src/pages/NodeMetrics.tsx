@@ -17,12 +17,16 @@ import {
 } from "recharts";
 import { Layout } from "@/components/layout/Layout";
 import ClusterService from "@/services/ClusterService";
+import { Button } from "@/components/ui/button";
+import { useSearchParams } from "react-router-dom";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
   const [summaryStats, setSummaryStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [timeRange, setTimeRange] = useState("24h");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Configuration for thresholds
   const thresholds = {
@@ -34,42 +38,17 @@ const NodeMetricsDashboard = () => {
     efficiencyWarning: 50,
   };
 
-   useEffect(() => {
-  const queryParams = {
-    accumulate: true,
-    aggregate: "node",
-    chartType: "costovertime",
-    costUnit: "cumulative",
-    external: false,
-    filter: "",
-    idle: true,
-    idleByNode: false,
-    includeSharedCostBreakdown: true,
-    shareCost: 0,
-    shareIdle: false,
-    shareLabels: "",
-    shareNamespaces: "",
-    shareSplit: "weighted",
-    shareTenancyCosts: true,
-    window: "7d",
-    offset: 0,
-    limit: 25,
-  };
-
-  const handleCallClusterData = async (params: Record<string, any>) => {
+  const handleCallClusterData = async (params) => {
     try {
       const response = await ClusterService.getClusterAllocationSummary(params);
-      //  const response:any = await fetch(
-      //     "http://172.16.20.110/kubecost/model/allocation/summary?accumulate=true&aggregate=node&chartType=costovertime&costUnit=cumulative&external=false&filter=&idle=true&idleByNode=false&includeSharedCostBreakdown=true&shareCost=0&shareIdle=false&shareLabels=&shareNamespaces=&shareSplit=weighted&shareTenancyCosts=true&window=7d&offset=0&limit=25"
-      //   );
-      return response.data; 
+      return response.data;
     } catch (error) {
       console.error("Failed to fetch cluster summary", error);
       throw error;
     }
   };
 
-  const fetchNodeData = async () => {
+  const fetchNodeData = async (queryParams) => {
     try {
       const response = await handleCallClusterData(queryParams);
 
@@ -79,19 +58,19 @@ const NodeMetricsDashboard = () => {
 
       const allocations = response.data.sets[0].allocations;
       const activeNodes:any = Object.values(allocations).filter(
-        (node: any) =>
+        (node) =>
           !node["name"].startsWith("__") &&
           node["cpuCoreRequestAverage"] !== undefined
       );
 
       const totalNodes = activeNodes.length;
       const totalCost = activeNodes.reduce(
-        (sum, node: any) => sum + (node["totalCost"] || 0),
+        (sum, node) => sum + (node["totalCost"] || 0),
         0
       );
 
       const avgCpuUsage =
-        activeNodes.reduce((sum, node: any) => {
+        activeNodes.reduce((sum, node) => {
           const usage =
             (node["cpuCoreUsageAverage"] || 0) /
             (node["cpuCoreRequestAverage"] || 1);
@@ -100,7 +79,7 @@ const NodeMetricsDashboard = () => {
 
       const avgEfficiency =
         activeNodes.reduce(
-          (sum, node: any) => sum + (node["totalEfficiency"] || 0),
+          (sum, node) => sum + (node["totalEfficiency"] || 0),
           0
         ) / totalNodes;
 
@@ -111,15 +90,16 @@ const NodeMetricsDashboard = () => {
         avgEfficiency,
       });
 
-      const processedNodes = activeNodes.map((node: any) => {
+      const processedNodes = activeNodes.map((node) => {
         const cpuRequest = node["cpuCoreRequestAverage"] || 0;
         const cpuUsage = node["cpuCoreUsageAverage"] || 0;
-        const cpuUtilization = cpuRequest > 0 ? (cpuUsage / cpuRequest) * 100 : 0;
+        const cpuUtilization =
+          cpuRequest > 0 ? (cpuUsage / cpuRequest) * 100 : 0;
 
         const ramUsageBytes = node["ramByteUsageAverage"] || 0;
         const ramRequestBytes = node["ramByteRequestAverage"] || 0;
-        const ramUtilizationGB = ramUsageBytes / (1024 ** 3);
-        const ramRequestGB = ramRequestBytes / (1024 ** 3);
+        const ramUtilizationGB = ramUsageBytes / 1024 ** 3;
+        const ramRequestGB = ramRequestBytes / 1024 ** 3;
         const ramUtilization =
           ramRequestBytes > 0
             ? Math.min((ramUsageBytes / ramRequestBytes) * 100, 100)
@@ -128,8 +108,7 @@ const NodeMetricsDashboard = () => {
         if (ramRequestBytes > 0 && ramUsageBytes / ramRequestBytes > 1) {
           console.warn(
             `High RAM utilization for ${node["name"]}: ${(
-              (ramUsageBytes / ramRequestBytes) *
-              100
+              (ramUsageBytes / ramRequestBytes) * 100
             ).toFixed(1)}%`
           );
         }
@@ -175,15 +154,46 @@ const NodeMetricsDashboard = () => {
     }
   };
 
-  fetchNodeData();
-}, []);
- 
+  useEffect(() => {
+    const queryParams = {
+      accumulate: true,
+      aggregate: "node",
+      chartType: "costovertime",
+      costUnit: "cumulative",
+      external: false,
+      filter: "",
+      idle: true,
+      idleByNode: false,
+      includeSharedCostBreakdown: true,
+      shareCost: 0,
+      shareIdle: false,
+      shareLabels: "",
+      shareNamespaces: "",
+      shareSplit: "weighted",
+      shareTenancyCosts: true,
+      window: timeRange,
+      offset: 0,
+      limit: 25,
+    };
+
+    fetchNodeData(queryParams);
+  }, [timeRange]);
+
+  const handleTimeRangeChange = (range) => {
+    try {
+      setTimeRange(range);
+      setSearchParams({ window: range });
+    } catch (error) {
+      console.error("Error updating time range:", error);
+    }
+  };
+
   const calculateUptime = (start, end) => {
     if (!start || !end) return "N/A";
 
     try {
-      const startTime: any = new Date(start);
-      const endTime: any = new Date(end);
+      const startTime:any = new Date(start);
+      const endTime:any = new Date(end);
       const diffMs = endTime - startTime;
 
       if (diffMs < 0) return "N/A";
@@ -200,13 +210,9 @@ const NodeMetricsDashboard = () => {
 
   const StatusBadge = ({ status }) => {
     const statusConfig = {
-      healthy: { bg: "bg-green-100", text: "text-green-800", label: "Healthy" },
-      warning: {
-        bg: "bg-yellow-100",
-        text: "text-yellow-800",
-        label: "Warning",
-      },
-      critical: { bg: "bg-red-100", text: "text-red-800", label: "Critical" },
+      healthy: { bg: "bg-success", text: "text-success-foreground", label: "Healthy" },
+      warning: { bg: "bg-warning", text: "text-warning-foreground", label: "Warning" },
+      critical: { bg: "bg-destructive", text: "text-destructive-foreground", label: "Critical" },
     };
 
     const config = statusConfig[status] || statusConfig.healthy;
@@ -222,10 +228,10 @@ const NodeMetricsDashboard = () => {
 
   const MetricCard = ({ title, value, subtitle, icon, status }) => {
     const statusColors = {
-      healthy: "border-green-200 bg-green-50",
-      warning: "border-yellow-200 bg-yellow-50",
-      critical: "border-red-200 bg-red-50",
-      info: "border-blue-200 bg-blue-50",
+      healthy: "border-success bg-success/10",
+      warning: "border-warning bg-warning/10",
+      critical: "border-destructive bg-destructive/10",
+      info: "",
     };
 
     return (
@@ -234,12 +240,12 @@ const NodeMetricsDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {icon}
-              <span className="text-sm font-medium text-gray-600">{title}</span>
+              <span className="text-sm font-medium text-muted-foreground">{title}</span>
             </div>
           </div>
           <div className="mt-2">
-            <div className="text-2xl font-bold text-gray-900">{value}</div>
-            <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+            <div className="text-2xl font-bold text-foreground">{value}</div>
+            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
           </div>
         </CardContent>
       </Card>
@@ -269,12 +275,7 @@ const NodeMetricsDashboard = () => {
   const pieData = Object.entries(statusDistribution).map(([status, count]) => ({
     name: status.charAt(0).toUpperCase() + status.slice(1),
     value: count,
-    color:
-      status === "healthy"
-        ? "#10B981"
-        : status === "warning"
-        ? "#F59E0B"
-        : "#EF4444",
+    color: status === "healthy" ? "hsl(var(--success))" : status === "warning" ? "hsl(var(--warning))" : "hsl(var(--destructive))",
   }));
 
   if (loading) {
@@ -283,9 +284,9 @@ const NodeMetricsDashboard = () => {
         title="Node Metrics"
         subtitle="CPU, memory, disk, network, and node health monitoring"
       >
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen bg-background p-6">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center text-gray-600">Loading...</div>
+            <div className="text-center text-muted-foreground">Loading...</div>
           </div>
         </div>
       </Layout>
@@ -298,9 +299,9 @@ const NodeMetricsDashboard = () => {
         title="Node Metrics"
         subtitle="CPU, memory, disk, network, and node health monitoring"
       >
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen bg-background p-6">
           <div className="max-w-7xl mx-auto">
-            <div className="text-center text-red-600">{error}</div>
+            <div className="text-center text-destructive">{error}</div>
           </div>
         </div>
       </Layout>
@@ -312,28 +313,41 @@ const NodeMetricsDashboard = () => {
       title="Node Metrics"
       subtitle="CPU, memory, disk, network, and node health monitoring"
     >
-      <div className="min-h-screen ">
+      <div className="min-h-screen bg-background ">
+        <div className="flex items-center gap-2 mb-5">
+          {["1h", "6h", "24h", "7d", "30d"].map((range) => (
+            <Button
+              key={range}
+              variant={timeRange === range ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleTimeRangeChange(range)}
+            >
+              {range}
+            </Button>
+          ))}
+        </div>
+
         <div className="max-w-7xl mx-auto space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard
               title="Active Nodes"
               value={summaryStats["totalNodes"]?.toString() || "0"}
               subtitle="All nodes operational"
-              icon={<Server className="w-5 h-5 text-blue-600" />}
+              icon={<Server className="w-5 h-5 text-primary" />}
               status="info"
             />
             <MetricCard
               title="Total Cost"
               value={`$${summaryStats["totalCost"]?.toFixed(2) || "0.00"}`}
-              subtitle="Last 7 days"
-              icon={<DollarSign className="w-5 h-5 text-green-600" />}
+              subtitle={`Last ${timeRange}`}
+              icon={<DollarSign className="w-5 h-5 text-success" />}
               status="info"
             />
             <MetricCard
               title="Avg CPU Usage"
               value={`${summaryStats["avgCpuUsage"]?.toFixed(1) || "0.0"}%`}
               subtitle="Across all nodes"
-              icon={<Cpu className="w-5 h-5 text-orange-600" />}
+              icon={<Cpu className="w-5 h-5 text-warning" />}
               status={
                 summaryStats["avgCpuUsage"] > thresholds.cpuUsageWarning
                   ? "warning"
@@ -344,7 +358,7 @@ const NodeMetricsDashboard = () => {
               title="Avg Efficiency"
               value={`${summaryStats["avgEfficiency"]?.toFixed(1) || "0.0"}%`}
               subtitle="Resource utilization"
-              icon={<Activity className="w-5 h-5 text-purple-600" />}
+              icon={<Activity className="w-5 h-5 text-primary" />}
               status={
                 summaryStats["avgEfficiency"] < thresholds.efficiencyWarning
                   ? "warning"
@@ -393,19 +407,19 @@ const NodeMetricsDashboard = () => {
                     <Bar
                       dataKey="cpu"
                       stackId="cost"
-                      fill="#EF4444"
+                      fill="hsl(var(--destructive))"
                       name="CPU"
                     />
                     <Bar
                       dataKey="ram"
                       stackId="cost"
-                      fill="#3B82F6"
+                      fill="hsl(var(--primary))"
                       name="RAM"
                     />
                     <Bar
                       dataKey="storage"
                       stackId="cost"
-                      fill="#10B981"
+                      fill="hsl(var(--success))"
                       name="Storage"
                     />
                   </BarChart>
@@ -428,28 +442,29 @@ const NodeMetricsDashboard = () => {
                   <Line
                     type="monotone"
                     dataKey="cpuUsage"
-                    stroke="#EF4444"
+                    stroke="hsl(var(--destructive))"
                     strokeWidth={2}
                     name="CPU Usage %"
                   />
                   <Line
                     type="monotone"
                     dataKey="ramUsage"
-                    stroke="#3B82F6"
+                    stroke="hsl(var(--primary))"
                     strokeWidth={2}
                     name="RAM Usage %"
                   />
                   <Line
                     type="monotone"
                     dataKey="efficiency"
-                    stroke="#10B981"
+                    stroke="hsl(var(--success))"
                     strokeWidth={2}
                     name="Efficiency %"
                   />
                 </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
 
           <Card>
             <CardHeader>
@@ -473,11 +488,11 @@ const NodeMetricsDashboard = () => {
                     {nodeData.map((node, index) => (
                       <tr
                         key={index}
-                        className="border-b hover:bg-gray-50 text-foreground"
+                        className="border-b hover:bg-muted/50 text-foreground"
                       >
                         <td className="p-3">
                           <div className="flex items-center gap-2">
-                            <Server className="w-4 h-4 text-gray-500" />
+                            <Server className="w-4 h-4 text-muted-foreground" />
                             <span className="font-medium">{node["name"]}</span>
                           </div>
                         </td>
@@ -487,7 +502,7 @@ const NodeMetricsDashboard = () => {
                         <td className="p-3">
                           <div className="text-sm">
                             <div>{node["cpuUsage"]}%</div>
-                            <div className="text-gray-500 text-xs">
+                            <div className="text-muted-foreground text-xs">
                               {node["cpuCores"]} cores
                             </div>
                           </div>
@@ -495,7 +510,7 @@ const NodeMetricsDashboard = () => {
                         <td className="p-3">
                           <div className="text-sm">
                             <div>{node["ramUtilization"]}%</div>
-                            <div className="text-gray-500 text-xs">
+                            <div className="text-muted-foreground text-xs">
                               {node["ramUsage"]}GB used
                             </div>
                           </div>
@@ -505,7 +520,7 @@ const NodeMetricsDashboard = () => {
                             <div className="font-medium">
                               ${node["totalCost"]}
                             </div>
-                            <div className="text-gray-500 text-xs">
+                            <div className="text-muted-foreground text-xs">
                               CPU: ${node["cpuCost"]} | RAM: ${node["ramCost"]}
                             </div>
                           </div>
@@ -514,16 +529,16 @@ const NodeMetricsDashboard = () => {
                           <span
                             className={`text-sm font-medium ${
                               parseFloat(node["efficiency"]) > 5
-                                ? "text-green-600"
+                                ? "text-success"
                                 : parseFloat(node["efficiency"]) > 1
-                                ? "text-yellow-600"
-                                : "text-red-600"
+                                ? "text-warning"
+                                : "text-destructive"
                             }`}
                           >
                             {node["efficiency"]}%
                           </span>
                         </td>
-                        <td className="p-3 text-sm text-gray-600">
+                        <td className="p-3 text-sm text-muted-foreground">
                           {node["uptime"]}
                         </td>
                       </tr>
@@ -534,7 +549,6 @@ const NodeMetricsDashboard = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
     </Layout>
   );
 };

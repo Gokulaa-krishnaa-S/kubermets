@@ -31,7 +31,7 @@
     --warning: 39 100% 56%; /* #F59E0B */
     --warning-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%; /* #EF4444 */
+    --destructive: 344 98% 44%;
     --destructive-foreground: 0 0% 100%;
 
     /* UI Support */
@@ -87,7 +87,7 @@
     --accent: 222 25% 25%;
     --accent-foreground: 215 33% 95%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 344 98% 44%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 142 71% 45%;
