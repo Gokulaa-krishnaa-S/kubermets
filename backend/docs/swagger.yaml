@@ -1,0 +1,46 @@
+swagger: "2.0"
+info:
+  title: Kubernetes metrics explorer
+  description: All Api's related to the metrics .
+  version: "0.0.0"
+host: localhost:8080
+basePath: /
+schemes:
+  - http
+paths:
+  /:
+    get:
+      summary: Returns the default response from the API.
+      responses:
+        200:
+          description: The default response
+          schema:
+            type: string
+  /health:
+    get:
+      summary: Health check
+      responses:
+        200:
+          description: OK
+          schema:
+            type: string
+  /custom:
+    post:
+      summary: Accepts a JSON with `say_hello`
+      parameters:
+        - in: body
+          name: payload
+          required: true
+          schema:
+            type: object
+            properties:
+              say_hello:
+                type: boolean
+      responses:
+        200:
+          description: Response message
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
