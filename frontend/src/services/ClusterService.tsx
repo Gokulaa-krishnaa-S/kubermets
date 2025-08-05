@@ -29,10 +29,10 @@ class ClusterService {
     queryParams: Record<string, any>
   ): Promise<any> {
     try {
-      const response: AxiosResponse = await this.api.get(
-        "/model/allocation/summary",
-        { params: queryParams }
-      );
+      const response: AxiosResponse = await this.api.get("/all", {
+        params: queryParams,
+      });
+      console.log(response.data);
       return response.data;
     } catch (error) {
       console.error("Error fetching cluster summary:", error);
