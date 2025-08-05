@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSearchParams } from "react-router-dom";
 
 import { Server, Cpu, HardDrive, Activity, CheckCircle } from "lucide-react";
 
@@ -28,11 +29,14 @@ export default function ClusterMetrics() {
   const [clusterStats, setClusterStats] = useState<any[]>([]);
   const [clusters, setClusters] = useState<any[]>([]);
   const [timeRange, setTimeRange] = useState("24h");
-
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
+    const rangeFromUrl = searchParams.get("window") || "24h";
+    setTimeRange(rangeFromUrl);
+
     const queryParams = {
-      window: "7d",
+      window: rangeFromUrl,
       aggregate: "cluster",
       accumulate: true,
       external: false,
@@ -49,22 +53,112 @@ export default function ClusterMetrics() {
 
     handleCallClusterData(queryParams);
   }, []);
+  // const handleCallClusterData = async (queryParams) => {
+  //   ClusterService.getClusterAllocationSummary(queryParams)
+  //     .then((res) => {
+  //       const allocations = res?.data?.sets?.[0]?.allocations || {};
+
+  //       const nodeSet = new Set<string>();
+  //       const podSet = new Set<string>();
+
+  //       const clusterList = Object.values(allocations).map((cluster: any) => {
+  //         const [namespace, node, pod] = cluster.name.split("/");
+
+  //         if (node) nodeSet.add(node);
+  //         if (pod) podSet.add(pod);
+
+  //         return {
+  //           name: cluster.name,
+  //           cpu: `${(
+  //             (cluster.cpuCoreUsageAverage / cluster.cpuCoreRequestAverage) *
+  //               100 || 0
+  //           ).toFixed(0)}%`,
+  //           memory: `${(
+  //             (cluster.ramByteUsageAverage / cluster.ramByteRequestAverage) *
+  //               100 || 0
+  //           ).toFixed(0)}%`,
+  //           cost: `$${cluster.totalCost.toFixed(2)}`,
+  //           version: cluster.version ?? "N/A",
+
+  //           nodes: 0, // will be set globally
+  //           pods: 0, // will be set globally
+  //           status: cluster.status ? cluster.status : "error",
+  //         };
+  //       });
+
+  //       // Global counts
+  //       const totalNodes = nodeSet.size;
+  //       const totalPods = podSet.size;
+
+  //       // Add total node/pod count to each cluster if desired
+  //       const updatedClusterList = clusterList.map((cluster) => ({
+  //         ...cluster,
+  //         nodes: totalNodes,
+  //         pods: totalPods,
+  //       }));
+
+  //       // Totals for resource costs
+  //       const totalCpuCost: any = Object.values(allocations).reduce(
+  //         (sum: number, c: any) => sum + c.cpuCost,
+  //         0
+  //       );
+  //       const totalRamCost: any = Object.values(allocations).reduce(
+  //         (sum: number, c: any) => sum + c.ramCost,
+  //         0
+  //       );
+  //       const totalStorage: any = Object.values(allocations).reduce(
+  //         (sum: number, c: any) => sum + c.pvCost,
+  //         0
+  //       );
+
+  //       setClusters(updatedClusterList);
+  //       setClusterStats([
+  //         {
+  //           title: "Total Clusters",
+  //           value: Object.keys(allocations).length,
+  //           subtitle: "Across all environments",
+  //           icon: <Server className="w-4 h-4" />,
+  //           trend: { value: "", direction: "up", label: "" },
+  //           status: "healthy",
+  //         },
+  //         {
+  //           title: "CPU Cost",
+  //           value: `$${totalCpuCost.toFixed(2)}`,
+  //           subtitle: "This week",
+  //           icon: <Cpu className="w-4 h-4" />,
+  //           trend: { value: "", direction: "up", label: "" },
+  //           status: "info",
+  //         },
+  //         {
+  //           title: "Memory Cost",
+  //           value: `$${totalRamCost.toFixed(2)}`,
+  //           subtitle: "This week",
+  //           icon: <Activity className="w-4 h-4" />,
+  //           trend: { value: "", direction: "up", label: "" },
+  //           status: "healthy",
+  //         },
+  //         {
+  //           title: "Storage Cost",
+  //           value: `$${totalStorage.toFixed(2)}`,
+  //           subtitle: "This week",
+  //           icon: <HardDrive className="w-4 h-4" />,
+  //           trend: { value: "", direction: "up", label: "" },
+  //           status: "info",
+  //         },
+  //       ]);
+  //     })
+  //     .catch(() => console.log("Failed to fetch cluster summary"));
+  // };
   const handleCallClusterData = async (queryParams) => {
     ClusterService.getClusterAllocationSummary(queryParams)
       .then((res) => {
-        const allocations = res?.data?.sets?.[0]?.allocations || {};
-
-        const nodeSet = new Set<string>();
-        const podSet = new Set<string>();
-
-        const clusterList = Object.values(allocations).map((cluster: any) => {
-          const [namespace, node, pod] = cluster.name.split("/");
-
-          if (node) nodeSet.add(node);
-          if (pod) podSet.add(pod);
-
-          return {
-            name: cluster.name,
+        console.log(res.data, "-----");
+        const allocations = res?.data?.data?.sets?.[0]?.allocations || {};
+        console.log(allocations);
+        // Since cluster name is a single string (e.g., "cluster-one"), we no longer parse nodes/pods
+        const clusterList = Object.entries(allocations).map(
+          ([name, cluster]: [string, any]) => ({
+            name,
             cpu: `${(
               (cluster.cpuCoreUsageAverage / cluster.cpuCoreRequestAverage) *
                 100 || 0
@@ -74,24 +168,13 @@ export default function ClusterMetrics() {
                 100 || 0
             ).toFixed(0)}%`,
             cost: `$${cluster.totalCost.toFixed(2)}`,
-            version: "v1.28.2", // fallback
-            nodes: 0, // will be set globally
-            pods: 0, // will be set globally
-            status: cluster.totalEfficiency > 0.5 ? "healthy" : "warning",
-          };
-        });
-
-        // Global counts
-        const totalNodes = nodeSet.size;
-        const totalPods = podSet.size;
-
-        // Add total node/pod count to each cluster if desired
-        const updatedClusterList = clusterList.map((cluster) => ({
-          ...cluster,
-          nodes: totalNodes,
-          pods: totalPods,
-        }));
-
+            version: cluster.version ?? "N/A", // May still be undefined
+            nodes: 0, // No data provided
+            pods: 0, // No data provided
+            status: cluster.status ?? "unknown", // Default if not provided
+          })
+        );
+        console.log(clusterList, ")");
         // Totals for resource costs
         const totalCpuCost: any = Object.values(allocations).reduce(
           (sum: number, c: any) => sum + c.cpuCost,
@@ -106,7 +189,7 @@ export default function ClusterMetrics() {
           0
         );
 
-        setClusters(updatedClusterList);
+        setClusters(clusterList);
         setClusterStats([
           {
             title: "Total Clusters",
@@ -144,6 +227,7 @@ export default function ClusterMetrics() {
       })
       .catch(() => console.log("Failed to fetch cluster summary"));
   };
+
   const clusterHealthData = [
     { name: "Healthy", value: 95, color: "#10B981" },
     { name: "Warning", value: 3, color: "#F59E0B" },
@@ -174,33 +258,34 @@ export default function ClusterMetrics() {
         shareSplit: "weighted",
         filter: "",
       };
+
       setTimeRange(range);
+      setSearchParams({ window: range }); // update browser URL
       handleCallClusterData(queryParams);
     } catch (error) {
       console.log(error);
     }
   };
+
   return (
     <Layout
       title="Cluster Metrics"
       subtitle="Node counts, status, and overall resource utilization"
     >
-     
-
       {/* Time Range Selector */}
 
-        <div className="flex items-center gap-2 mb-5">
-          {["1h", "6h", "24h", "7d", "30d"].map((range) => (
-            <Button
-              key={range}
-              variant={timeRange === range ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleTimeRangeChange(range)}
-            >
-              {range}
-            </Button>
-          ))}
-        </div>
+      <div className="flex items-center gap-2 mb-5">
+        {["1h", "6h", "24h", "7d", "30d"].map((range) => (
+          <Button
+            key={range}
+            variant={timeRange === range ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleTimeRangeChange(range)}
+          >
+            {range}
+          </Button>
+        ))}
+      </div>
       <div className="space-y-6">
         {/* Dynamic Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -225,7 +310,7 @@ export default function ClusterMetrics() {
                       <Server className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-medium">{cluster.name}</h4>
+                      <h4 className="font-medium text-black">{cluster.name}</h4>
                       <p className="text-sm text-muted-foreground">
                         Kubernetes {cluster.version}
                       </p>
@@ -233,22 +318,26 @@ export default function ClusterMetrics() {
                   </div>
 
                   <div className="grid grid-cols-4 gap-6 text-sm">
-                    <div className="text-center">
+                    {/* <div className="text-center">
                       <p className="font-medium">{cluster.nodes}</p>
                       <p className="text-muted-foreground">Nodes</p>
+                    </div> */}
+                    <div className="text-center">
+                      <p className="font-medium text-black">{cluster.cost}</p>
+                      <p className="text-muted-foreground">Cost</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-medium">{cluster.cpu}</p>
+                      <p className="font-medium text-black">{cluster.cpu}</p>
                       <p className="text-muted-foreground">CPU</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-medium">{cluster.memory}</p>
+                      <p className="font-medium text-black">{cluster.memory}</p>
                       <p className="text-muted-foreground">Memory</p>
                     </div>
-                    <div className="text-center">
-                      <p className="font-medium">{cluster.pods}</p>
+                    {/* <div className="text-center">
+                      <p className="font-medium text-black">{cluster.pods}</p>
                       <p className="text-muted-foreground">Pods</p>
-                    </div>
+                    </div> */}
                   </div>
 
                   <StatusBadge status={cluster.status} />
@@ -258,8 +347,8 @@ export default function ClusterMetrics() {
           </CardContent>
         </Card>
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Cluster Health PieChart */}
+        {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+       
           <Card>
             <CardHeader>
               <CardTitle>Cluster Health Distribution</CardTitle>
@@ -285,7 +374,7 @@ export default function ClusterMetrics() {
             </CardContent>
           </Card>
 
-          {/* Resource Usage LineChart */}
+        
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>Resource Usage Trends</CardTitle>
@@ -322,7 +411,7 @@ export default function ClusterMetrics() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
       </div>
     </Layout>
   );
