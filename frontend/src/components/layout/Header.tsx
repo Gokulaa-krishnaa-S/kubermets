@@ -39,13 +39,13 @@ export function Header({
         {/* Right Section */}
         <div className="flex items-center gap-3">
           {/* Search */}
-          <div className="hidden md:flex relative">
+          {/* <div className="hidden md:flex relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search..."
               className="w-64 pl-10 bg-background"
             />
-          </div>
+          </div> */}
 
           {/* Theme Toggle */}
           <Button
