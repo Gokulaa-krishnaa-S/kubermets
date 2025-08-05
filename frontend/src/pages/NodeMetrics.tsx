@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Server,
-  Cpu,
-  Activity,
-  DollarSign,
-} from "lucide-react";
+import { Server, Cpu, Activity, DollarSign } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -21,6 +16,7 @@ import {
   Cell,
 } from "recharts";
 import { Layout } from "@/components/layout/Layout";
+import ClusterService from "@/services/ClusterService";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
@@ -38,112 +34,156 @@ const NodeMetricsDashboard = () => {
     efficiencyWarning: 50,
   };
 
-  useEffect(() => {
-    const fetchNodeData = async () => {
-      try {
-        const response = await fetch(
-          "http://172.16.20.110/kubecost/model/allocation/summary?accumulate=true&aggregate=node&chartType=costovertime&costUnit=cumulative&external=false&filter=&idle=true&idleByNode=false&includeSharedCostBreakdown=true&shareCost=0&shareIdle=false&shareLabels=&shareNamespaces=&shareSplit=weighted&shareTenancyCosts=true&window=7d&offset=0&limit=25"
-        );
-        const result = await response.json();
+   useEffect(() => {
+  const queryParams = {
+    accumulate: true,
+    aggregate: "node",
+    chartType: "costovertime",
+    costUnit: "cumulative",
+    external: false,
+    filter: "",
+    idle: true,
+    idleByNode: false,
+    includeSharedCostBreakdown: true,
+    shareCost: 0,
+    shareIdle: false,
+    shareLabels: "",
+    shareNamespaces: "",
+    shareSplit: "weighted",
+    shareTenancyCosts: true,
+    window: "7d",
+    offset: 0,
+    limit: 25,
+  };
 
-        if (result.code !== 200 || !result.data?.sets?.[0]?.allocations) {
-          throw new Error("Invalid response format");
-        }
+  const handleCallClusterData = async (params: Record<string, any>) => {
+    try {
+      const response = await ClusterService.getClusterAllocationSummary(params);
+      //  const response:any = await fetch(
+      //     "http://172.16.20.110/kubecost/model/allocation/summary?accumulate=true&aggregate=node&chartType=costovertime&costUnit=cumulative&external=false&filter=&idle=true&idleByNode=false&includeSharedCostBreakdown=true&shareCost=0&shareIdle=false&shareLabels=&shareNamespaces=&shareSplit=weighted&shareTenancyCosts=true&window=7d&offset=0&limit=25"
+      //   );
+      return response.data; 
+    } catch (error) {
+      console.error("Failed to fetch cluster summary", error);
+      throw error;
+    }
+  };
 
-        const allocations = result.data.sets[0].allocations;
+  const fetchNodeData = async () => {
+    try {
+      const response = await handleCallClusterData(queryParams);
 
-        const activeNodes:any = Object.values(allocations).filter(
-          (node) =>
-            !node["name"].startsWith("__") &&
-            node["cpuCoreRequestAverage"] !== undefined
-        );
+      if (response.code !== 200 || !response.data?.sets?.[0]?.allocations) {
+        throw new Error("Invalid response format");
+      }
 
-        const totalNodes = activeNodes.length;
-        const totalCost = activeNodes.reduce(
-          (sum, node) => sum + (node["totalCost"] || 0),
+      const allocations = response.data.sets[0].allocations;
+      const activeNodes:any = Object.values(allocations).filter(
+        (node: any) =>
+          !node["name"].startsWith("__") &&
+          node["cpuCoreRequestAverage"] !== undefined
+      );
+
+      const totalNodes = activeNodes.length;
+      const totalCost = activeNodes.reduce(
+        (sum, node: any) => sum + (node["totalCost"] || 0),
+        0
+      );
+
+      const avgCpuUsage =
+        activeNodes.reduce((sum, node: any) => {
+          const usage =
+            (node["cpuCoreUsageAverage"] || 0) /
+            (node["cpuCoreRequestAverage"] || 1);
+          return sum + (isNaN(usage) ? 0 : usage);
+        }, 0) / totalNodes;
+
+      const avgEfficiency =
+        activeNodes.reduce(
+          (sum, node: any) => sum + (node["totalEfficiency"] || 0),
           0
-        );
-        const avgCpuUsage =
-          activeNodes.reduce((sum, node) => {
-            const usage =
-              (node["cpuCoreUsageAverage"] || 0) /
-              (node["cpuCoreRequestAverage"] || 1);
-            return sum + (isNaN(usage) ? 0 : usage);
-          }, 0) / totalNodes;
-        const avgEfficiency =
-          activeNodes.reduce(
-            (sum, node) => sum + (node["totalEfficiency"] || 0),
-            0
-          ) / totalNodes;
+        ) / totalNodes;
 
-        setSummaryStats({
-          totalNodes,
-          totalCost,
-          avgCpuUsage: avgCpuUsage * 100,
-          avgEfficiency,
-        });
+      setSummaryStats({
+        totalNodes,
+        totalCost,
+        avgCpuUsage: avgCpuUsage * 100,
+        avgEfficiency,
+      });
 
-        const processedNodes = activeNodes.map((node) => {
-          const cpuRequest = node["cpuCoreRequestAverage"] || 0;
-          const cpuUsage = node["cpuCoreUsageAverage"] || 0;
-          const cpuUtilization = cpuRequest > 0 ? (cpuUsage / cpuRequest) * 100 : 0;
+      const processedNodes = activeNodes.map((node: any) => {
+        const cpuRequest = node["cpuCoreRequestAverage"] || 0;
+        const cpuUsage = node["cpuCoreUsageAverage"] || 0;
+        const cpuUtilization = cpuRequest > 0 ? (cpuUsage / cpuRequest) * 100 : 0;
 
-          const ramUsageBytes = node["ramByteUsageAverage"] || 0;
-          const ramRequestBytes = node["ramByteRequestAverage"] || 0;
-          const ramUtilizationGB = ramUsageBytes / (1024 * 1024 * 1024);
-          const ramRequestGB = ramRequestBytes / (1024 * 1024 * 1024);
-          const ramUtilization = ramRequestBytes > 0
+        const ramUsageBytes = node["ramByteUsageAverage"] || 0;
+        const ramRequestBytes = node["ramByteRequestAverage"] || 0;
+        const ramUtilizationGB = ramUsageBytes / (1024 ** 3);
+        const ramRequestGB = ramRequestBytes / (1024 ** 3);
+        const ramUtilization =
+          ramRequestBytes > 0
             ? Math.min((ramUsageBytes / ramRequestBytes) * 100, 100)
             : 0;
 
-          if (ramRequestBytes > 0 && ramUsageBytes / ramRequestBytes > 1) {
-            console.warn(`High RAM utilization for ${node["name"]}: ${(ramUsageBytes / ramRequestBytes) * 100}%`);
-          }
+        if (ramRequestBytes > 0 && ramUsageBytes / ramRequestBytes > 1) {
+          console.warn(
+            `High RAM utilization for ${node["name"]}: ${(
+              (ramUsageBytes / ramRequestBytes) *
+              100
+            ).toFixed(1)}%`
+          );
+        }
 
-          let status = "healthy";
-          if (cpuUtilization > thresholds.cpuCritical || ramUtilization > thresholds.ramCritical) {
-            status = "critical";
-          } else if (cpuUtilization > thresholds.cpuWarning || ramUtilization > thresholds.ramWarning) {
-            status = "warning";
-          }
+        let status = "healthy";
+        if (
+          cpuUtilization > thresholds.cpuCritical ||
+          ramUtilization > thresholds.ramCritical
+        ) {
+          status = "critical";
+        } else if (
+          cpuUtilization > thresholds.cpuWarning ||
+          ramUtilization > thresholds.ramWarning
+        ) {
+          status = "warning";
+        }
 
-          return {
-            name: node["name"],
-            status,
-            cpuCores: cpuRequest.toFixed(1),
-            cpuUsage: cpuUtilization.toFixed(1),
-            ramRequest: ramRequestGB.toFixed(2),
-            ramUsage: ramUtilizationGB.toFixed(2),
-            ramUtilization: ramUtilization.toFixed(1),
-            totalCost: (node["totalCost"] || 0).toFixed(2),
-            cpuCost: (node["cpuCost"] || 0).toFixed(2),
-            ramCost: (node["ramCost"] || 0).toFixed(2),
-            pvCost: (node["pvCost"] || 0).toFixed(2),
-            efficiency: (node["totalEfficiency"] || 0).toFixed(2),
-            uptime: calculateUptime(node["start"] || "", node["end"] || ""),
-          };
-        });
+        return {
+          name: node["name"],
+          status,
+          cpuCores: cpuRequest.toFixed(1),
+          cpuUsage: cpuUtilization.toFixed(1),
+          ramRequest: ramRequestGB.toFixed(2),
+          ramUsage: ramUtilizationGB.toFixed(2),
+          ramUtilization: ramUtilization.toFixed(1),
+          totalCost: (node["totalCost"] || 0).toFixed(2),
+          cpuCost: (node["cpuCost"] || 0).toFixed(2),
+          ramCost: (node["ramCost"] || 0).toFixed(2),
+          pvCost: (node["pvCost"] || 0).toFixed(2),
+          efficiency: (node["totalEfficiency"] || 0).toFixed(2),
+          uptime: calculateUptime(node["start"] || "", node["end"] || ""),
+        };
+      });
 
-        setNodeData(processedNodes);
-      } catch (err) {
-        console.error("Failed to fetch data:", err);
-        setError("Unable to fetch node data.");
-        setNodeData([]);
-        setSummaryStats({});
-      } finally {
-        setLoading(false);
-      }
-    };
+      setNodeData(processedNodes);
+    } catch (err) {
+      console.error("Failed to fetch node data:", err);
+      setError("Unable to fetch node data.");
+      setNodeData([]);
+      setSummaryStats({});
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchNodeData();
-  }, []);
-
+  fetchNodeData();
+}, []);
+ 
   const calculateUptime = (start, end) => {
     if (!start || !end) return "N/A";
 
     try {
-      const startTime:any = new Date(start);
-      const endTime :any = new Date(end);
+      const startTime: any = new Date(start);
+      const endTime: any = new Date(end);
       const diffMs = endTime - startTime;
 
       if (diffMs < 0) return "N/A";
@@ -161,7 +201,11 @@ const NodeMetricsDashboard = () => {
   const StatusBadge = ({ status }) => {
     const statusConfig = {
       healthy: { bg: "bg-green-100", text: "text-green-800", label: "Healthy" },
-      warning: { bg: "bg-yellow-100", text: "text-yellow-800", label: "Warning" },
+      warning: {
+        bg: "bg-yellow-100",
+        text: "text-yellow-800",
+        label: "Warning",
+      },
       critical: { bg: "bg-red-100", text: "text-red-800", label: "Critical" },
     };
 
@@ -235,7 +279,10 @@ const NodeMetricsDashboard = () => {
 
   if (loading) {
     return (
-      <Layout title="Node Metrics" subtitle="CPU, memory, disk, network, and node health monitoring">
+      <Layout
+        title="Node Metrics"
+        subtitle="CPU, memory, disk, network, and node health monitoring"
+      >
         <div className="min-h-screen bg-gray-50 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="text-center text-gray-600">Loading...</div>
@@ -247,7 +294,10 @@ const NodeMetricsDashboard = () => {
 
   if (error) {
     return (
-      <Layout title="Node Metrics" subtitle="CPU, memory, disk, network, and node health monitoring">
+      <Layout
+        title="Node Metrics"
+        subtitle="CPU, memory, disk, network, and node health monitoring"
+      >
         <div className="min-h-screen bg-gray-50 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="text-center text-red-600">{error}</div>
@@ -262,17 +312,8 @@ const NodeMetricsDashboard = () => {
       title="Node Metrics"
       subtitle="CPU, memory, disk, network, and node health monitoring"
     >
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen ">
         <div className="max-w-7xl mx-auto space-y-6">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Node Metrics Dashboard
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Monitor CPU, memory, costs, and node health across your Kubernetes cluster
-            </p>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard
               title="Active Nodes"
@@ -293,14 +334,22 @@ const NodeMetricsDashboard = () => {
               value={`${summaryStats["avgCpuUsage"]?.toFixed(1) || "0.0"}%`}
               subtitle="Across all nodes"
               icon={<Cpu className="w-5 h-5 text-orange-600" />}
-              status={summaryStats["avgCpuUsage"] > thresholds.cpuUsageWarning ? "warning" : "healthy"}
+              status={
+                summaryStats["avgCpuUsage"] > thresholds.cpuUsageWarning
+                  ? "warning"
+                  : "healthy"
+              }
             />
             <MetricCard
               title="Avg Efficiency"
               value={`${summaryStats["avgEfficiency"]?.toFixed(1) || "0.0"}%`}
               subtitle="Resource utilization"
               icon={<Activity className="w-5 h-5 text-purple-600" />}
-              status={summaryStats["avgEfficiency"] < thresholds.efficiencyWarning ? "warning" : "healthy"}
+              status={
+                summaryStats["avgEfficiency"] < thresholds.efficiencyWarning
+                  ? "warning"
+                  : "healthy"
+              }
             />
           </div>
 
@@ -422,7 +471,10 @@ const NodeMetricsDashboard = () => {
                   </thead>
                   <tbody>
                     {nodeData.map((node, index) => (
-                      <tr key={index} className="border-b hover:bg-gray-50 text-foreground">
+                      <tr
+                        key={index}
+                        className="border-b hover:bg-gray-50 text-foreground"
+                      >
                         <td className="p-3">
                           <div className="flex items-center gap-2">
                             <Server className="w-4 h-4 text-gray-500" />
