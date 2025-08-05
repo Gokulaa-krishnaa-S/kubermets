@@ -3,7 +3,7 @@ version: "3.8"
 services:
   frontend:
     # build:
-    #   context: ./frontend
+    #   context: . /frontend
     image: sanjaysify/vite-frontend:latest
     ports:
       - "4000:80"
