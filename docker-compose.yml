@@ -2,8 +2,8 @@ version: "3.8"
 
 services:
   frontend:
-    build:
-      context: ./frontend
+    # build:
+    #   context: ./frontend
     image: sanjaysify/vite-frontend:latest
     ports:
       - "4000:80"
@@ -12,8 +12,8 @@ services:
     environment:
       VITE_API_BASE_URL: http://10.0.2.16/api/v1
   backend:
-    build:
-      context: ./backend
+    # build:
+    #   context: ./backend
     image: sanjaysify/backend:latest
     ports:
       - "8000:8000"
