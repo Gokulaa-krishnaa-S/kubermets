@@ -11,6 +11,10 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  XCircle,
+  Cpu,
+  HardDrive,
+  X
 } from "lucide-react";
 import {
   LineChart,
@@ -26,6 +30,7 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+// import { X, Cpu, Server, HardDrive, Clock, DollarSign } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import ClusterService from "@/services/ClusterService";
 import podService from "@/services/podService";
@@ -41,7 +46,7 @@ const KubecostDashboard = () => {
 
   // New pagination and filtering states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
   const [customDateRange, setCustomDateRange] = useState({
     start: "",
@@ -758,7 +763,7 @@ const KubecostDashboard = () => {
                           content={({ active, payload, label }) => {
                             if (active && payload && payload.length) {
                               const total = payload.reduce(
-                                (sum:any, entry) => sum + entry.value,
+                                (sum: any, entry) => sum + entry.value,
                                 0
                               );
                               return (
@@ -1040,13 +1045,12 @@ const KubecostDashboard = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            pod.totalEfficiency * 100 > 50
-                              ? "bg-green-100 text-green-800"
-                              : pod.totalEfficiency * 100 > 20
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pod.totalEfficiency * 100 > 50
+                            ? "bg-green-100 text-green-800"
+                            : pod.totalEfficiency * 100 > 20
                               ? "bg-yellow-100 text-yellow-800"
                               : "bg-red-100 text-red-800"
-                          }`}
+                            }`}
                         >
                           {(pod.totalEfficiency * 100).toFixed(1)}%
                         </div>
@@ -1126,11 +1130,10 @@ const KubecostDashboard = () => {
                             <button
                               key={pageNum}
                               onClick={() => handlePageChange(pageNum)}
-                              className={`px-3 py-1 text-sm border rounded ${
-                                currentPage === pageNum
-                                  ? "bg-blue-500 text-white border-blue-500"
-                                  : "border-gray-300 hover:bg-gray-100"
-                              }`}
+                              className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
+                                ? "bg-blue-500 text-white border-blue-500"
+                                : "border-gray-300 hover:bg-gray-100"
+                                }`}
                             >
                               {pageNum}
                             </button>
@@ -1202,47 +1205,290 @@ const KubecostDashboard = () => {
         </div>
       </div>
 
+
       {showPodModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">
-              Details for {selectedPod}
-            </h3>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+          onClick={() => {
+            setShowPodModal(false);
+            setSelectedPod(null);
+            setPodDetails([]);
+          }}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl w-full max-w-6xl h-auto sm:h-auto flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Details for {selectedPod}
+              </h3>
+              {/* Top-right close button */}
+              <button
+                onClick={() => {
+                  setShowPodModal(false);
+                  setSelectedPod(null);
+                  setPodDetails([]);
+                }}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
 
-            {podDetails.length === 0 ? (
-              <p>No container data found.</p>
-            ) : (
-              <div className="space-y-4">
-                {podDetails.map((container, index) => (
-                  <div key={index} className="border p-3 rounded-md shadow">
-                    <p className="font-semibold">{container.containerName}</p>
-                    <p>
-                      CPU: {container.cpu.amount} cores (${container.cpu.cost})
-                    </p>
-                    <p>
-                      RAM: {container.ram.amount} GiB (${container.ram.cost})
-                    </p>
-                    <p>
-                      PV: {container.pv.amount} GiB (${container.pv.cost})
-                    </p>
-                    <p>Total Time: {container.totalHours} hours</p>
-                    <p className="font-bold">
-                      Total Cost: ${container.totalCost}
-                    </p>
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4 sm:p-6 pb-0">
+                {podDetails.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Loading container data...</p>
                   </div>
-                ))}
-              </div>
-            )}
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Left Column - Resource Overview and Container Details */}
+                    <div className="space-y-6">
+                      {/* Resource Overview */}
+                      <div className="bg-blue-50 rounded-lg p-4">
+                        <h4 className="font-medium text-blue-900 mb-3">{selectedPod}</h4>
+                        {podDetails.map((container, index) => (
+                          <div key={index} className="mb-4 last:mb-0">
+                            <h5 className="font-medium text-blue-800 mb-2">{container.containerName}</h5>
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 text-sm">
+                              <div className="flex items-center gap-2">
+                                <Cpu className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                <span className="text-blue-700 truncate">
+                                  CPU: {container.cpu.amount} cores ({formatCurrency(parseFloat(container.cpu.cost))})
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Server className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                <span className="text-blue-700 truncate">
+                                  RAM: {container.ram.amount} GiB ({formatCurrency(parseFloat(container.ram.cost))})
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <HardDrive className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                <span className="text-blue-700 truncate">
+                                  PV: {container.pv.amount} GiB ({formatCurrency(parseFloat(container.pv.cost))})
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                <span className="text-blue-700 truncate">
+                                  Time: {container.totalHours} hours
+                                </span>
+                              </div>
+                            </div>
+                            {index < podDetails.length - 1 && (
+                              <div className="border-t border-blue-200 mt-3 pt-3">
+                                <div className="flex items-center gap-2">
+                                  <DollarSign className="w-4 h-4 text-blue-600" />
+                                  <span className="font-medium text-blue-900">
+                                    Container Cost: {formatCurrency(parseFloat(container.totalCost))}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        <div className="mt-3 pt-3 border-t border-blue-200">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-blue-600" />
+                            <span className="font-medium text-blue-900">
+                              Total Pod Cost: {formatCurrency(podDetails.reduce((sum, container) => sum + parseFloat(container.totalCost), 0))}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
 
-            <button
-              className="mt-6 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-              onClick={() => setShowPodModal(false)}
-            >
-              Close
-            </button>
+                      {/* Container Details */}
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-gray-900">Container Resource Usage</h4>
+                        {podDetails.map((container, index) => (
+                          <div key={index} className="bg-gray-50 rounded-lg p-4">
+                            <h5 className="font-medium text-gray-800 mb-3">{container.containerName}</h5>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {/* CPU Usage */}
+                              <div className="bg-white rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="font-medium text-gray-700 text-sm">CPU</span>
+                                  <span className="text-xs text-gray-500">{container.cpu.hourlyRate}/hr</span>
+                                </div>
+                                <div className="space-y-1 text-xs text-gray-600">
+                                  <div>Allocation: {container.cpu.amount} cores</div>
+                                  <div className="font-semibold text-gray-900">Cost: {formatCurrency(parseFloat(container.cpu.cost))}</div>
+                                </div>
+                              </div>
+                              {/* Memory Usage */}
+                              <div className="bg-white rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="font-medium text-gray-700 text-sm">Memory</span>
+                                  <span className="text-xs text-gray-500">{container.ram.hourlyRate}/hr</span>
+                                </div>
+                                <div className="space-y-1 text-xs text-gray-600">
+                                  <div>Allocation: {container.ram.amount} GiB</div>
+                                  <div className="font-semibold text-gray-900">Cost: {formatCurrency(parseFloat(container.ram.cost))}</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Storage and Runtime in a single row */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                              {/* Storage Usage */}
+                              {parseFloat(container.pv.cost) > 0 && (
+                                <div className="bg-white rounded-lg p-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="font-medium text-gray-700 text-sm">Storage</span>
+                                    <span className="text-xs text-gray-500">{container.pv.hourlyRate}/hr</span>
+                                  </div>
+                                  <div className="space-y-1 text-xs text-gray-600">
+                                    <div>Volume: {container.pv.amount} GiB</div>
+                                    <div className="font-semibold text-gray-900">Cost: {formatCurrency(parseFloat(container.pv.cost))}</div>
+                                    {container.pv.adjustment !== 0 && (
+                                      <div>Adj: {formatCurrency(parseFloat(container.pv.adjustment))}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              {/* Runtime */}
+                              <div className="bg-white rounded-lg p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="font-medium text-gray-700 text-sm">Runtime</span>
+                                </div>
+                                <div className="space-y-1 text-xs text-gray-600">
+                                  <div>Hours: {container.totalHours}</div>
+                                  <div className="font-semibold text-gray-900">
+                                    Total: {formatCurrency(parseFloat(container.totalCost))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Right Column - Summary */}
+                    <div className="space-y-6">
+                      {/* Summary */}
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-gray-900">Pod Summary</h4>
+                        <div className="bg-gray-50 rounded-lg p-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600">Total Containers:</span>
+                                <span className="font-medium text-gray-900">{podDetails.length}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600">Total CPU Cost:</span>
+                                <span className="font-medium text-gray-900">
+                                  {formatCurrency(podDetails.reduce((sum, container) => sum + parseFloat(container.cpu.cost), 0))}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600">Total RAM Cost:</span>
+                                <span className="font-medium text-gray-900">
+                                  {formatCurrency(podDetails.reduce((sum, container) => sum + parseFloat(container.ram.cost), 0))}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600">Total Storage:</span>
+                                <span className="font-medium text-gray-900">
+                                  {formatCurrency(podDetails.reduce((sum, container) => sum + parseFloat(container.pv.cost), 0))}
+                                </span>
+                              </div>
+                              <div className="border-t border-gray-200 pt-3">
+                                <div className="flex justify-between items-center">
+                                  <span className="font-semibold text-gray-900">Total Cost:</span>
+                                  <span className="font-bold text-gray-900 text-lg">
+                                    {formatCurrency(podDetails.reduce((sum, container) => sum + parseFloat(container.totalCost), 0))}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Resource Breakdown Chart Area */}
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-100">
+                        <h4 className="font-medium text-gray-900 mb-3">Resource Distribution</h4>
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div className="bg-white rounded-lg p-3">
+                            <div className="text-lg font-bold text-blue-600">
+                              {Math.round((podDetails.reduce((sum, container) => sum + parseFloat(container.cpu.cost), 0) /
+                                podDetails.reduce((sum, container) => sum + parseFloat(container.totalCost), 0)) * 100)}%
+                            </div>
+                            <div className="text-xs text-gray-600">CPU</div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3">
+                            <div className="text-lg font-bold text-green-600">
+                              {Math.round((podDetails.reduce((sum, container) => sum + parseFloat(container.ram.cost), 0) /
+                                podDetails.reduce((sum, container) => sum + parseFloat(container.totalCost), 0)) * 100)}%
+                            </div>
+                            <div className="text-xs text-gray-600">RAM</div>
+                          </div>
+                          <div className="bg-white rounded-lg p-3">
+                            <div className="text-lg font-bold text-amber-600">
+                              {Math.round((podDetails.reduce((sum, container) => sum + parseFloat(container.pv.cost), 0) /
+                                podDetails.reduce((sum, container) => sum + parseFloat(container.totalCost), 0)) * 100)}%
+                            </div>
+                            <div className="text-xs text-gray-600">Storage</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Additional Metrics */}
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-3">Performance Metrics</h4>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Avg Cost per Hour:</span>
+                            <span className="font-medium text-gray-900">
+                              {formatCurrency(
+                                podDetails.reduce((sum, container) => sum + parseFloat(container.totalCost), 0) /
+                                Math.max(...podDetails.map(c => parseFloat(c.totalHours)))
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Longest Runtime:</span>
+                            <span className="font-medium text-gray-900">
+                              {Math.max(...podDetails.map(c => parseFloat(c.totalHours)))} hours
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-600">Most Expensive Container:</span>
+                            <span className="font-medium text-gray-900">
+                              {formatCurrency(Math.max(...podDetails.map(c => parseFloat(c.totalCost))))}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Modal Footer */}
+            {/* <div className="flex-shrink-0 px-4 sm:px-6 py-1 bg-white">
+        <button
+          onClick={() => setShowPodModal(false)}
+          className="w-full sm:w-auto px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+        >
+          Close
+        </button>
+      </div> */}
           </div>
         </div>
       )}
+
     </Layout>
   );
 };
