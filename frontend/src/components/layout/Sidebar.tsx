@@ -39,13 +39,12 @@ const metricItems = [
   { title: "Cluster Metrics", url: "/cluster", icon: Server },
   { title: "Node Metrics", url: "/nodes", icon: Box },
   { title: "Pods & Containers", url: "/pods", icon: Layers },
-  { title: "Deployments", url: "/deployments", icon: Activity },
-  { title: "Control Plane", url: "/control-plane", icon: Shield },
-  { title: "Resource Usage", url: "/resources", icon: TrendingUp },
-  { title: "Networking", url: "/networking", icon: Network },
-  { title: "Storage", url: "/storage", icon: HardDrive },
-  { title: "Alerts & Events", url: "/alerts-events", icon: BarChart3 },
-
+  // { title: "Deployments", url: "/deployments", icon: Activity },
+  // { title: "Control Plane", url: "/control-plane", icon: Shield },
+  // { title: "Resource Usage", url: "/resources", icon: TrendingUp },
+  // { title: "Networking", url: "/networking", icon: Network },
+  // { title: "Storage", url: "/storage", icon: HardDrive },
+  // { title: "Alerts & Events", url: "/alerts-events", icon: BarChart3 },
 ];
 
 const platformItems = [
@@ -90,7 +89,9 @@ export function AppSidebar() {
             {!collapsed && (
               <div>
                 <h2 className="font-bold text-lg">K8s Monitor</h2>
-                <p className="text-xs text-muted-foreground">Kubernetes Platform</p>
+                <p className="text-xs text-muted-foreground">
+                  Kubernetes Platform
+                </p>
               </div>
             )}
           </div>
