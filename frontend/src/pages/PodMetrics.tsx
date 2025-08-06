@@ -630,7 +630,7 @@ const KubecostDashboard = () => {
                     <TrendingUp className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-slate-900">
+                    <h2 className="text-2xl font-bold text">
                       Pod Cost Breakdown
                     </h2>
                     <p className="text-sm text-slate-500 mt-1">
@@ -641,7 +641,7 @@ const KubecostDashboard = () => {
 
                 <div className="flex items-center gap-4">
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-slate-900">
+                    <div className="text-2xl font-bold text">
                       {formatCurrency(
                         chartData?.reduce(
                           (sum, item) =>
@@ -888,7 +888,7 @@ const KubecostDashboard = () => {
 
             {/* Cost Distribution Pie Chart */}
             <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">
+              <h2 className="text-xl font-semibold text mb-6">
                 Cost Distribution
               </h2>
               <ResponsiveContainer width="100%" height={300}>
@@ -936,7 +936,7 @@ const KubecostDashboard = () => {
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold text">
                   Pod Cost Allocation Details
                 </h2>
                 <div className="text-sm text-gray-500">
