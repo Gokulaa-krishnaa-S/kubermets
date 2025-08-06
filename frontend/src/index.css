@@ -8,7 +8,7 @@
   :root {
     /* Core */
     --background: 0 0% 100%;
-    --foreground: 210 100% 36%;
+    --foreground:   0 0% 0%;
 
     --card: 0 0% 100%;
     --card-foreground: 215 25% 95%;
@@ -62,6 +62,9 @@
     --sidebar-accent-foreground: 213 100% 21%;
     --sidebar-border: 213 27% 91%;
     --sidebar-ring: 213 100% 21%;
+
+    /* h3 */
+    --h3-text: 0 0% 0%;
   }
 
   .dark {
