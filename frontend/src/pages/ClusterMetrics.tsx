@@ -276,46 +276,7 @@ export default function ClusterMetrics() {
           ))}
         </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* CPU Usage Chart */}
-          <Card>
-            <CardContent className="p-6">
-              <GroupedBarChart
-                data={chartData.cpuData}
-                title="Cluster CPU Usage"
-                yAxisLabel="CPU Cores"
-                colors={["#3b82f6", "#10b981"]}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Memory Usage Chart */}
-          <Card>
-            <CardContent className="p-6">
-              <GroupedBarChart
-                data={chartData.memoryData}
-                title="Cluster Memory Usage"
-                yAxisLabel="Memory (GB)"
-                colors={["#f59e0b", "#84cc16"]}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Cost Breakdown Donut Chart */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex justify-center">
-              <DonutChart
-                data={chartData.costBreakdown}
-                title="Cost Breakdown by Cluster"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Dynamic Cluster Overview */}
+           {/* Dynamic Cluster Overview */}
         <Card>
           <CardHeader>
             <CardTitle>Cluster Overview</CardTitle>
@@ -360,6 +321,47 @@ export default function ClusterMetrics() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* CPU Usage Chart */}
+          <Card>
+            <CardContent className="p-6">
+              <GroupedBarChart
+                data={chartData.cpuData}
+                title="Cluster CPU Usage"
+                yAxisLabel="CPU Cores"
+                colors={["#3b82f6", "#10b981"]}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Memory Usage Chart */}
+          <Card>
+            <CardContent className="p-6">
+              <GroupedBarChart
+                data={chartData.memoryData}
+                title="Cluster Memory Usage"
+                yAxisLabel="Memory (GB)"
+                colors={["#f59e0b", "#84cc16"]}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Cost Breakdown Donut Chart */}
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex justify-center">
+              <DonutChart
+                data={chartData.costBreakdown}
+                title="Cost Breakdown by Cluster"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+     
       </div>
     </Layout>
   );
