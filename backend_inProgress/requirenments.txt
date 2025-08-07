@@ -1,0 +1,18 @@
+# requirements.txt
+Flask==2.3.3
+Flask-CORS==4.0.0
+flasgger==0.9.7.1
+requests==2.31.0
+SQLAlchemy==2.0.21
+psycopg2-binary==2.9.7
+python-dotenv==1.0.0
+APScheduler==3.10.4
+celery==5.3.2
+redis==4.6.0
+flask
+flasgger
+dotenv
+flask_cors
+sqlalchemy
+apscheduler
+
