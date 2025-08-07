@@ -267,51 +267,115 @@ class KubecostDataService:
             return {"status": "failed", "error": str(e)}
         finally:
             session.close()
-    
     def _process_cluster_data(self, session: Session, api_data: Dict[str, Any], window: str):
         """Process and store cluster data"""
         try:
             print("=====================================")
             print(api_data)
             print("=====================================")
-            data = api_data.get('data', [])
-            if not data:
+
+            data = api_data.get('data', {})
+            sets = data.get('sets', [])
+
+            if not sets:
+                print("No sets found in data")
                 return
-            print(data , "---------------Data")
-            for cluster_data in data["sets"]:
-                cluster_name = cluster_data.get('name', 'default')
-                print(cluster_name , "-----NAME")
-                cluster = self._upsert_cluster(session, cluster_name)
-                
-                # Extract cost metrics
-                total_cost = cluster_data.get('totalCost', 0)
-                cpu_cost = cluster_data.get('cpuCost', 0)
-                memory_cost = cluster_data.get('ramCost', 0)
-                storage_cost = cluster_data.get('pvCost', 0)
-                print("**************************************************")
-                print("cluster metric Data : ")
-             
-                print("**************************************************")
-                # Create cluster metric record
-                cluster_metric = ClusterMetric(
-                    cluster_id=cluster.id,
-                    timestamp=datetime.utcnow(),
-                    window=window,
-                    total_cost=total_cost,
-                    cpu_cost=cpu_cost,
-                    memory_cost=memory_cost,
-                    storage_cost=storage_cost,
-                    raw_data=cluster_data
-                )
-                session.add(cluster_metric)
-            
+
+            for item in sets:
+                allocations = item.get('allocations', {})
+                if not allocations:
+                    print("No allocations found in set:", item)
+                    continue
+
+                for cluster_name, cluster_data in allocations.items():
+                    print(cluster_data, "------CLUSTER DATA")
+                    print(cluster_name, "-----NAME")
+
+                    cluster = self._upsert_cluster(session, cluster_name)
+
+                    # Extract cost metrics
+                    total_cost = cluster_data.get('totalCost', 0)
+                    cpu_cost = cluster_data.get('cpuCost', 0)
+                    memory_cost = cluster_data.get('ramCost', 0)
+                    storage_cost = cluster_data.get('pvCost', 0)
+
+                    print("**************************************************")
+                    print("Cluster Metric Data:")
+                    print(f"Cluster Name       : {cluster_name}")
+                    print(f"Window             : {window}")
+                    print(f"Total Cost         : {total_cost}")
+                    print(f"CPU Cost           : {cpu_cost}")
+                    print(f"Memory Cost        : {memory_cost}")
+                    print(f"Storage Cost       : {storage_cost}")
+                    print(f"Timestamp (UTC)    : {datetime.utcnow()}")
+                    print("**************************************************")
+
+                    # Create cluster metric record
+                    cluster_metric = ClusterMetric(
+                        cluster_id=cluster.id,
+                        timestamp=datetime.utcnow(),
+                        window=window,
+                        total_cost=total_cost,
+                        cpu_cost=cpu_cost,
+                        memory_cost=memory_cost,
+                        storage_cost=storage_cost,
+                        raw_data=cluster_data
+                    )
+                    session.add(cluster_metric)
+
             session.commit()
-            logger.info(f"Processed cluster data for {len(data)} clusters")
-            
+            logger.info(f"Processed cluster data for {len(sets)} sets")
+
         except Exception as e:
             session.rollback()
             logger.error(f"Error processing cluster data: {str(e)}")
             raise
+
+    # def _process_cluster_data(self, session: Session, api_data: Dict[str, Any], window: str):
+    #     """Process and store cluster data"""
+    #     try:
+    #         print("=====================================")
+    #         print(api_data)
+    #         print("=====================================")
+    #         data = api_data.get('data', [])
+    #         if not data:
+    #             return
+    #         print(data , "---------------Data")
+    #         for cluster_data in data["sets"]:
+    #             print(cluster_data , "------CLUSTER DATA")
+    #             cluster_name = cluster_data.get('name', 'default')
+    #             print(cluster_name , "-----NAME")
+    #             cluster = self._upsert_cluster(session, cluster_name)
+                
+    #             # Extract cost metrics
+    #             total_cost = cluster_data.get('totalCost', 0)
+    #             cpu_cost = cluster_data.get('cpuCost', 0)
+    #             memory_cost = cluster_data.get('ramCost', 0)
+    #             storage_cost = cluster_data.get('pvCost', 0)
+    #             print("**************************************************")
+    #             print("cluster metric Data : ")
+             
+    #             print("**************************************************")
+    #             # Create cluster metric record
+    #             cluster_metric = ClusterMetric(
+    #                 cluster_id=cluster.id,
+    #                 timestamp=datetime.utcnow(),
+    #                 window=window,
+    #                 total_cost=total_cost,
+    #                 cpu_cost=cpu_cost,
+    #                 memory_cost=memory_cost,
+    #                 storage_cost=storage_cost,
+    #                 raw_data=cluster_data
+    #             )
+    #             session.add(cluster_metric)
+            
+    #         session.commit()
+    #         logger.info(f"Processed cluster data for {len(data)} clusters")
+            
+    #     except Exception as e:
+    #         session.rollback()
+    #         logger.error(f"Error processing cluster data: {str(e)}")
+    #         raise
             
     def _process_node_data(self, session: Session, api_data: Dict[str, Any], window: str):
         """Process and store node data"""
