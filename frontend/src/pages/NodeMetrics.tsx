@@ -17,8 +17,9 @@ import {
 } from "recharts";
 import { Layout } from "@/components/layout/Layout";
 import ClusterService from "@/services/ClusterService";
-import { Button } from "@/components/ui/button";
 import { useSearchParams } from "react-router-dom";
+import { FilterBar } from "@/components/reusable/filterbar";
+import { toast } from "@/components/ui/use-toast";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
@@ -26,6 +27,9 @@ const NodeMetricsDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState("24h");
+  const [refreshInterval, setRefreshInterval] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Configuration for thresholds
@@ -154,7 +158,59 @@ const NodeMetricsDashboard = () => {
     }
   };
 
+  // Function to refresh all data
+  const refreshAllData = async (showToast = true) => {
+    setIsRefreshing(true);
+    try {
+      const queryParams = {
+        accumulate: true,
+        aggregate: "node",
+        chartType: "costovertime",
+        costUnit: "cumulative",
+        external: false,
+        filter: "",
+        idle: true,
+        idleByNode: false,
+        includeSharedCostBreakdown: true,
+        shareCost: 0,
+        shareIdle: false,
+        shareLabels: "",
+        shareNamespaces: "",
+        shareSplit: "weighted",
+        shareTenancyCosts: true,
+        window: timeRange,
+        offset: 0,
+        limit: 25,
+      };
+
+      await fetchNodeData(queryParams);
+      setLastUpdated(new Date());
+
+      if (showToast) {
+        toast({
+          title: "Data Refreshed",
+          description: "Node metrics have been updated successfully.",
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      if (showToast) {
+        toast({
+          title: "Refresh Failed",
+          description: "Failed to update node metrics. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
+    const rangeFromUrl = searchParams.get("window") || "24h";
+    setTimeRange(rangeFromUrl);
+
     const queryParams = {
       accumulate: true,
       aggregate: "node",
@@ -171,21 +227,53 @@ const NodeMetricsDashboard = () => {
       shareNamespaces: "",
       shareSplit: "weighted",
       shareTenancyCosts: true,
-      window: timeRange,
+      window: rangeFromUrl,
       offset: 0,
       limit: 25,
     };
 
     fetchNodeData(queryParams);
-  }, [timeRange]);
+    setLastUpdated(new Date());
+  }, []);
 
   const handleTimeRangeChange = (range) => {
     try {
       setTimeRange(range);
       setSearchParams({ window: range });
+      
+      const queryParams = {
+        accumulate: true,
+        aggregate: "node",
+        chartType: "costovertime",
+        costUnit: "cumulative",
+        external: false,
+        filter: "",
+        idle: true,
+        idleByNode: false,
+        includeSharedCostBreakdown: true,
+        shareCost: 0,
+        shareIdle: false,
+        shareLabels: "",
+        shareNamespaces: "",
+        shareSplit: "weighted",
+        shareTenancyCosts: true,
+        window: range,
+        offset: 0,
+        limit: 25,
+      };
+
+      fetchNodeData(queryParams);
     } catch (error) {
       console.error("Error updating time range:", error);
     }
+  };
+
+  const handleRefreshIntervalChange = (interval) => {
+    setRefreshInterval(interval);
+  };
+
+  const handleFilterClick = () => {
+    console.log("Filter button clicked");
   };
 
   const calculateUptime = (start, end) => {
@@ -313,21 +401,25 @@ const NodeMetricsDashboard = () => {
       title="Node Metrics"
       subtitle="CPU, memory, disk, network, and node health monitoring"
     >
-      <div className="min-h-screen bg-background ">
-        <div className="flex items-center gap-2 mb-5">
-          {["1h", "6h", "24h", "7d", "30d"].map((range) => (
-            <Button
-              key={range}
-              variant={timeRange === range ? "default" : "outline"}
-              size="sm"
-              onClick={() => handleTimeRangeChange(range)}
-            >
-              {range}
-            </Button>
-          ))}
-        </div>
+      <div className="min-h-screen bg-background">
+        {/* Filter Bar */}
+        <FilterBar
+          selectedTimeRange={timeRange}
+          onTimeRangeChange={handleTimeRangeChange}
+           timeRangeVariant="select" // ✅
+          timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
+          onFilterClick={handleFilterClick}
+          showFilter={false}
+          onRefresh={refreshAllData}
+          refreshInterval={refreshInterval}
+          onRefreshIntervalChange={handleRefreshIntervalChange}
+          isRefreshing={isRefreshing}
+          lastUpdated={lastUpdated}
+          showRefresh={true}
+          className="mb-6"
+        />
 
-        <div className=" mx-auto space-y-6">
+        <div className="mx-auto space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard
               title="Active Nodes"
@@ -338,7 +430,7 @@ const NodeMetricsDashboard = () => {
             />
             <MetricCard
               title="Total Cost"
-              value={`$${summaryStats["totalCost"]?.toFixed(2) || "0.00"}`}
+              value={`${summaryStats["totalCost"]?.toFixed(2) || "0.00"}`}
               subtitle={`Last ${timeRange}`}
               icon={<DollarSign className="w-5 h-5 text-success" />}
               status="info"
@@ -403,7 +495,7 @@ const NodeMetricsDashboard = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
                     <YAxis />
-                    <Tooltip formatter={(value) => [`$${value}`, ""]} />
+                    <Tooltip formatter={(value) => [`${value}`, ""]} />
                     <Bar
                       dataKey="cpu"
                       stackId="cost"
@@ -426,11 +518,9 @@ const NodeMetricsDashboard = () => {
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-          
-
-         
           </div>
-           <Card>
+
+          <Card>
             <CardHeader>
               <CardTitle>Resource Utilization by Node</CardTitle>
             </CardHeader>
@@ -463,9 +553,9 @@ const NodeMetricsDashboard = () => {
                     name="Efficiency %"
                   />
                 </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
@@ -550,7 +640,7 @@ const NodeMetricsDashboard = () => {
             </CardContent>
           </Card>
         </div>
-        </div>
+      </div>
     </Layout>
   );
 };
