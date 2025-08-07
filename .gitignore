@@ -31,5 +31,6 @@ cvenv
 
 .venv
 .env
-
+wvenv
+cvenv
 __pycache__
