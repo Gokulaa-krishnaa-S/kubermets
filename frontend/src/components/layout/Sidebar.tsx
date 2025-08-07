@@ -31,7 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const mainItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
+  // { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Overview", url: "/overview", icon: BarChart3 },
 ];
 

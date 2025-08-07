@@ -13,12 +13,12 @@ interface HeaderProps {
   onAddClick?: () => void;
 }
 
-export function Header({ 
-  title, 
-  subtitle, 
-  showAddButton = false, 
+export function Header({
+  title,
+  subtitle,
+  showAddButton = false,
   addButtonText = "Add Item",
-  onAddClick 
+  onAddClick,
 }: HeaderProps) {
   const { theme, setTheme } = useTheme();
 
@@ -60,7 +60,7 @@ export function Header({
           </Button>
 
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
+          {/* <Button variant="ghost" size="icon" className="relative">
             <Bell className="w-4 h-4" />
             <Badge 
               variant="destructive" 
@@ -69,19 +69,19 @@ export function Header({
               3
             </Badge>
             <span className="sr-only">Notifications</span>
-          </Button>
+          </Button> */}
 
           {/* Add Button */}
-          {showAddButton && (
-            <Button 
-              variant="gradient" 
+          {/* {showAddButton && (
+            <Button
+              variant="gradient"
               onClick={onAddClick}
               className="hidden sm:flex"
             >
               <Plus className="w-4 h-4" />
               {addButtonText}
             </Button>
-          )}
+          )} */}
         </div>
       </div>
     </header>

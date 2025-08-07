@@ -24,7 +24,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/new" element={<K8sDashboard />} />
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/" element={<Overview />} />
           <Route path="/overview" element={<Overview />} />
           <Route path="/cluster" element={<ClusterMetrics />} />
           <Route path="/nodes" element={<NodeMetrics />} />

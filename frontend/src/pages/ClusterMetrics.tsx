@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import ClusterService from "../services/ClusterService";
 import { Layout } from "@/components/layout/Layout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
@@ -7,8 +7,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSearchParams } from "react-router-dom";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { DonutChart } from "@/components/chart/DonutChart";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "@/components/ui/use-toast";
 
-import { Server, Cpu, HardDrive, Activity } from "lucide-react";
+import {
+  Server,
+  Cpu,
+  HardDrive,
+  Activity,
+  RefreshCw,
+  ChevronDown,
+  Clock,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ClusterMetrics() {
@@ -20,7 +35,11 @@ export default function ClusterMetrics() {
     costBreakdown: [],
   });
   const [timeRange, setTimeRange] = useState("24h");
+  const [refreshInterval, setRefreshInterval] = useState(10000);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const intervalRef = useRef(null);
   const [chartParams, setChartParams] = useState({
     window: "24h",
     aggregate: "cluster",
@@ -42,8 +61,94 @@ export default function ClusterMetrics() {
     limit: 25,
   });
 
+  // Refresh interval options
+  const refreshOptions = [
+    { label: "Every 10 seconds", value: 10000 },
+    { label: "No auto-refresh", value: null },
+    { label: "Every 30 seconds", value: 30000 },
+    { label: "Every 1 minute", value: 60000 },
+    { label: "Every 2 minutes", value: 120000 },
+    { label: "Every 5 minutes", value: 300000 },
+    { label: "Every 10 minutes", value: 600000 },
+  ];
+
   // Helper function to convert bytes to GB
   const bytesToGB = (bytes) => (bytes / 1024 ** 3).toFixed(2);
+
+  // Function to refresh all data
+  const refreshAllData = async (showToast = true) => {
+    setIsRefreshing(true);
+    try {
+      const queryParams = {
+        window: timeRange,
+        aggregate: "cluster",
+        accumulate: true,
+        external: false,
+        shareCost: 0,
+        shareTenancyCosts: true,
+        idle: true,
+        shareIdle: true,
+        idleByNode: true,
+        shareLabels: "",
+        shareNamespaces: "",
+        shareSplit: "weighted",
+        filter: "",
+      };
+
+      // Call both APIs concurrently
+      await Promise.all([
+        handleCallClusterData(queryParams),
+        handleClusterChartData({ ...chartParams, window: timeRange }),
+      ]);
+
+      // Update last updated timestamp
+      setLastUpdated(new Date());
+
+      // Show success toast notification
+      if (showToast) {
+        toast({
+          title: "Data Refreshed",
+          description: "Cluster metrics have been updated successfully.",
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.log("Error refreshing data:", error);
+
+      // Show error toast notification
+      if (showToast) {
+        toast({
+          title: "Refresh Failed",
+          description: "Failed to update cluster metrics. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Setup auto-refresh interval
+  useEffect(() => {
+    // Clear existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    // Set up new interval if selected
+    if (refreshInterval) {
+      intervalRef.current = setInterval(() => {
+        refreshAllData(false); // Don't show toast for auto-refresh
+      }, refreshInterval);
+    }
+
+    // Cleanup on component unmount or interval change
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [refreshInterval, timeRange, chartParams]);
 
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
@@ -67,6 +172,9 @@ export default function ClusterMetrics() {
 
     handleCallClusterData(queryParams);
     handleClusterChartData({ ...chartParams, window: rangeFromUrl });
+
+    // Set initial last updated timestamp
+    setLastUpdated(new Date());
   }, []);
 
   const handleCallClusterData = async (queryParams) => {
@@ -97,15 +205,15 @@ export default function ClusterMetrics() {
         }));
 
         // Calculate totals including idle
-        const totalCpuCost:any = Object.values(allocations).reduce(
+        const totalCpuCost: any = Object.values(allocations).reduce(
           (sum, c: any) => sum + c.cpuCost,
           0
         );
-        const totalRamCost:any = Object.values(allocations).reduce(
+        const totalRamCost: any = Object.values(allocations).reduce(
           (sum, c: any) => sum + c.ramCost,
           0
         );
-        const totalStorage:any = Object.values(allocations).reduce(
+        const totalStorage: any = Object.values(allocations).reduce(
           (sum, c: any) => sum + c.pvCost,
           0
         );
@@ -194,7 +302,7 @@ export default function ClusterMetrics() {
         const costData = Object.entries(allocations).map(([name, cluster]) => {
           const c = cluster as Allocation;
 
-          const totalClusterCost:any = Object.values(allocations).reduce(
+          const totalClusterCost: any = Object.values(allocations).reduce(
             (sum, item) => {
               const a = item as any;
               return sum + a.totalCost;
@@ -249,23 +357,80 @@ export default function ClusterMetrics() {
     }
   };
 
+  const handleRefreshIntervalChange = (interval) => {
+    setRefreshInterval(interval);
+  };
+
+  const getRefreshLabel = () => {
+    const option = refreshOptions.find((opt) => opt.value === refreshInterval);
+    return option ? option.label : "No auto-refresh";
+  };
+
   return (
     <Layout
       title="Cluster Metrics"
       subtitle="Node counts, status, and overall resource utilization"
     >
-      {/* Time Range Selector */}
-      <div className="flex items-center gap-2 mb-5">
-        {["1h", "6h", "24h", "7d", "30d"].map((range) => (
+      {/* Controls Section */}
+      <div className="flex items-center justify-between mb-5">
+        {/* Time Range Selector */}
+        <div className="flex items-center gap-2">
+          {["1h", "6h", "24h", "7d", "30d"].map((range) => (
+            <Button
+              key={range}
+              variant={timeRange === range ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleTimeRangeChange(range)}
+            >
+              {range}
+            </Button>
+          ))}
+        </div>
+
+        {/* Refresh Controls */}
+        <div className="flex items-center gap-2">
+          {/* Last Updated Indicator */}
+
           <Button
-            key={range}
-            variant={timeRange === range ? "default" : "outline"}
+            variant="outline"
             size="sm"
-            onClick={() => handleTimeRangeChange(range)}
+            onClick={() => refreshAllData(true)}
+            disabled={isRefreshing}
+            className="flex items-center gap-2"
           >
-            {range}
+            <RefreshCw
+              className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
+            Refresh
           </Button>
-        ))}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                {getRefreshLabel()}
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              {refreshOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option.value || "none"}
+                  onClick={() => handleRefreshIntervalChange(option.value)}
+                  className={`cursor-pointer text-gray-700 dark:text-white ${
+                    refreshInterval === option.value ? "bg-accent" : ""
+                  }`}
+                >
+                  {option.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -276,7 +441,7 @@ export default function ClusterMetrics() {
           ))}
         </div>
 
-           {/* Dynamic Cluster Overview */}
+        {/* Dynamic Cluster Overview */}
         <Card>
           <CardHeader>
             <CardTitle>Cluster Overview</CardTitle>
@@ -293,7 +458,9 @@ export default function ClusterMetrics() {
                       <Server className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <h4 className="font-medium  text-gray-700 dark:text-white">{cluster.name}</h4>
+                      <h4 className="font-medium  text-gray-700 dark:text-white">
+                        {cluster.name}
+                      </h4>
                       <p className="text-sm text-muted-foreground">
                         Kubernetes {cluster.version}
                       </p>
@@ -302,15 +469,21 @@ export default function ClusterMetrics() {
 
                   <div className="grid grid-cols-3 gap-6 text-sm">
                     <div className="text-center">
-                      <p className="font-medium  text-gray-700 dark:text-white">{cluster.cost}</p>
+                      <p className="font-medium  text-gray-700 dark:text-white">
+                        {cluster.cost}
+                      </p>
                       <p className="text-muted-foreground">Cost</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-medium  text-gray-700 dark:text-white">{cluster.cpu}</p>
+                      <p className="font-medium  text-gray-700 dark:text-white">
+                        {cluster.cpu}
+                      </p>
                       <p className="text-muted-foreground">CPU</p>
                     </div>
                     <div className="text-center">
-                      <p className="font-medium  text-gray-700 dark:text-white">{cluster.memory}</p>
+                      <p className="font-medium  text-gray-700 dark:text-white">
+                        {cluster.memory}
+                      </p>
                       <p className="text-muted-foreground">Memory</p>
                     </div>
                   </div>
@@ -360,8 +533,6 @@ export default function ClusterMetrics() {
             </div>
           </CardContent>
         </Card>
-
-     
       </div>
     </Layout>
   );
