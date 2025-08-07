@@ -38,7 +38,7 @@ const NodeMetricsDashboard = () => {
     efficiencyWarning: 50,
   };
 
-  const handleCallClusterData = async (params) => {
+  const handleCallNodeData = async (params) => {
     try {
       const response = await ClusterService.getClusterAllocationSummary(params);
       return response.data;
@@ -50,7 +50,7 @@ const NodeMetricsDashboard = () => {
 
   const fetchNodeData = async (queryParams) => {
     try {
-      const response = await handleCallClusterData(queryParams);
+      const response = await handleCallNodeData(queryParams);
 
       if (response.code !== 200 || !response.data?.sets?.[0]?.allocations) {
         throw new Error("Invalid response format");
