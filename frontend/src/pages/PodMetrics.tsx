@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  Search,
-  Filter,
   TrendingUp,
   Server,
   Database,
@@ -24,118 +22,42 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-// import { X, Cpu, Server, HardDrive, Clock, DollarSign } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import ClusterService from "@/services/ClusterService";
 import podService from "@/services/podService";
 import PodDetailsModal from "@/components/modals/podDetailMetrics";
+import { Days, Refresh } from "@/components/reusable/filterbar";
+import { useSearchParams } from "react-router-dom";
 
 const KubecostDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("totalCost");
   const [sortDirection, setSortDirection] = useState("desc");
-  const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
+const [searchParams, setSearchParams] = useSearchParams();
+const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
+  return searchParams.get("window") || "7d";
+});
 
-  // New pagination and filtering states
+  // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [showDateRangeModal, setShowDateRangeModal] = useState(false);
-  const [customDateRange, setCustomDateRange] = useState({
-    start: "",
-    end: "",
-  });
   const [showPodModal, setShowPodModal] = useState(false);
   const [selectedPod, setSelectedPod] = useState(null);
   const [podDetails, setPodDetails] = useState([]);
 
-  // Original useEffect - don't touch this
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-
-      const windowParam = getWindowFromSelectedTimeRange(selectedTimeRange);
-
-      const queryParams = {
-        window: windowParam,
-        aggregate: "pod",
-        accumulate: true,
-        external: false,
-        shareCost: 0,
-        shareTenancyCosts: true,
-        idle: true,
-        shareIdle: false,
-        idleByNode: false,
-        shareLabels: "",
-        shareNamespaces: "",
-        shareSplit: "weighted",
-        filter: "",
-        offset: 0,
-        limit: 200,
-        includeSharedCostBreakdown: true,
-        chartType: "costovertime",
-        costUnit: "cumulative",
-      };
-
-      try {
-        const res = await ClusterService.getClusterAllocationSummary(
-          queryParams
-        );
-        setData(res.data.data);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to fetch cost allocation data");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [selectedTimeRange]);
-
-  // New useEffect for pagination/filtering API calls
-  useEffect(() => {
-    const fetchPaginatedData = async () => {
-      if (!data) return; // Only run after initial data is loaded
-
-      const queryParams = {
-        window: selectedTimeRange,
-        aggregate: "pod",
-        accumulate: true,
-        external: false,
-        shareCost: 0,
-        shareTenancyCosts: true,
-        idle: true,
-        shareIdle: false,
-        idleByNode: false,
-        shareLabels: "",
-        shareNamespaces: "",
-        shareSplit: "weighted",
-        filter: searchTerm,
-        offset: (currentPage - 1) * itemsPerPage,
-        limit: itemsPerPage,
-        includeSharedCostBreakdown: true,
-        chartType: "costovertime",
-        costUnit: "cumulative",
-      };
-
-      try {
-        // Uncomment when ready to use paginated API
-        // const res = await ClusterService.getClusterAllocationSummary(queryParams);
-        // Handle paginated response here
-        console.log("Paginated query params:", queryParams);
-      } catch (err) {
-        console.error("Pagination fetch error:", err);
-      }
-    };
-
-    fetchPaginatedData();
-  }, [currentPage, itemsPerPage, searchTerm, selectedTimeRange, data]);
+  // Refresh states
+  const [refreshInterval, setRefreshInterval] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const getWindowFromSelectedTimeRange = (range: string): string => {
     switch (range) {
+      case "1h":
+        return "1h";
+      case "6h":
+        return "6h";
       case "24h":
         return "1d";
       case "48h":
@@ -153,7 +75,7 @@ const KubecostDashboard = () => {
       case "12m":
         return "365d";
       default:
-        // If it's custom, parse the dates and compute difference in days
+    
         if (range.includes(":")) {
           const [start, end] = range.split(":");
           const diffInMs = new Date(end).getTime() - new Date(start).getTime();
@@ -163,6 +85,60 @@ const KubecostDashboard = () => {
         return "1d"; // fallback
     }
   };
+
+
+  const fetchData = async (showToast = false) => {
+    setIsRefreshing(true);
+    if (!showToast) setLoading(true);
+
+    const windowParam = getWindowFromSelectedTimeRange(selectedTimeRange);
+
+    const queryParams = {
+      window: windowParam,
+      aggregate: "pod",
+      accumulate: true,
+      external: false,
+      shareCost: 0,
+      shareTenancyCosts: true,
+      idle: true,
+      shareIdle: false,
+      idleByNode: false,
+      shareLabels: "",
+      shareNamespaces: "",
+      shareSplit: "weighted",
+      filter: "",
+      offset: 0,
+      limit: 200,
+      includeSharedCostBreakdown: true,
+      chartType: "costovertime",
+      costUnit: "cumulative",
+    };
+
+    try {
+      const res = await ClusterService.getClusterAllocationSummary(queryParams);
+      setData(res.data.data);
+      setLastUpdated(new Date());
+      
+      if (showToast) {
+
+        console.log("Data refreshed successfully");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Failed to fetch cost allocation data");
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+
+useEffect(() => {
+
+  setSearchParams({ window: selectedTimeRange });
+  fetchData();
+}, [selectedTimeRange]);
+
 
   const handlePodDetails = async (name) => {
     setSelectedPod(name);
@@ -275,13 +251,7 @@ const KubecostDashboard = () => {
   }, [data]);
 
   const filteredAndSortedPods = useMemo(() => {
-    let filtered = processedData.pods.filter(
-      (pod) =>
-        pod.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pod.namespace.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const sorted = filtered.sort((a, b) => {
+    const sorted = processedData.pods.sort((a, b) => {
       const aVal = a[sortField] || 0;
       const bVal = b[sortField] || 0;
       const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
@@ -289,7 +259,7 @@ const KubecostDashboard = () => {
     });
 
     return sorted;
-  }, [processedData.pods, searchTerm, sortField, sortDirection]);
+  }, [processedData.pods, sortField, sortDirection]);
 
   // Pagination calculations
   const totalItems = filteredAndSortedPods.length;
@@ -352,18 +322,6 @@ const KubecostDashboard = () => {
     setCurrentPage(1); // Reset to first page
   };
 
-  const getTimeRangeOptions = () => [
-    { value: "1d", label: "Last 24h" },
-    { value: "2d", label: "Last 48h" },
-    { value: "7d", label: "Last 7 days" },
-    { value: "30d", label: "Last 30 days" },
-    { value: "60d", label: "Last 60 days" },
-    { value: "90d", label: "Last 90 days" },
-    { value: "6m", label: "Last 6 months" },
-    { value: "12m", label: "Last 12 months" },
-    { value: "custom", label: "Custom Range" },
-  ];
-
   const formatCurrency = (value) => `$${value?.toFixed(2) || "0.00"}`;
   const formatBytes = (bytes) => {
     if (!bytes) return "0 B";
@@ -377,7 +335,7 @@ const KubecostDashboard = () => {
     return sortDirection === "asc" ? "↑" : "↓";
   };
 
-  if (loading) {
+  if (loading && !data) {
     return (
       <Layout
         title="Pods & Containers"
@@ -433,117 +391,29 @@ const KubecostDashboard = () => {
       >
         <div className="min-h-screen p-6">
           <div className="mx-auto">
+            {/* Filter Bar */}
             <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-6">
               <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search pods by name or namespace..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                <div className="flex items-center gap-4">
+                  <Days 
+                    selectedTimeRange={selectedTimeRange}
+                    onTimeRangeChange={setSelectedTimeRange}
+                    variant="select" 
+                    buttonOptions={["1h", "6h", "24h", "7d", "30d"]}
                   />
                 </div>
-
-                <div className="flex gap-3 items-center">
-                  {/* Time Range Selector */}
-                  <div className="relative">
-                    <select
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white min-w-[140px]"
-                      value={selectedTimeRange}
-                      onChange={(e) => {
-                        if (e.target.value === "custom") {
-                          setShowDateRangeModal(true);
-                        } else {
-                          setSelectedTimeRange(e.target.value);
-                        }
-                      }}
-                    >
-                      {getTimeRangeOptions().map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Filter Button */}
-                  <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent flex items-center gap-2">
-                    <Filter className="w-4 h-4" />
-                    Filter
-                  </button>
+                
+                <div className="flex items-center gap-3">
+                  <Refresh
+                    onRefresh={fetchData}
+                    refreshInterval={refreshInterval}
+                    onRefreshIntervalChange={setRefreshInterval}
+                    isRefreshing={isRefreshing}
+                    lastUpdated={lastUpdated}
+                  />
                 </div>
               </div>
             </div>
-
-            {/* Date Range Modal */}
-            {showDateRangeModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-                  <h3 className="text-lg font-semibold mb-4">
-                    Select Date Range
-                  </h3>
-
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Start Date
-                        </label>
-                        <input
-                          type="date"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          value={customDateRange.start}
-                          onChange={(e) =>
-                            setCustomDateRange((prev) => ({
-                              ...prev,
-                              start: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          End Date
-                        </label>
-                        <input
-                          type="date"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          value={customDateRange.end}
-                          onChange={(e) =>
-                            setCustomDateRange((prev) => ({
-                              ...prev,
-                              end: e.target.value,
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 mt-6">
-                      <button
-                        className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                        onClick={() => setShowDateRangeModal(false)}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        onClick={() => {
-                          setSelectedTimeRange(
-                            `${customDateRange.start}:${customDateRange.end}`
-                          );
-                          setShowDateRangeModal(false);
-                        }}
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -556,7 +426,7 @@ const KubecostDashboard = () => {
                     <p className="text-2xl font-bold text">
                       {formatCurrency(processedData.totalCost)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">Last 7 days</p>
+                    <p className="text-xs text-gray-500 mt-1">Selected period</p>
                   </div>
                   <div className="p-3 bg-blue-100 rounded-lg">
                     <DollarSign className="w-6 h-6 text-blue-600" />

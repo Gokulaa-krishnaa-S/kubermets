@@ -28,3 +28,9 @@ dist-ssr
 # Others
 ExternalFiles
 cvenv
+
+.venv
+.env
+wvenv
+cvenv
+__pycache__
