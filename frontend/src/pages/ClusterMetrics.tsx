@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 import ClusterService from "../services/ClusterService";
 import { Layout } from "@/components/layout/Layout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
@@ -9,6 +9,7 @@ import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { DonutChart } from "@/components/chart/DonutChart";
 import { toast } from "@/components/ui/use-toast";
 import { FilterBar } from "@/components/reusable/filterbar";
+import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
 
 import {
   Server,
@@ -30,6 +31,10 @@ export default function ClusterMetrics() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const intervalRef = useRef(null);
+  const [selectedCluster, setSelectedCluster] = useState(null);
+  const [showClusterModal, setShowClusterModal] = useState(false);
+
   const [chartParams, setChartParams] = useState({
     window: "24h",
     aggregate: "cluster",
@@ -363,8 +368,13 @@ export default function ClusterMetrics() {
               {clusters.map((cluster, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
+                  onClick={() => {
+                    setSelectedCluster(cluster.name);
+                    setShowClusterModal(true);
+                  }}
+                  className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
                 >
+                  {" "}
                   <div className="flex items-center gap-4">
                     <div className="p-2 bg-primary/10 rounded-lg">
                       <Server className="w-4 h-4 text-primary" />
@@ -378,7 +388,6 @@ export default function ClusterMetrics() {
                       </p>
                     </div>
                   </div>
-
                   <div className="grid grid-cols-3 gap-6 text-sm">
                     <div className="text-center">
                       <p className="font-medium  text-gray-700 dark:text-white">
@@ -399,7 +408,6 @@ export default function ClusterMetrics() {
                       <p className="text-muted-foreground">Memory</p>
                     </div>
                   </div>
-
                   <StatusBadge status={cluster.status} />
                 </div>
               ))}
@@ -407,36 +415,11 @@ export default function ClusterMetrics() {
           </CardContent>
         </Card>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* CPU Usage Chart */}
-          <Card>
-            <CardContent className="p-6">
-              <GroupedBarChart
-                data={chartData.cpuData}
-                title="Cluster CPU Usage"
-                yAxisLabel="CPU Cores"
-                colors={["#3b82f6", "#10b981"]}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Memory Usage Chart */}
-          <Card>
-            <CardContent className="p-6">
-              <GroupedBarChart
-                data={chartData.memoryData}
-                title="Cluster Memory Usage"
-                yAxisLabel="Memory (GB)"
-                colors={["#f59e0b", "#84cc16"]}
-              />
-            </CardContent>
-          </Card>
-        </div>
+       
 
         {/* Cost Breakdown Donut Chart */}
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-6 pb-16">
             <div className="flex justify-center">
               <DonutChart
                 data={chartData.costBreakdown}
@@ -446,6 +429,30 @@ export default function ClusterMetrics() {
           </CardContent>
         </Card>
       </div>
+      {showClusterModal && selectedCluster && (
+        <>
+          {/* Overlay */}
+          <div
+            className="fixed inset-0 z-40  bg-opacity-40 backdrop-blur-sm transition-opacity"
+            style={{ pointerEvents: 'auto' }}
+          />
+          {/* Centered Modal */}
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 mt-2"
+            style={{ pointerEvents: 'none' }}
+          >
+            <div className="h-[90vh]" style={{ pointerEvents: 'auto', maxWidth: '95vw', width: '100%', height: '80vh' }}>
+              <ClusterDetailModal
+                clusterName={selectedCluster}
+                onClose={() => {
+                  setShowClusterModal(false);
+                  setSelectedCluster(null);
+                }}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </Layout>
   );
 }

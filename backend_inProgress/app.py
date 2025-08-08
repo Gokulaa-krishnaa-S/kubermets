@@ -111,11 +111,11 @@ def background_data_refresh():
                 # Refresh cluster data
                 kubecost_service.get_cluster_data(window=window, force_refresh=True)
                 
-                # # Refresh node data
-                # kubecost_service.get_node_data(window=window, force_refresh=True)
+                # Refresh node data
+                kubecost_service.get_node_data(window=window, force_refresh=True)
                 
-                # # Refresh pod data
-                # kubecost_service.get_pod_data(window=window, force_refresh=True)
+                # Refresh pod data
+                kubecost_service.get_pod_data(window=window, force_refresh=True)
                 
                 logger.info(f"Refreshed data for window: {window}")
                 
