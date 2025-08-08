@@ -61,7 +61,7 @@ const NodeMetricsDashboard = () => {
       }
 
       const allocations = response.data.sets[0].allocations;
-      const activeNodes:any = Object.values(allocations).filter(
+      const activeNodes: any = Object.values(allocations).filter(
         (node) =>
           !node["name"].startsWith("__") &&
           node["cpuCoreRequestAverage"] !== undefined
@@ -112,7 +112,8 @@ const NodeMetricsDashboard = () => {
         if (ramRequestBytes > 0 && ramUsageBytes / ramRequestBytes > 1) {
           console.warn(
             `High RAM utilization for ${node["name"]}: ${(
-              (ramUsageBytes / ramRequestBytes) * 100
+              (ramUsageBytes / ramRequestBytes) *
+              100
             ).toFixed(1)}%`
           );
         }
@@ -181,6 +182,7 @@ const NodeMetricsDashboard = () => {
         window: timeRange,
         offset: 0,
         limit: 25,
+        force_refresh: true,
       };
 
       await fetchNodeData(queryParams);
@@ -240,7 +242,7 @@ const NodeMetricsDashboard = () => {
     try {
       setTimeRange(range);
       setSearchParams({ window: range });
-      
+
       const queryParams = {
         accumulate: true,
         aggregate: "node",
@@ -280,8 +282,8 @@ const NodeMetricsDashboard = () => {
     if (!start || !end) return "N/A";
 
     try {
-      const startTime:any = new Date(start);
-      const endTime:any = new Date(end);
+      const startTime: any = new Date(start);
+      const endTime: any = new Date(end);
       const diffMs = endTime - startTime;
 
       if (diffMs < 0) return "N/A";
@@ -298,9 +300,21 @@ const NodeMetricsDashboard = () => {
 
   const StatusBadge = ({ status }) => {
     const statusConfig = {
-      healthy: { bg: "bg-success", text: "text-success-foreground", label: "Healthy" },
-      warning: { bg: "bg-warning", text: "text-warning-foreground", label: "Warning" },
-      critical: { bg: "bg-destructive", text: "text-destructive-foreground", label: "Critical" },
+      healthy: {
+        bg: "bg-success",
+        text: "text-success-foreground",
+        label: "Healthy",
+      },
+      warning: {
+        bg: "bg-warning",
+        text: "text-warning-foreground",
+        label: "Warning",
+      },
+      critical: {
+        bg: "bg-destructive",
+        text: "text-destructive-foreground",
+        label: "Critical",
+      },
     };
 
     const config = statusConfig[status] || statusConfig.healthy;
@@ -328,7 +342,9 @@ const NodeMetricsDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {icon}
-              <span className="text-sm font-medium text-muted-foreground">{title}</span>
+              <span className="text-sm font-medium text-muted-foreground">
+                {title}
+              </span>
             </div>
           </div>
           <div className="mt-2">
@@ -363,7 +379,12 @@ const NodeMetricsDashboard = () => {
   const pieData = Object.entries(statusDistribution).map(([status, count]) => ({
     name: status.charAt(0).toUpperCase() + status.slice(1),
     value: count,
-    color: status === "healthy" ? "hsl(var(--success))" : status === "warning" ? "hsl(var(--warning))" : "hsl(var(--destructive))",
+    color:
+      status === "healthy"
+        ? "hsl(var(--success))"
+        : status === "warning"
+        ? "hsl(var(--warning))"
+        : "hsl(var(--destructive))",
   }));
 
   if (loading) {
@@ -406,7 +427,7 @@ const NodeMetricsDashboard = () => {
         <FilterBar
           selectedTimeRange={timeRange}
           onTimeRangeChange={handleTimeRangeChange}
-           timeRangeVariant="select" // ✅
+          timeRangeVariant="select" // ✅
           timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
           onFilterClick={handleFilterClick}
           showFilter={false}

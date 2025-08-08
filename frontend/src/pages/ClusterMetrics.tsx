@@ -1,4 +1,4 @@
-import { useEffect, useState,useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import ClusterService from "../services/ClusterService";
 import { Layout } from "@/components/layout/Layout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
@@ -11,12 +11,7 @@ import { toast } from "@/components/ui/use-toast";
 import { FilterBar } from "@/components/reusable/filterbar";
 import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
 
-import {
-  Server,
-  Cpu,
-  HardDrive,
-  Activity,
-} from "lucide-react";
+import { Server, Cpu, HardDrive, Activity } from "lucide-react";
 
 export default function ClusterMetrics() {
   const [clusterStats, setClusterStats] = useState([]);
@@ -77,6 +72,7 @@ export default function ClusterMetrics() {
         shareNamespaces: "",
         shareSplit: "weighted",
         filter: "",
+        force_refresh: true,
       };
 
       // Call both APIs concurrently
@@ -337,7 +333,7 @@ export default function ClusterMetrics() {
       <FilterBar
         selectedTimeRange={timeRange}
         onTimeRangeChange={handleTimeRangeChange}
-          timeRangeVariant="select" // ✅
+        timeRangeVariant="select" // ✅
         timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
         onFilterClick={handleFilterClick}
         showFilter={false}
@@ -415,8 +411,6 @@ export default function ClusterMetrics() {
           </CardContent>
         </Card>
 
-       
-
         {/* Cost Breakdown Donut Chart */}
         <Card>
           <CardContent className="p-6 pb-16">
@@ -434,14 +428,22 @@ export default function ClusterMetrics() {
           {/* Overlay */}
           <div
             className="fixed inset-0 z-40  bg-opacity-40 backdrop-blur-sm transition-opacity"
-            style={{ pointerEvents: 'auto' }}
+            style={{ pointerEvents: "auto" }}
           />
           {/* Centered Modal */}
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 mt-2"
-            style={{ pointerEvents: 'none' }}
+            style={{ pointerEvents: "none" }}
           >
-            <div className="h-[90vh]" style={{ pointerEvents: 'auto', maxWidth: '95vw', width: '100%', height: '80vh' }}>
+            <div
+              className="h-[90vh]"
+              style={{
+                pointerEvents: "auto",
+                maxWidth: "95vw",
+                width: "100%",
+                height: "80vh",
+              }}
+            >
               <ClusterDetailModal
                 clusterName={selectedCluster}
                 onClose={() => {

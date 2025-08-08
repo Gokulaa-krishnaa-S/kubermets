@@ -183,6 +183,25 @@ class PodMetric(Base):
     __table_args__ = (Index("idx_pod_time_window", "pod_id", "timestamp", "window"),)
 
 
+class KubernetesInstance(Base):
+    __tablename__ = "kubernetes_instances"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(Text)
+    # namespace = Column(String(100), nullable=False)  # K8s namespace where deployed
+    api_url = Column(String(255), nullable=False)
+    client_name = Column(String(100))
+    status = Column(String(20), default="active")  # active/inactive
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # # Optional: Link to clusters if needed
+    # clusters = relationship(
+    #     "Cluster", back_populates="instance", cascade="all, delete-orphan"
+    # )
+
+
 # Database connection setup
 class DatabaseManager:
     def __init__(self):

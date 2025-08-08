@@ -39,6 +39,16 @@ class ClusterService {
       throw error;
     }
   }
+  async getInstanceList() {
+    try {
+      const response: AxiosResponse = await this.api.get("/instance");
+      console.log(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching cluster summary:", error);
+      throw error;
+    }
+  }
 }
 
 export default new ClusterService();

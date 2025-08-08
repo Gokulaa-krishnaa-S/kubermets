@@ -39,6 +39,8 @@ const metricItems = [
   { title: "Cluster Metrics", url: "/cluster", icon: Server },
   { title: "Node Metrics", url: "/nodes", icon: Box },
   { title: "Pods & Containers", url: "/pods", icon: Layers },
+  { title: "Instances", url: "/instance", icon: Layers },
+
   // { title: "Deployments", url: "/deployments", icon: Activity },
   // { title: "Control Plane", url: "/control-plane", icon: Shield },
   // { title: "Resource Usage", url: "/resources", icon: TrendingUp },

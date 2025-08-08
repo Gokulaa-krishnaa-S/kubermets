@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 import K8sDashboard from "./pages/K8newDashbaord";
 import { AlertsAndCost } from "@/pages/AlertsAndCost";
 import { BillingAndCost } from "./pages/BillingAndCost";
+import KubernetesInstanceList from "./pages/kubernetesInstance";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/alerts-events" element={<AlertsAndCost />} />
           <Route path="/billing-cost" element={<BillingAndCost />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/instance" element={<KubernetesInstanceList />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
