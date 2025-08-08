@@ -293,7 +293,7 @@ export const Days: React.FC<DaysProps> = ({
                                         onTimeRangeChange(option.value);
                                         setIsDropdownOpen(false);
                                     }}
-                                    className={`cursor-pointer px-2 py-1.5 text-sm rounded hover:bg-gray-100 ${selectedTimeRange === option.value ? "text-green-600 font-medium" : "text-gray-700"
+                                    className={`cursor-pointer px-2 py-1.5 text-sm rounded hover:bg-gray-100 colors-h3-text ${selectedTimeRange === option.value ? "text-green-600 font-medium" : "text-gray-700"
                                         }`}
                                 >
                                     {option.label}
@@ -444,8 +444,9 @@ export const Refresh: React.FC<RefreshProps> = ({
                     {refreshOptions.map((option) => (
                         <DropdownMenuItem
                             key={option.value}
+                            
                             onClick={() => onRefreshIntervalChange(option.value)}
-                            className={`cursor-pointer ${refreshInterval === option.value ? "bg-accent" : ""
+                            className={`cursor-pointer text-gray-700 dark:text-white ${refreshInterval === option.value ? "bg-accent" : ""
                                 }`}
                         >
                             {option.label}
