@@ -9,6 +9,8 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  Search,
+  X,
 } from "lucide-react";
 import {
   XAxis,
@@ -28,6 +30,47 @@ import podService from "@/services/podService";
 import PodDetailsModal from "@/components/modals/podDetailMetrics";
 import { Days, Refresh } from "@/components/reusable/filterbar";
 import { useSearchParams } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+
+// Search Component
+interface SearchProps {
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+const SearchInput: React.FC<SearchProps> = ({
+  searchTerm,
+  onSearchChange,
+  placeholder = "Search pods...",
+  className = "",
+}) => {
+  return (
+    <div className={`relative ${className}`}>
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <Search className="w-4 h-4 text-gray-400" />
+      </div>
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={(e) => onSearchChange(e.target.value)}
+        placeholder={placeholder}
+        className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+      />
+      {searchTerm && (
+        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+          <button
+            onClick={() => onSearchChange("")}
+            className="text-gray-400 hover:text-gray-600 focus:outline-none"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const KubecostDashboard = () => {
   const [data, setData] = useState(null);
@@ -35,10 +78,13 @@ const KubecostDashboard = () => {
   const [error, setError] = useState(null);
   const [sortField, setSortField] = useState("totalCost");
   const [sortDirection, setSortDirection] = useState("desc");
-const [searchParams, setSearchParams] = useSearchParams();
-const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
-  return searchParams.get("window") || "7d";
-});
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
+    return searchParams.get("window") || "7d";
+  });
+
+  // Search state
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -75,7 +121,6 @@ const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
       case "12m":
         return "365d";
       default:
-    
         if (range.includes(":")) {
           const [start, end] = range.split(":");
           const diffInMs = new Date(end).getTime() - new Date(start).getTime();
@@ -85,7 +130,6 @@ const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
         return "1d"; // fallback
     }
   };
-
 
   const fetchData = async (showToast = false) => {
     setIsRefreshing(true);
@@ -108,7 +152,7 @@ const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
       shareSplit: "weighted",
       filter: "",
       offset: 0,
-      limit: 200,
+      limit: 2000,
       includeSharedCostBreakdown: true,
       chartType: "costovertime",
       costUnit: "cumulative",
@@ -118,9 +162,8 @@ const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
       const res = await ClusterService.getClusterAllocationSummary(queryParams);
       setData(res.data.data);
       setLastUpdated(new Date());
-      
-      if (showToast) {
 
+      if (showToast) {
         console.log("Data refreshed successfully");
       }
     } catch (err) {
@@ -132,13 +175,10 @@ const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
     }
   };
 
-
-useEffect(() => {
-
-  setSearchParams({ window: selectedTimeRange });
-  fetchData();
-}, [selectedTimeRange]);
-
+  useEffect(() => {
+    setSearchParams({ window: selectedTimeRange });
+    fetchData();
+  }, [selectedTimeRange]);
 
   const handlePodDetails = async (name) => {
     setSelectedPod(name);
@@ -251,7 +291,19 @@ useEffect(() => {
   }, [data]);
 
   const filteredAndSortedPods = useMemo(() => {
-    const sorted = processedData.pods.sort((a, b) => {
+    // Filter pods based on search term
+    const filtered = processedData.pods.filter((pod) => {
+      if (!searchTerm) return true;
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        pod.name.toLowerCase().includes(searchLower) ||
+        pod.namespace.toLowerCase().includes(searchLower) ||
+        pod.id.toLowerCase().includes(searchLower)
+      );
+    });
+
+    // Sort filtered pods
+    const sorted = filtered.sort((a, b) => {
       const aVal = a[sortField] || 0;
       const bVal = b[sortField] || 0;
       const comparison = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
@@ -259,7 +311,12 @@ useEffect(() => {
     });
 
     return sorted;
-  }, [processedData.pods, sortField, sortDirection]);
+  }, [processedData.pods, sortField, sortDirection, searchTerm]);
+
+  // Reset pagination when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   // Pagination calculations
   const totalItems = filteredAndSortedPods.length;
@@ -319,7 +376,7 @@ useEffect(() => {
 
   const handleItemsPerPageChange = (newItemsPerPage) => {
     setItemsPerPage(newItemsPerPage);
-    setCurrentPage(1); // Reset to first page
+    setCurrentPage(1);
   };
 
   const formatCurrency = (value) => `$${value?.toFixed(2) || "0.00"}`;
@@ -391,18 +448,29 @@ useEffect(() => {
       >
         <div className="min-h-screen p-6">
           <div className="mx-auto">
-            {/* Filter Bar */}
+            {/* Enhanced Filter Bar with Search */}
             <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-6">
               <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                {/* Left side - Time Range */}
                 <div className="flex items-center gap-4">
-                  <Days 
+                  <Days
                     selectedTimeRange={selectedTimeRange}
                     onTimeRangeChange={setSelectedTimeRange}
-                    variant="select" 
+                    variant="select"
                     buttonOptions={["1h", "6h", "24h", "7d", "30d"]}
                   />
                 </div>
-                
+
+                {/* Center - Search */}
+                <div className="flex-1 max-w-md">
+                  <SearchInput
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    placeholder="Search pods by pod name"
+                  />
+                </div>
+
+                {/* Right side - Refresh Controls */}
                 <div className="flex items-center gap-3">
                   <Refresh
                     onRefresh={fetchData}
@@ -413,18 +481,44 @@ useEffect(() => {
                   />
                 </div>
               </div>
+
+              {/* Search Results Info */}
+              {searchTerm && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <span>
+                      {totalItems === 0 ? "No pods found" :
+                        totalItems === 1 ? "1 pod found" :
+                          `${totalItems} pods found`}
+                      {searchTerm && ` matching "${searchTerm}"`}
+                    </span>
+                    {searchTerm && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSearchTerm("")}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        Clear search
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Summary Cards */}
+            {/* Summary Cards - Updated to reflect filtered data */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
-                      Total Cost
+                      {searchTerm ? "Filtered" : "Total"} Cost
                     </p>
                     <p className="text-2xl font-bold text">
-                      {formatCurrency(processedData.totalCost)}
+                      {formatCurrency(
+                        filteredAndSortedPods.reduce((sum, pod) => sum + pod.totalCost, 0)
+                      )}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">Selected period</p>
                   </div>
@@ -438,10 +532,10 @@ useEffect(() => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
-                      Active Pods
+                      {searchTerm ? "Matching" : "Active"} Pods
                     </p>
                     <p className="text-2xl font-bold text">
-                      {processedData.pods.length}
+                      {filteredAndSortedPods.length}
                     </p>
                     <p className="text-xs text-green-600 mt-1">Running</p>
                   </div>
@@ -475,14 +569,18 @@ useEffect(() => {
                       Avg Efficiency
                     </p>
                     <p className="text-2xl font-bold text">
-                      {(
-                        (processedData.pods.reduce(
-                          (sum, pod) => sum + (pod.totalEfficiency || 0),
-                          0
-                        ) /
-                          processedData.pods.length) *
-                        100
-                      ).toFixed(1)}
+                      {filteredAndSortedPods.length > 0 ? (
+                        (
+                          (filteredAndSortedPods.reduce(
+                            (sum, pod) => sum + (pod.totalEfficiency || 0),
+                            0
+                          ) /
+                            filteredAndSortedPods.length) *
+                          100
+                        ).toFixed(1)
+                      ) : (
+                        "0"
+                      )}
                       %
                     </p>
                     <p className="text-xs text-purple-600 mt-1">
@@ -495,6 +593,7 @@ useEffect(() => {
                 </div>
               </div>
             </div>
+
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -829,9 +928,6 @@ useEffect(() => {
                       >
                         Pod Name {getSortIcon("name")}
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Namespace
-                      </th>
                       <th
                         className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("cpuCost")}
@@ -862,7 +958,7 @@ useEffect(() => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedPods.map((pod, index) => (
+                    {paginatedPods.map((pod) => (
                       <tr
                         key={pod.id}
                         className="hover:bg-gray-50 transition-colors"
@@ -878,16 +974,10 @@ useEffect(() => {
                                 {pod.name}
                               </div>
                               <div className="text-xs text-gray-500">
-                                CPU: {pod.cpuCoreUsageAverage?.toFixed(4)} /{" "}
-                                {pod.cpuCoreRequestAverage} cores
+                                CPU: {pod.cpuCoreUsageAverage?.toFixed(4)} / {pod.cpuCoreRequestAverage} cores
                               </div>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                            {pod.namespace}
-                          </span>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="text-sm font-medium text-gray-900">
@@ -912,13 +1002,12 @@ useEffect(() => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              pod.totalEfficiency * 100 > 50
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pod.totalEfficiency * 100 > 50
                                 ? "bg-green-100 text-green-800"
                                 : pod.totalEfficiency * 100 > 20
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
                           >
                             {(pod.totalEfficiency * 100).toFixed(1)}%
                           </div>
@@ -933,6 +1022,7 @@ useEffect(() => {
                   </tbody>
                 </table>
               </div>
+
 
               {/* Enhanced Pagination Controls */}
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
@@ -998,11 +1088,10 @@ useEffect(() => {
                               <button
                                 key={pageNum}
                                 onClick={() => handlePageChange(pageNum)}
-                                className={`px-3 py-1 text-sm border rounded ${
-                                  currentPage === pageNum
+                                className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
                                     ? "bg-blue-500 text-white border-blue-500"
                                     : "border-gray-300 hover:bg-gray-100"
-                                }`}
+                                  }`}
                               >
                                 {pageNum}
                               </button>
