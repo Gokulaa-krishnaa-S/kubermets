@@ -83,7 +83,7 @@ class ClusterMetric(Base):
     __tablename__ = "cluster_metrics"
 
     id = Column(Integer, primary_key=True)
-    cluster_id = Column(Integer, ForeignKey("clusters.id"), nullable=False)
+    cluster_id = Column(Integer, ForeignKey("clusters.id"), nullable=True)
     timestamp = Column(DateTime, nullable=False)
     window = Column(String(10), nullable=False)  # 1h, 6h, 24h, 7d, 30d
 
@@ -100,7 +100,8 @@ class ClusterMetric(Base):
 
     # Additional metadata
     raw_data = Column(JSON)  # Store full API response for debugging
-
+    argument_hash = Column(String(255), nullable=True)
+    query_params = Column(JSON, nullable=True)
     # Relationships
     cluster = relationship("Cluster", back_populates="cluster_metrics")
 
@@ -114,7 +115,7 @@ class NodeMetric(Base):
     __tablename__ = "node_metrics"
 
     id = Column(Integer, primary_key=True)
-    node_id = Column(Integer, ForeignKey("nodes.id"), nullable=False)
+    node_id = Column(Integer, ForeignKey("nodes.id"), nullable=True)
     timestamp = Column(DateTime, nullable=False)
     window = Column(String(10), nullable=False)
 
@@ -135,6 +136,8 @@ class NodeMetric(Base):
 
     # Additional metadata
     raw_data = Column(JSON)
+    argument_hash = Column(String(255), nullable=True)
+    query_params = Column(JSON, nullable=True)
 
     # Relationships
     node = relationship("Node", back_populates="node_metrics")
@@ -147,7 +150,7 @@ class PodMetric(Base):
     __tablename__ = "pod_metrics"
 
     id = Column(Integer, primary_key=True)
-    pod_id = Column(Integer, ForeignKey("pods.id"), nullable=False)
+    pod_id = Column(Integer, ForeignKey("pods.id"), nullable=True)
     timestamp = Column(DateTime, nullable=False)
     window = Column(String(10), nullable=False)
 
@@ -170,12 +173,33 @@ class PodMetric(Base):
 
     # Additional metadata
     raw_data = Column(JSON)
+    argument_hash = Column(String(255), nullable=True)
+    query_params = Column(JSON, nullable=True)
 
     # Relationships
     pod = relationship("Pod", back_populates="pod_metrics")
 
     # Composite index for time-based queries
     __table_args__ = (Index("idx_pod_time_window", "pod_id", "timestamp", "window"),)
+
+
+class KubernetesInstance(Base):
+    __tablename__ = "kubernetes_instances"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(Text)
+    # namespace = Column(String(100), nullable=False)  # K8s namespace where deployed
+    api_url = Column(String(255), nullable=False)
+    client_name = Column(String(100))
+    status = Column(String(20), default="active")  # active/inactive
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # # Optional: Link to clusters if needed
+    # clusters = relationship(
+    #     "Cluster", back_populates="instance", cascade="all, delete-orphan"
+    # )
 
 
 # Database connection setup

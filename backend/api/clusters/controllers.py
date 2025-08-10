@@ -71,7 +71,10 @@ def summaryApi():
     print(full_url, "---------")
 
     try:
-        res = requests.get(full_url)
+        headers = {"Authorization": f"Basic YWRtaW46QWRtaW5AMTIjJA=="}
+
+        res = requests.get(full_url, headers=headers)
+        # res = requests.get(full_url)
         res.raise_for_status()
         data = res.json()
         return {"status": "success", "data": data}
