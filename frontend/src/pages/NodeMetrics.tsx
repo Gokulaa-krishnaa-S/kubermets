@@ -20,6 +20,7 @@ import ClusterService from "@/services/ClusterService";
 import { useSearchParams } from "react-router-dom";
 import { FilterBar } from "@/components/reusable/filterbar";
 import { toast } from "@/components/ui/use-toast";
+import DomainDropdown from "@/components/reusable/domainDropdown";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
@@ -31,7 +32,13 @@ const NodeMetricsDashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedHash, setSelectedHash] = useState<string>("");
 
+  const handleDomainSelect = (hash: string) => {
+    console.log("Selected Unique Hash:", hash);
+    setSelectedHash(hash);
+    refreshAllData(true);
+  };
   // Configuration for thresholds
   const thresholds = {
     cpuCritical: 90,
@@ -183,6 +190,7 @@ const NodeMetricsDashboard = () => {
         offset: 0,
         limit: 25,
         force_refresh: true,
+        domain: selectedHash,
       };
 
       await fetchNodeData(queryParams);
@@ -232,6 +240,7 @@ const NodeMetricsDashboard = () => {
       window: rangeFromUrl,
       offset: 0,
       limit: 25,
+      domain: selectedHash,
     };
 
     fetchNodeData(queryParams);
@@ -262,6 +271,7 @@ const NodeMetricsDashboard = () => {
         window: range,
         offset: 0,
         limit: 25,
+        domain: selectedHash,
       };
 
       fetchNodeData(queryParams);
@@ -441,6 +451,10 @@ const NodeMetricsDashboard = () => {
         />
 
         <div className="mx-auto space-y-6">
+          <div className="flex items-center gap-4">
+            <DomainDropdown onSelect={handleDomainSelect} />
+            {/* {selectedHash && <p className="mt-3 text-green-600">Selected: {selectedHash}</p>} */}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <MetricCard
               title="Active Nodes"
@@ -449,6 +463,7 @@ const NodeMetricsDashboard = () => {
               icon={<Server className="w-5 h-5 text-primary" />}
               status="info"
             />
+
             <MetricCard
               title="Total Cost"
               value={`${summaryStats["totalCost"]?.toFixed(2) || "0.00"}`}

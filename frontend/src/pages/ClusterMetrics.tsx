@@ -10,7 +10,7 @@ import { DonutChart } from "@/components/chart/DonutChart";
 import { toast } from "@/components/ui/use-toast";
 import { FilterBar } from "@/components/reusable/filterbar";
 import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
-
+import DomainDropdown from "@/components/reusable/domainDropdown";
 import { Server, Cpu, HardDrive, Activity } from "lucide-react";
 
 export default function ClusterMetrics() {
@@ -29,7 +29,13 @@ export default function ClusterMetrics() {
   const intervalRef = useRef(null);
   const [selectedCluster, setSelectedCluster] = useState(null);
   const [showClusterModal, setShowClusterModal] = useState(false);
+  const [selectedHash, setSelectedHash] = useState<string>("");
 
+  const handleDomainSelect = (hash: string) => {
+    console.log("Selected Unique Hash:", hash);
+    setSelectedHash(hash);
+    refreshAllData(true);
+  };
   const [chartParams, setChartParams] = useState({
     window: "24h",
     aggregate: "cluster",
@@ -73,6 +79,7 @@ export default function ClusterMetrics() {
         shareSplit: "weighted",
         filter: "",
         force_refresh: true,
+        domain:selectedHash
       };
 
       // Call both APIs concurrently
@@ -329,6 +336,7 @@ export default function ClusterMetrics() {
       title="Cluster Metrics"
       subtitle="Node counts, status, and overall resource utilization"
     >
+
       {/* Filter Bar */}
       <FilterBar
         selectedTimeRange={timeRange}
@@ -347,6 +355,10 @@ export default function ClusterMetrics() {
       />
 
       <div className="space-y-6">
+        <div className="flex items-center gap-4">
+            <DomainDropdown onSelect={handleDomainSelect} />
+            {/* {selectedHash && <p className="mt-3 text-green-600">Selected: {selectedHash}</p>} */}
+          </div>
         {/* Dynamic Metric Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {clusterStats.map((stat, index) => (

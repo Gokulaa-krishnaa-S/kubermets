@@ -31,6 +31,7 @@ import PodDetailsModal from "@/components/modals/podDetailMetrics";
 import { Days, Refresh } from "@/components/reusable/filterbar";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import DomainDropdown from "@/components/reusable/domainDropdown";
 
 // Search Component
 interface SearchProps {
@@ -97,7 +98,13 @@ const KubecostDashboard = () => {
   const [refreshInterval, setRefreshInterval] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [selectedHash, setSelectedHash] = useState<string>("");
 
+  const handleDomainSelect = (hash: string) => {
+    console.log("Selected Unique Hash:", hash);
+    setSelectedHash(hash);
+    fetchData(true);
+  };
   const getWindowFromSelectedTimeRange = (range: string): string => {
     switch (range) {
       case "1h":
@@ -156,6 +163,8 @@ const KubecostDashboard = () => {
       includeSharedCostBreakdown: true,
       chartType: "costovertime",
       costUnit: "cumulative",
+      domain: selectedHash || "",
+      // force_refresh: true,
     };
 
     try {
@@ -469,7 +478,10 @@ const KubecostDashboard = () => {
                     placeholder="Search pods by pod name"
                   />
                 </div>
-
+                <div className="flex items-center gap-4">
+                  <DomainDropdown onSelect={handleDomainSelect} />
+                  {/* {selectedHash && <p className="mt-3 text-green-600">Selected: {selectedHash}</p>} */}
+                </div>
                 {/* Right side - Refresh Controls */}
                 <div className="flex items-center gap-3">
                   <Refresh
@@ -487,9 +499,11 @@ const KubecostDashboard = () => {
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between text-sm text-gray-600">
                     <span>
-                      {totalItems === 0 ? "No pods found" :
-                        totalItems === 1 ? "1 pod found" :
-                          `${totalItems} pods found`}
+                      {totalItems === 0
+                        ? "No pods found"
+                        : totalItems === 1
+                        ? "1 pod found"
+                        : `${totalItems} pods found`}
                       {searchTerm && ` matching "${searchTerm}"`}
                     </span>
                     {searchTerm && (
@@ -517,10 +531,15 @@ const KubecostDashboard = () => {
                     </p>
                     <p className="text-2xl font-bold text">
                       {formatCurrency(
-                        filteredAndSortedPods.reduce((sum, pod) => sum + pod.totalCost, 0)
+                        filteredAndSortedPods.reduce(
+                          (sum, pod) => sum + pod.totalCost,
+                          0
+                        )
                       )}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">Selected period</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Selected period
+                    </p>
                   </div>
                   <div className="p-3 bg-blue-100 rounded-lg">
                     <DollarSign className="w-6 h-6 text-blue-600" />
@@ -569,18 +588,16 @@ const KubecostDashboard = () => {
                       Avg Efficiency
                     </p>
                     <p className="text-2xl font-bold text">
-                      {filteredAndSortedPods.length > 0 ? (
-                        (
-                          (filteredAndSortedPods.reduce(
-                            (sum, pod) => sum + (pod.totalEfficiency || 0),
-                            0
-                          ) /
-                            filteredAndSortedPods.length) *
-                          100
-                        ).toFixed(1)
-                      ) : (
-                        "0"
-                      )}
+                      {filteredAndSortedPods.length > 0
+                        ? (
+                            (filteredAndSortedPods.reduce(
+                              (sum, pod) => sum + (pod.totalEfficiency || 0),
+                              0
+                            ) /
+                              filteredAndSortedPods.length) *
+                            100
+                          ).toFixed(1)
+                        : "0"}
                       %
                     </p>
                     <p className="text-xs text-purple-600 mt-1">
@@ -593,7 +610,6 @@ const KubecostDashboard = () => {
                 </div>
               </div>
             </div>
-
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -974,7 +990,8 @@ const KubecostDashboard = () => {
                                 {pod.name}
                               </div>
                               <div className="text-xs text-gray-500">
-                                CPU: {pod.cpuCoreUsageAverage?.toFixed(4)} / {pod.cpuCoreRequestAverage} cores
+                                CPU: {pod.cpuCoreUsageAverage?.toFixed(4)} /{" "}
+                                {pod.cpuCoreRequestAverage} cores
                               </div>
                             </div>
                           </div>
@@ -1002,12 +1019,13 @@ const KubecostDashboard = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${pod.totalEfficiency * 100 > 50
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              pod.totalEfficiency * 100 > 50
                                 ? "bg-green-100 text-green-800"
                                 : pod.totalEfficiency * 100 > 20
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
                           >
                             {(pod.totalEfficiency * 100).toFixed(1)}%
                           </div>
@@ -1022,7 +1040,6 @@ const KubecostDashboard = () => {
                   </tbody>
                 </table>
               </div>
-
 
               {/* Enhanced Pagination Controls */}
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
@@ -1088,10 +1105,11 @@ const KubecostDashboard = () => {
                               <button
                                 key={pageNum}
                                 onClick={() => handlePageChange(pageNum)}
-                                className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
+                                className={`px-3 py-1 text-sm border rounded ${
+                                  currentPage === pageNum
                                     ? "bg-blue-500 text-white border-blue-500"
                                     : "border-gray-300 hover:bg-gray-100"
-                                  }`}
+                                }`}
                               >
                                 {pageNum}
                               </button>

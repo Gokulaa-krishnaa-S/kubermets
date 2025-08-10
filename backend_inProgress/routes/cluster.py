@@ -217,6 +217,7 @@ def list_instances():
                 "api_url": inst.api_url,
                 "client_name": inst.client_name,
                 "status": inst.status,
+                "unique_hash": inst.unique_hash,
                 "created_at": inst.created_at.isoformat(),
                 "updated_at": inst.updated_at.isoformat(),
             }
