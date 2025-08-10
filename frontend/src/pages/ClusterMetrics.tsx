@@ -5,7 +5,6 @@ import { MetricCard } from "@/components/dashboard/MetricCard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSearchParams } from "react-router-dom";
-import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { DonutChart } from "@/components/chart/DonutChart";
 import { toast } from "@/components/ui/use-toast";
 import { FilterBar } from "@/components/reusable/filterbar";
