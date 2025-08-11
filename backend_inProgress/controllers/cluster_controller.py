@@ -24,18 +24,19 @@ def summaryApi():
     force_refresh = request.args.get("force_refresh", "false").lower() == "true"
     offset = request.args.get("offset", "0")
     limit = request.args.get("limit", "2")
+    domain = request.args.get("domain" , '')
     print(force_refresh,"--------FORCE REFRESH")
     try:
         # Route to appropriate service method based on aggregation type
         if aggregate == "cluster":
-            result = kubecost_service.get_cluster_data(window=window, force_refresh=force_refresh , offset=offset , limit=limit)
+            result = kubecost_service.get_cluster_data(window=window, force_refresh=force_refresh , offset=offset , limit=limit , domain = domain)
         elif aggregate == "node":
-            result = kubecost_service.get_node_data(window=window, force_refresh=force_refresh ,  offset=offset , limit=limit)
+            result = kubecost_service.get_node_data(window=window, force_refresh=force_refresh ,  offset=offset , limit=limit , domain = domain)
         else:  # pod, controller, namespace, etc.
             result = kubecost_service.get_pod_data(
                 window=window, 
                 aggregate=aggregate,
-                force_refresh=force_refresh , offset=offset , limit=limit
+                force_refresh=force_refresh , offset=offset , limit=limit , domain = domain
             )
         
         return result

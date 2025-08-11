@@ -1,4 +1,0 @@
-locust
-black
-isort
-pytest

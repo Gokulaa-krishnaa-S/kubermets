@@ -19,6 +19,7 @@ from models.model import (
 import logging
 from threading import Thread
 import hashlib
+import base64
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -29,20 +30,60 @@ class KubecostDataService:
         self.base_domain = os.getenv("domain")
         self.cache_duration_minutes = int(os.getenv("CACHE_DURATION_MINUTES", "5"))
 
+
     def _make_kubecost_request(
-        self, endpoint: str, params: Dict[str, Any]
+        self, endpoint: str, params: Dict[str, Any], domain: str
     ) -> Dict[str, Any]:
-        """Make request to Kubecost API"""
+        """Make request to Kubecost API using instance hash to get API URL."""
+        print(domain , "---------------DOMAIN")
+        # 1. Fetch instance by hash
+        instance = self._get_instance_by_hash(domain)
+        if not instance:
+            raise Exception(f"No instance found for hash: {domain}")
+
+        # 2. Use instance's api_url as base_domain
+        base_domain = instance.api_url
+
+        # 3. Prepare request headers
+        headers = {}
+        if getattr(instance, "username", None) and getattr(instance, "password", None):
+            if instance.username.strip() and instance.password.strip():
+                credentials = f"{instance.username}:{instance.password}"
+                encoded_credentials = base64.b64encode(credentials.encode()).decode()
+                headers["Authorization"] = f"Basic {encoded_credentials}"
+
+        # 4. Build URL with params
         query_string = "?" + "&".join(f"{key}={value}" for key, value in params.items())
-        full_url = f"{self.base_domain}{endpoint}{query_string}"
+        full_url = f"{base_domain}{endpoint}{query_string}"
+
+        print("***********************************")
+        print(full_url ,'-------------', headers)
+        print("***********************************")
+
         try:
-            response = requests.get(full_url, timeout=30)
+            headers["Accept"] = "application/json"
+            response = requests.get(full_url, headers=headers, timeout=15 ,  verify=False)
             print(response, "=======ACTUAL RESPONSE")
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
             logger.error(f"Kubecost API request failed: {str(e)}")
             raise Exception(f"Kubecost API request failed: {str(e)}")
+
+    # def _make_kubecost_request(
+    #     self, endpoint: str, params: Dict[str, Any]
+    # ) -> Dict[str, Any]:
+    #     """Make request to Kubecost API"""
+    #     query_string = "?" + "&".join(f"{key}={value}" for key, value in params.items())
+    #     full_url = f"{self.base_domain}{endpoint}{query_string}"
+    #     try:
+    #         response = requests.get(full_url, timeout=30)
+    #         print(response, "=======ACTUAL RESPONSE")
+    #         response.raise_for_status()
+    #         return response.json()
+    #     except requests.exceptions.RequestException as e:
+    #         logger.error(f"Kubecost API request failed: {str(e)}")
+    #         raise Exception(f"Kubecost API request failed: {str(e)}")
 
     def _is_cache_valid(self, timestamp: datetime) -> bool:
         """Check if cached data is still valid"""
@@ -114,6 +155,7 @@ class KubecostDataService:
         force_refresh: bool = False,
         offset: str = "0",
         limit: str = "2",
+        domain:str = ''
     ) -> Dict[str, Any]:
         """Get cluster data from cache or fetch from API"""
         session = db_manager.get_session()
@@ -174,7 +216,7 @@ class KubecostDataService:
                 }
 
                 api_data = self._make_kubecost_request(
-                    "/model/allocation/summary", params
+                    "/model/allocation/summary", params ,domain=domain
                 )
                 print(api_data, "----------CLUSTER API DATA")
 
@@ -320,106 +362,107 @@ class KubecostDataService:
             logger.error(f"Error getting cluster fallback cache data: {str(e)}")
             return None
 
-    def get_node_data(
-        self,
-        window: str = "24h",
-        force_refresh: bool = False,
-        offset: str = "0",
-        limit: str = "2",
-    ) -> Dict[str, Any]:
-        """Get node data from cache or fetch from API"""
-        session = db_manager.get_session()
-        try:
-            print("working node----")
-            # Check cache first
-            if not force_refresh:
-                cached_metrics = (
-                    session.query(NodeMetric)
-                    .filter(NodeMetric.window == window)
-                    .order_by(desc(NodeMetric.timestamp))
-                    .limit(10)
-                    .all()
-                )
+    # def get_node_data(
+    #     self,
+    #     window: str = "24h",
+    #     force_refresh: bool = False,
+    #     offset: str = "0",
+    #     limit: str = "2",
+    #     domain:str = ''
+    # ) -> Dict[str, Any]:
+    #     """Get node data from cache or fetch from API"""
+    #     session = db_manager.get_session()
+    #     try:
+    #         print("working node----")
+    #         # Check cache first
+    #         if not force_refresh:
+    #             cached_metrics = (
+    #                 session.query(NodeMetric)
+    #                 .filter(NodeMetric.window == window)
+    #                 .order_by(desc(NodeMetric.timestamp))
+    #                 .limit(10)
+    #                 .all()
+    #             )
 
-                if cached_metrics and self._is_cache_valid(cached_metrics[0].timestamp):
-                    logger.info(f"Returning cached node data for window: {window}")
+    #             if cached_metrics and self._is_cache_valid(cached_metrics[0].timestamp):
+    #                 logger.info(f"Returning cached node data for window: {window}")
 
-                    aggregated_data = self._aggregate_node_cache_data(cached_metrics)
+    #                 aggregated_data = self._aggregate_node_cache_data(cached_metrics)
 
-                    def async_refresh():
-                        try:
-                            logger.info(
-                                f"Refreshing node data in background for window: {window}"
-                            )
-                            params = {
-                                "window": window,
-                                "aggregate": "node",
-                                "accumulate": "true",
-                                "chartType": "costovertime",
-                                "costUnit": "cumulative",
-                                "external": "false",
-                                "filter": "",
-                                "idle": "true",
-                                "idleByNode": "false",
-                                "includeSharedCostBreakdown": "true",
-                                "shareCost": "0",
-                                "shareIdle": "false",
-                                "shareLabels": "",
-                                "shareNamespaces": "",
-                                "shareSplit": "weighted",
-                                "shareTenancyCosts": "true",
-                            }
-                            api_data = self._make_kubecost_request(
-                                "/model/allocation/summary", params
-                            )
-                            self._process_node_data(session, api_data, window)
-                        except Exception as e:
-                            logger.error(
-                                f"Background refresh failed for node data: {str(e)}"
-                            )
+    #                 def async_refresh():
+    #                     try:
+    #                         logger.info(
+    #                             f"Refreshing node data in background for window: {window}"
+    #                         )
+    #                         params = {
+    #                             "window": window,
+    #                             "aggregate": "node",
+    #                             "accumulate": "true",
+    #                             "chartType": "costovertime",
+    #                             "costUnit": "cumulative",
+    #                             "external": "false",
+    #                             "filter": "",
+    #                             "idle": "true",
+    #                             "idleByNode": "false",
+    #                             "includeSharedCostBreakdown": "true",
+    #                             "shareCost": "0",
+    #                             "shareIdle": "false",
+    #                             "shareLabels": "",
+    #                             "shareNamespaces": "",
+    #                             "shareSplit": "weighted",
+    #                             "shareTenancyCosts": "true",
+    #                         }
+    #                         api_data = self._make_kubecost_request(
+    #                             "/model/allocation/summary", params
+    #                         )
+    #                         self._process_node_data(session, api_data, window)
+    #                     except Exception as e:
+    #                         logger.error(
+    #                             f"Background refresh failed for node data: {str(e)}"
+    #                         )
 
-                    Thread(target=async_refresh).start()
+    #                 Thread(target=async_refresh).start()
 
-                    return {
-                        "status": "success",
-                        "data": aggregated_data,
-                        "cached": True,
-                        "cache_timestamp": cached_metrics[0].timestamp.isoformat(),
-                    }
-            logger.info(f"Fetching fresh node data for window: {window}")
-            params = {
-                "window": window,
-                "aggregate": "node",
-                "accumulate": "true",
-                "chartType": "costovertime",
-                "costUnit": "cumulative",
-                "external": "false",
-                "filter": "",
-                "idle": "true",
-                "idleByNode": "false",
-                "includeSharedCostBreakdown": "true",
-                "shareCost": "0",
-                "shareIdle": "false",
-                "shareLabels": "",
-                "shareNamespaces": "",
-                "shareSplit": "weighted",
-                "shareTenancyCosts": "true",
-            }
-            api_data = self._make_kubecost_request("/model/allocation/summary", params)
-            print(api_data, "----------000000000000))))))))))0")
-            self._process_node_data(session, api_data, window)
-            return {
-                "status": "success",
-                "data": api_data,
-                "cached": False,
-                "fetch_timestamp": datetime.utcnow().isoformat(),
-            }
+    #                 return {
+    #                     "status": "success",
+    #                     "data": aggregated_data,
+    #                     "cached": True,
+    #                     "cache_timestamp": cached_metrics[0].timestamp.isoformat(),
+    #                 }
+    #         logger.info(f"Fetching fresh node data for window: {window}")
+    #         params = {
+    #             "window": window,
+    #             "aggregate": "node",
+    #             "accumulate": "true",
+    #             "chartType": "costovertime",
+    #             "costUnit": "cumulative",
+    #             "external": "false",
+    #             "filter": "",
+    #             "idle": "true",
+    #             "idleByNode": "false",
+    #             "includeSharedCostBreakdown": "true",
+    #             "shareCost": "0",
+    #             "shareIdle": "false",
+    #             "shareLabels": "",
+    #             "shareNamespaces": "",
+    #             "shareSplit": "weighted",
+    #             "shareTenancyCosts": "true",
+    #         }
+    #         api_data = self._make_kubecost_request("/model/allocation/summary", params)
+    #         print(api_data, "----------000000000000))))))))))0")
+    #         self._process_node_data(session, api_data, window)
+    #         return {
+    #             "status": "success",
+    #             "data": api_data,
+    #             "cached": False,
+    #             "fetch_timestamp": datetime.utcnow().isoformat(),
+    #         }
 
-        except Exception as e:
-            logger.error(f"Error getting node data: {str(e)}")
-            return {"status": "failed", "error": str(e)}
-        finally:
-            session.close()
+    #     except Exception as e:
+    #         logger.error(f"Error getting node data: {str(e)}")
+    #         return {"status": "failed", "error": str(e)}
+    #     finally:
+    #         session.close()
 
     def get_pod_data(
         self,
@@ -429,6 +472,7 @@ class KubecostDataService:
         force_refresh: bool = False,
         offset: str = "0",
         limit: str = "2",
+        domain:str = '',
     ) -> Dict[str, Any]:
         """Get pod data from cache or fetch from API"""
         session = db_manager.get_session()
@@ -494,9 +538,9 @@ class KubecostDataService:
                     params["filterPods"] = filter_pods
 
                 endpoint = (
-                    "/model/allocation" if filter_pods else "/model/allocation/summary"
+                    "model/allocation" if filter_pods else "model/allocation/summary"
                 )
-                api_data = self._make_kubecost_request(endpoint, params)
+                api_data = self._make_kubecost_request(endpoint, params , domain)
 
                 # Store the response with argument hash
                 self._store_argument_based_data(
@@ -752,6 +796,7 @@ class KubecostDataService:
         force_refresh: bool = False,
         offset: str = "0",
         limit: str = "2",
+        domain:str = ''
     ) -> Dict[str, Any]:
         """Get node data from cache or fetch from API"""
         session = db_manager.get_session()
@@ -812,10 +857,11 @@ class KubecostDataService:
                     "shareTenancyCosts": "true",
                     "offset": offset,
                     "limit": limit,
+                    
                 }
 
                 api_data = self._make_kubecost_request(
-                    "/model/allocation/summary", params
+                    "/model/allocation/summary", params , domain=domain
                 )
                 print(api_data, "----------NODE API DATA")
 
@@ -1066,9 +1112,22 @@ class KubecostDataService:
             "data": [metric.raw_data for metric in cached_metrics if metric.raw_data],
         }
 
+
+
     def _create_instance(self, data):
         session = db_manager.get_session()
         try:
+            # Prepare a consistent hash source (sorted keys for stability)
+            hash_source = json.dumps(
+                {
+                    "name": data["name"],
+                    "api_url": data["api_url"],
+                    "client_name": data.get("client_name", ""),
+                },
+                sort_keys=True
+            ).encode("utf-8")
+
+            unique_hash = hashlib.sha256(hash_source).hexdigest()
 
             instance = KubernetesInstance(
                 name=data["name"],
@@ -1076,7 +1135,11 @@ class KubecostDataService:
                 api_url=data["api_url"],
                 client_name=data.get("client_name", ""),
                 status=data.get("status", "active"),
+                username=data.get("username", ""),
+                password=data.get("password", ""),
+                unique_hash=unique_hash, 
             )
+
             session.add(instance)
             session.commit()
             session.refresh(instance)
@@ -1085,7 +1148,7 @@ class KubecostDataService:
         except Exception as e:
             print(e, "--------------")
             session.rollback()
-            raise Exception("Instance with this name already exists.")
+            raise Exception("Instance with this name or hash already exists.")
 
         finally:
             session.close()
@@ -1102,5 +1165,17 @@ class KubecostDataService:
             session.close()
 
 
+    def _get_instance_by_hash(self, unique_hash: str):
+        """Retrieve Kubernetes instance by hash."""
+        session = db_manager.get_session()
+        try:
+            instance = (
+                session.query(KubernetesInstance)
+                .filter(KubernetesInstance.unique_hash == unique_hash)
+                .first()
+            )
+            return instance
+        finally:
+            session.close()
 # Initialize the service
 kubecost_service = KubecostDataService()
