@@ -75,7 +75,7 @@ const SearchInput: React.FC<SearchProps> = ({
 
 const KubecostDashboard = () => {
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sortField, setSortField] = useState("totalCost");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -103,7 +103,7 @@ const KubecostDashboard = () => {
   const handleDomainSelect = (hash: string) => {
     console.log("Selected Unique Hash:", hash);
     setSelectedHash(hash);
-    fetchData(true);
+    // fetchData(true);
   };
   const getWindowFromSelectedTimeRange = (range: string): string => {
     switch (range) {
@@ -164,7 +164,7 @@ const KubecostDashboard = () => {
       chartType: "costovertime",
       costUnit: "cumulative",
       domain: selectedHash || "",
-      // force_refresh: true,
+      force_refresh: true,
     };
 
     try {
@@ -186,7 +186,7 @@ const KubecostDashboard = () => {
 
   useEffect(() => {
     setSearchParams({ window: selectedTimeRange });
-    fetchData();
+    // fetchData();
   }, [selectedTimeRange]);
 
   const handlePodDetails = async (name) => {
@@ -199,6 +199,7 @@ const KubecostDashboard = () => {
       aggregate: "controller",
       external: "false",
       filterPods: name,
+      domain:selectedHash
     };
 
     let response = await podService.getPodDetails(queryParams);
@@ -248,6 +249,14 @@ const KubecostDashboard = () => {
     setPodDetails(containers);
     return containers;
   };
+
+  useEffect(() => {
+    if (selectedHash) {
+      // only fetch if we have a domain selected
+      setSearchParams({ window: selectedTimeRange });
+      fetchData();
+    }
+  }, [selectedTimeRange, selectedHash]); // now runs on dropdown change too
 
   useEffect(() => {
     if (showPodModal && selectedPod) {

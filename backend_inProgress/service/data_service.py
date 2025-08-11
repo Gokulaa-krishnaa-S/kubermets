@@ -30,12 +30,11 @@ class KubecostDataService:
         self.base_domain = os.getenv("domain")
         self.cache_duration_minutes = int(os.getenv("CACHE_DURATION_MINUTES", "5"))
 
-
     def _make_kubecost_request(
         self, endpoint: str, params: Dict[str, Any], domain: str
     ) -> Dict[str, Any]:
         """Make request to Kubecost API using instance hash to get API URL."""
-        print(domain , "---------------DOMAIN")
+        print(domain, "---------------DOMAIN")
         # 1. Fetch instance by hash
         instance = self._get_instance_by_hash(domain)
         if not instance:
@@ -57,12 +56,12 @@ class KubecostDataService:
         full_url = f"{base_domain}{endpoint}{query_string}"
 
         print("***********************************")
-        print(full_url ,'-------------', headers)
+        print(full_url, "-------------", headers)
         print("***********************************")
 
         try:
             headers["Accept"] = "application/json"
-            response = requests.get(full_url, headers=headers, timeout=15 ,  verify=False)
+            response = requests.get(full_url, headers=headers, timeout=15, verify=False)
             print(response, "=======ACTUAL RESPONSE")
             response.raise_for_status()
             return response.json()
@@ -70,20 +69,7 @@ class KubecostDataService:
             logger.error(f"Kubecost API request failed: {str(e)}")
             raise Exception(f"Kubecost API request failed: {str(e)}")
 
-    # def _make_kubecost_request(
-    #     self, endpoint: str, params: Dict[str, Any]
-    # ) -> Dict[str, Any]:
-    #     """Make request to Kubecost API"""
-    #     query_string = "?" + "&".join(f"{key}={value}" for key, value in params.items())
-    #     full_url = f"{self.base_domain}{endpoint}{query_string}"
-    #     try:
-    #         response = requests.get(full_url, timeout=30)
-    #         print(response, "=======ACTUAL RESPONSE")
-    #         response.raise_for_status()
-    #         return response.json()
-    #     except requests.exceptions.RequestException as e:
-    #         logger.error(f"Kubecost API request failed: {str(e)}")
-    #         raise Exception(f"Kubecost API request failed: {str(e)}")
+   
 
     def _is_cache_valid(self, timestamp: datetime) -> bool:
         """Check if cached data is still valid"""
@@ -154,12 +140,22 @@ class KubecostDataService:
         window: str = "7d",
         force_refresh: bool = False,
         offset: str = "0",
-        limit: str = "2",
-        domain:str = ''
+        limit: str = "0",
+        domain: str = "",
     ) -> Dict[str, Any]:
         """Get cluster data from cache or fetch from API"""
         session = db_manager.get_session()
         try:
+            query_params = {
+                "window": window,
+                "aggregate": "cluster",
+            }
+
+            # Only add offset/limit if not both zero
+            if not (offset == "0" and limit == "0"):
+                query_params["offset"] = offset
+                query_params["limit"] = limit
+
             # Create argument hash for caching
             query_params = {
                 "window": window,
@@ -216,13 +212,13 @@ class KubecostDataService:
                 }
 
                 api_data = self._make_kubecost_request(
-                    "/model/allocation/summary", params ,domain=domain
+                    "/model/allocation/summary", params, domain=domain
                 )
                 print(api_data, "----------CLUSTER API DATA")
 
                 # Store the response with argument hash
                 self._store_cluster_argument_based_data(
-                    session, api_data, argument_hash, query_params, window
+                    session, api_data, argument_hash, query_params, window , domain
                 )
 
                 return {
@@ -237,7 +233,7 @@ class KubecostDataService:
                 logger.warning(f"Cluster API request failed: {str(api_error)}")
 
                 # API failed, try to get fallback data from cache
-                fallback_data = self._get_cluster_fallback_cache_data(session)
+                fallback_data = self._get_cluster_fallback_cache_data(session , query_params)
 
                 if fallback_data:
                     logger.info(
@@ -275,6 +271,7 @@ class KubecostDataService:
         argument_hash: str,
         query_params: Dict,
         window: str,
+        domain:str
     ):
         """Store cluster API response with argument hash for caching"""
         try:
@@ -286,6 +283,7 @@ class KubecostDataService:
                 raw_data=api_data,
                 argument_hash=argument_hash,
                 query_params=query_params,
+                domain=domain
             )
             session.add(cache_record)
             session.commit()
@@ -298,7 +296,7 @@ class KubecostDataService:
             logger.error(f"Error storing cluster argument-based data: {str(e)}")
             raise
 
-    def _get_cluster_fallback_cache_data(self, session: Session) -> Dict[str, Any]:
+    def _get_cluster_fallback_cache_data(self, session: Session , query_params:Dict) -> Dict[str, Any]:
         """Get the cluster record with maximum window and maximum limit when API fails"""
         try:
             # Get all cached cluster records
@@ -315,6 +313,25 @@ class KubecostDataService:
             if not cached_records:
                 return None
 
+            for record in cached_records:
+                try:
+                    if isinstance(record.query_params, str):
+                        import json
+                        params = json.loads(record.query_params)
+                    else:
+                        params = record.query_params
+
+                    print(params == query_params , '---check query')
+                    if params == query_params:
+                        logger.info("Found exact cached match for query_params, returning it.")
+                        return {
+                            "data": record.raw_data,
+                            "timestamp": record.timestamp.isoformat(),
+                            "query_params": record.query_params,
+                        }
+                except Exception as e:
+                    logger.warning(f"Error parsing record query_params during exact match check: {str(e)}")
+                    continue
             best_record = None
             max_window_days = 0
             max_limit = 0
@@ -362,107 +379,6 @@ class KubecostDataService:
             logger.error(f"Error getting cluster fallback cache data: {str(e)}")
             return None
 
-    # def get_node_data(
-    #     self,
-    #     window: str = "24h",
-    #     force_refresh: bool = False,
-    #     offset: str = "0",
-    #     limit: str = "2",
-    #     domain:str = ''
-    # ) -> Dict[str, Any]:
-    #     """Get node data from cache or fetch from API"""
-    #     session = db_manager.get_session()
-    #     try:
-    #         print("working node----")
-    #         # Check cache first
-    #         if not force_refresh:
-    #             cached_metrics = (
-    #                 session.query(NodeMetric)
-    #                 .filter(NodeMetric.window == window)
-    #                 .order_by(desc(NodeMetric.timestamp))
-    #                 .limit(10)
-    #                 .all()
-    #             )
-
-    #             if cached_metrics and self._is_cache_valid(cached_metrics[0].timestamp):
-    #                 logger.info(f"Returning cached node data for window: {window}")
-
-    #                 aggregated_data = self._aggregate_node_cache_data(cached_metrics)
-
-    #                 def async_refresh():
-    #                     try:
-    #                         logger.info(
-    #                             f"Refreshing node data in background for window: {window}"
-    #                         )
-    #                         params = {
-    #                             "window": window,
-    #                             "aggregate": "node",
-    #                             "accumulate": "true",
-    #                             "chartType": "costovertime",
-    #                             "costUnit": "cumulative",
-    #                             "external": "false",
-    #                             "filter": "",
-    #                             "idle": "true",
-    #                             "idleByNode": "false",
-    #                             "includeSharedCostBreakdown": "true",
-    #                             "shareCost": "0",
-    #                             "shareIdle": "false",
-    #                             "shareLabels": "",
-    #                             "shareNamespaces": "",
-    #                             "shareSplit": "weighted",
-    #                             "shareTenancyCosts": "true",
-    #                         }
-    #                         api_data = self._make_kubecost_request(
-    #                             "/model/allocation/summary", params
-    #                         )
-    #                         self._process_node_data(session, api_data, window)
-    #                     except Exception as e:
-    #                         logger.error(
-    #                             f"Background refresh failed for node data: {str(e)}"
-    #                         )
-
-    #                 Thread(target=async_refresh).start()
-
-    #                 return {
-    #                     "status": "success",
-    #                     "data": aggregated_data,
-    #                     "cached": True,
-    #                     "cache_timestamp": cached_metrics[0].timestamp.isoformat(),
-    #                 }
-    #         logger.info(f"Fetching fresh node data for window: {window}")
-    #         params = {
-    #             "window": window,
-    #             "aggregate": "node",
-    #             "accumulate": "true",
-    #             "chartType": "costovertime",
-    #             "costUnit": "cumulative",
-    #             "external": "false",
-    #             "filter": "",
-    #             "idle": "true",
-    #             "idleByNode": "false",
-    #             "includeSharedCostBreakdown": "true",
-    #             "shareCost": "0",
-    #             "shareIdle": "false",
-    #             "shareLabels": "",
-    #             "shareNamespaces": "",
-    #             "shareSplit": "weighted",
-    #             "shareTenancyCosts": "true",
-    #         }
-    #         api_data = self._make_kubecost_request("/model/allocation/summary", params)
-    #         print(api_data, "----------000000000000))))))))))0")
-    #         self._process_node_data(session, api_data, window)
-    #         return {
-    #             "status": "success",
-    #             "data": api_data,
-    #             "cached": False,
-    #             "fetch_timestamp": datetime.utcnow().isoformat(),
-    #         }
-
-    #     except Exception as e:
-    #         logger.error(f"Error getting node data: {str(e)}")
-    #         return {"status": "failed", "error": str(e)}
-    #     finally:
-    #         session.close()
 
     def get_pod_data(
         self,
@@ -471,20 +387,31 @@ class KubecostDataService:
         filter_pods: str = None,
         force_refresh: bool = False,
         offset: str = "0",
-        limit: str = "2",
-        domain:str = '',
+        limit: str = "0",
+        domain: str = "",
     ) -> Dict[str, Any]:
         """Get pod data from cache or fetch from API"""
         session = db_manager.get_session()
         try:
-            # Create argument hash for caching
+
             query_params = {
                 "window": window,
-                "aggregate": aggregate,
-                "filter_pods": filter_pods,
-                "offset": offset,
-                "limit": limit,
+                "aggregate": "cluster",
             }
+
+            # Only add offset/limit if not both zero
+            if not (offset == "0" and limit == "0"):
+                query_params["offset"] = offset
+                query_params["limit"] = limit
+                # Create argument hash for caching
+                query_params = {
+                    "window": window,
+                    "aggregate": aggregate,
+                    "filter_pods": filter_pods,
+                    "offset": offset,
+                    "limit": limit,
+                "domain":domain
+                }
             argument_hash = hashlib.md5(
                 str(sorted(query_params.items())).encode()
             ).hexdigest()
@@ -540,7 +467,7 @@ class KubecostDataService:
                 endpoint = (
                     "model/allocation" if filter_pods else "model/allocation/summary"
                 )
-                api_data = self._make_kubecost_request(endpoint, params , domain)
+                api_data = self._make_kubecost_request(endpoint, params, domain)
 
                 # Store the response with argument hash
                 self._store_argument_based_data(
@@ -560,7 +487,7 @@ class KubecostDataService:
 
                 # API failed, try to get fallback data from cache
                 fallback_data = self._get_fallback_cache_data(
-                    session, aggregate, filter_pods
+                    session, aggregate, filter_pods , query_params
                 )
 
                 if fallback_data:
@@ -591,7 +518,7 @@ class KubecostDataService:
             session.close()
 
     def _get_fallback_cache_data(
-        self, session: Session, aggregate: str, filter_pods: str = None
+        self, session: Session, aggregate: str, filter_pods: str = None , query_params : Dict = {}
     ) -> Dict[str, Any]:
         """Get the record with maximum window and maximum limit when API fails"""
         try:
@@ -608,6 +535,25 @@ class KubecostDataService:
 
             if not cached_records:
                 return None
+            for record in cached_records:
+                try:
+                    if isinstance(record.query_params, str):
+                        import json
+                        params = json.loads(record.query_params)
+                    else:
+                        params = record.query_params
+
+                    print(params == query_params , '---check query')
+                    if params == query_params:
+                        logger.info("Found exact cached match for query_params, returning it.")
+                        return {
+                            "data": record.raw_data,
+                            "timestamp": record.timestamp.isoformat(),
+                            "query_params": record.query_params,
+                        }
+                except Exception as e:
+                    logger.warning(f"Error parsing record query_params during exact match check: {str(e)}")
+                    continue
 
             best_record = None
             max_window_days = 0
@@ -795,21 +741,29 @@ class KubecostDataService:
         window: str = "24h",
         force_refresh: bool = False,
         offset: str = "0",
-        limit: str = "2",
-        domain:str = ''
+        limit: str = "0",
+        domain: str = "",
     ) -> Dict[str, Any]:
         """Get node data from cache or fetch from API"""
         session = db_manager.get_session()
         try:
             print("working node----")
-
-            # Create argument hash for caching
             query_params = {
                 "window": window,
-                "aggregate": "node",
-                "offset": offset,
-                "limit": limit,
+                "aggregate": "cluster",
             }
+
+            # Only add offset/limit if not both zero
+            if not (offset == "0" and limit == "0"):
+                query_params["offset"] = offset
+                query_params["limit"] = limit
+                # Create argument hash for caching
+                query_params = {
+                    "window": window,
+                    "aggregate": "node",
+                    "offset": offset,
+                    "limit": limit,
+                }
             argument_hash = hashlib.md5(
                 str(sorted(query_params.items())).encode()
             ).hexdigest()
@@ -857,11 +811,10 @@ class KubecostDataService:
                     "shareTenancyCosts": "true",
                     "offset": offset,
                     "limit": limit,
-                    
                 }
 
                 api_data = self._make_kubecost_request(
-                    "/model/allocation/summary", params , domain=domain
+                    "/model/allocation/summary", params, domain=domain
                 )
                 print(api_data, "----------NODE API DATA")
 
@@ -882,7 +835,7 @@ class KubecostDataService:
                 logger.warning(f"Node API request failed: {str(api_error)}")
 
                 # API failed, try to get fallback data from cache
-                fallback_data = self._get_node_fallback_cache_data(session)
+                fallback_data = self._get_node_fallback_cache_data(session , query_params)
 
                 if fallback_data:
                     logger.info(
@@ -941,7 +894,7 @@ class KubecostDataService:
             logger.error(f"Error storing node argument-based data: {str(e)}")
             raise
 
-    def _get_node_fallback_cache_data(self, session: Session) -> Dict[str, Any]:
+    def _get_node_fallback_cache_data(self, session: Session , query_params:Dict) -> Dict[str, Any]:
         """Get the node record with maximum window and maximum limit when API fails"""
         try:
             # Get all cached node records
@@ -958,6 +911,25 @@ class KubecostDataService:
             if not cached_records:
                 return None
 
+            for record in cached_records:
+                try:
+                    if isinstance(record.query_params, str):
+                        import json
+                        params = json.loads(record.query_params)
+                    else:
+                        params = record.query_params
+
+                    print(params == query_params , '---check query')
+                    if params == query_params:
+                        logger.info("Found exact cached match for query_params, returning it.")
+                        return {
+                            "data": record.raw_data,
+                            "timestamp": record.timestamp.isoformat(),
+                            "query_params": record.query_params,
+                        }
+                except Exception as e:
+                    logger.warning(f"Error parsing record query_params during exact match check: {str(e)}")
+                    continue
             best_record = None
             max_window_days = 0
             max_limit = 0
@@ -1112,8 +1084,6 @@ class KubecostDataService:
             "data": [metric.raw_data for metric in cached_metrics if metric.raw_data],
         }
 
-
-
     def _create_instance(self, data):
         session = db_manager.get_session()
         try:
@@ -1137,7 +1107,7 @@ class KubecostDataService:
                 status=data.get("status", "active"),
                 username=data.get("username", ""),
                 password=data.get("password", ""),
-                unique_hash=unique_hash, 
+                unique_hash=unique_hash,
             )
 
             session.add(instance)
@@ -1153,6 +1123,39 @@ class KubecostDataService:
         finally:
             session.close()
 
+    def _update_instance(self, instance_id, data):
+        session = db_manager.get_session()
+        try:
+            instance = (
+                session.query(KubernetesInstance).filter_by(id=instance_id).first()
+            )
+            if not instance:
+                return None
+
+            # Only update provided fields
+            for field in [
+                "name",
+                "description",
+                "api_url",
+                "client_name",
+                "status",
+                "username",
+                "password",
+            ]:
+                if field in data:
+                    setattr(instance, field, data[field])
+
+            session.commit()
+            session.refresh(instance)
+            return instance
+
+        except Exception as e:
+            session.rollback()
+            raise Exception(f"Failed to update instance: {e}")
+
+        finally:
+            session.close()
+
     def _list_instances(self):
         session = db_manager.get_session()
         try:
@@ -1163,7 +1166,6 @@ class KubecostDataService:
             )
         finally:
             session.close()
-
 
     def _get_instance_by_hash(self, unique_hash: str):
         """Retrieve Kubernetes instance by hash."""
@@ -1177,5 +1179,7 @@ class KubecostDataService:
             return instance
         finally:
             session.close()
+
+
 # Initialize the service
 kubecost_service = KubecostDataService()

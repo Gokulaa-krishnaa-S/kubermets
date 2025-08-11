@@ -23,7 +23,6 @@ class ClusterService {
 
   /**
    * Fetch allocation summary for clusters using external query params
-   * @param queryParams - key-value pairs for the query string
    */
   async getClusterAllocationSummary(
     queryParams: Record<string, any>
@@ -32,20 +31,60 @@ class ClusterService {
       const response: AxiosResponse = await this.api.get("/all", {
         params: queryParams,
       });
-      console.log(response.data);
       return response.data;
     } catch (error) {
       console.error("Error fetching cluster summary:", error);
       throw error;
     }
   }
+
+  /**
+   * Get list of all Kubernetes instances
+   */
   async getInstanceList() {
     try {
       const response: AxiosResponse = await this.api.get("/instance");
-      console.log(response.data);
       return response.data;
     } catch (error) {
-      console.error("Error fetching cluster summary:", error);
+      console.error("Error fetching instance list:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new Kubernetes instance
+   */
+  async createInstance(data: Record<string, any>) {
+    try {
+      const response: AxiosResponse = await this.api.post("/instance", data);
+      return response.data;
+    } catch (error) {
+      console.error("Error creating instance:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing Kubernetes instance
+   */
+  async updateInstance(instanceId: number, data: Record<string, any>) {
+    try {
+      const response: AxiosResponse = await this.api.put(
+        `/instance/${instanceId}`,
+        data
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error updating instance:", error);
+      throw error;
+    }
+  }
+  async getAllMetrics() {
+    try {
+      const response: AxiosResponse = await this.api.get(`dashboard/summary`);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating instance:", error);
       throw error;
     }
   }
