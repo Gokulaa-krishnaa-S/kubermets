@@ -283,7 +283,7 @@ class KubecostDataService:
                 raw_data=api_data,
                 argument_hash=argument_hash,
                 query_params=query_params,
-                unique_hash=domain,
+                # domain=domain
             )
             session.add(cache_record)
             session.commit()
