@@ -22,197 +22,50 @@ import { Layout } from "@/components/layout/Layout";
 import ClusterService from "@/services/ClusterService";
 import { useNavigate } from "react-router-dom";
 
-const fetchClusterMetrics = async () => {
-  const queryParams = {
-    window: "7d",
-    aggregate: "cluster",
-    accumulate: true,
-    external: false,
-    shareCost: 0,
-    shareTenancyCosts: true,
-    idle: true,
-    shareIdle: true,
-    idleByNode: true,
-    shareLabels: "",
-    shareNamespaces: "",
-    shareSplit: "weighted",
-    filter: "",
-  };
-
+const fetchDashboardSummary = async () => {
   try {
-    const res = await ClusterService.getClusterAllocationSummary(queryParams);
+    const res = await ClusterService.getAllMetrics(); // New API method
     console.log(res, "------------------");
-    return res?.data?.data?.sets?.[0]?.allocations || {};
+    return res?.data || { clusters: [], aggregated: {} };
   } catch (error) {
-    console.error("Error fetching cluster metrics:", error);
-    return {};
-  }
-};
-
-const fetchNodeMetrics = async () => {
-  const queryParams = {
-    window: "7d",
-    accumulate: true,
-    aggregate: "node",
-    chartType: "costovertime",
-    costUnit: "cumulative",
-    external: false,
-    filter: "",
-    idle: true,
-    idleByNode: false,
-    includeSharedCostBreakdown: true,
-    shareCost: 0,
-    shareIdle: false,
-    shareLabels: "",
-    shareNamespaces: "",
-    shareSplit: "weighted",
-    shareTenancyCosts: true,
-  };
-
-  try {
-    const res = await ClusterService.getClusterAllocationSummary(queryParams);
-    return res?.data?.data?.sets?.[0]?.allocations || {};
-  } catch (error) {
-    console.error("Error fetching node metrics:", error);
-    return {};
-  }
-};
-
-const fetchPodMetrics = async () => {
-  const queryParams = {
-    window: "7d",
-    aggregate: "pod",
-    accumulate: true,
-    external: false,
-    shareCost: 0,
-    shareTenancyCosts: true,
-    idle: true,
-    shareIdle: false,
-    idleByNode: false,
-    shareLabels: "",
-    shareNamespaces: "",
-    shareSplit: "weighted",
-    filter: "",
-    offset: 0,
-    limit: 200,
-    includeSharedCostBreakdown: true,
-    chartType: "costovertime",
-    costUnit: "cumulative",
-  };
-
-  try {
-    const res = await ClusterService.getClusterAllocationSummary(queryParams);
-    return res?.data?.data?.sets?.[0]?.allocations || {};
-  } catch (error) {
-    console.error("Error fetching pod metrics:", error);
-    return {};
+    console.error("Error fetching dashboard summary:", error);
+    return { clusters: [], aggregated: {} };
   }
 };
 
 export default function Overview() {
-  const [clusterData, setClusterData] = useState(null);
-  const [nodeData, setNodeData] = useState(null);
-  const [podData, setPodData] = useState(null);
+  const [dashboardData, setDashboardData] = useState({
+    clusters: [],
+    aggregated: {},
+  });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [cluster, nodes, pods] = await Promise.all([
-          fetchClusterMetrics(),
-          fetchNodeMetrics(),
-          fetchPodMetrics(),
-        ]);
-        console.log(cluster);
-
-        setClusterData(cluster);
-        setNodeData(nodes);
-        setPodData(pods);
+        const data = await fetchDashboardSummary();
+        setDashboardData(data);
       } catch (error) {
-        console.error("Error loading metrics:", error);
+        console.error("Error loading dashboard summary:", error);
       } finally {
         setLoading(false);
       }
     };
 
+    // Initial load
     loadData();
+
+    // Set up interval to fetch data every 30 seconds
+    const interval = setInterval(() => {
+      loadData();
+    }, 3000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval);
   }, []);
 
-  // Helper functions to process the data
-  const getClusterStats = () => {
-    if (!clusterData) return null;
-    console.log(clusterData);
-    const cluster: any = Object.values(clusterData)[0];
-    return {
-      totalCost: cluster.totalCost,
-      efficiency: cluster.totalEfficiency,
-      cpuUsage:
-        (cluster.cpuCoreUsageAverage / cluster.cpuCoreRequestAverage) * 100,
-      memoryUsage:
-        (cluster.ramByteUsageAverage / cluster.ramByteRequestAverage) * 100,
-    };
-  };
-
-  const getNodeStats = () => {
-    if (!nodeData) return null;
-
-    const allocations = nodeData;
-    const nodes: any = Object.entries(allocations).filter(
-      ([key]) => !key.startsWith("__")
-    );
-
-    const totalNodes = nodes.length;
-    const healthyNodes = nodes.filter(
-      ([, node]) => node.totalEfficiency > 0.2
-    ).length;
-    const warningNodes = nodes.filter(
-      ([, node]) => node.totalEfficiency > 0 && node.totalEfficiency <= 0.2
-    ).length;
-
-    const totalCost = nodes.reduce((sum, [, node]) => sum + node.totalCost, 0);
-    const avgEfficiency =
-      nodes.reduce((sum, [, node]) => sum + node.totalEfficiency, 0) /
-      totalNodes;
-
-    return {
-      totalNodes,
-      healthyNodes,
-      warningNodes,
-      totalCost,
-      avgEfficiency,
-      avgCpuUsage:
-        nodes.reduce(
-          (sum, [, node]) =>
-            sum + (node.cpuCoreUsageAverage / node.cpuCoreRequestAverage) * 100,
-          0
-        ) / totalNodes,
-    };
-  };
-
-  const getPodStats = () => {
-    if (!podData) return null;
-
-    const allocations = podData;
-    const pods: any = Object.entries(allocations).filter(
-      ([key]) => !key.startsWith("__")
-    );
-
-    const runningPods = pods.filter(([, pod]) => pod.totalCost >= 0).length;
-    const idlePods = pods.filter(([, pod]) => pod.totalCost === 0).length;
-    const totalPods = pods.length;
-
-    return {
-      totalPods,
-      runningPods,
-      idlePods,
-      totalCost: pods.reduce((sum, [, pod]) => sum + pod.totalCost, 0),
-    };
-  };
-
-  const clusterStats = getClusterStats();
-  const nodeStats = getNodeStats();
-  const podStats = getPodStats();
+  const { clusters, aggregated }: any = dashboardData;
 
   if (loading) {
     return (
@@ -231,11 +84,13 @@ export default function Overview() {
       icon: <Server className="w-6 h-6" />,
       path: "/cluster",
       metrics: [
-        `$${clusterStats?.totalCost.toFixed(2)} Total Cost`,
-        `${(clusterStats?.efficiency * 100).toFixed(1)}% Efficiency`,
-        `${clusterStats?.cpuUsage.toFixed(1)}% CPU Utilization`,
+        `$${aggregated.totalCost?.toFixed(2) || "0.00"} Total Cost`,
+        `${
+          (aggregated.avgEfficiency * 100)?.toFixed(1) || "0.0"
+        }% Avg Efficiency`,
+        `${aggregated.avgCpuUsage?.toFixed(1) || "0.0"}% Avg CPU Utilization`,
       ],
-      status: clusterStats?.efficiency > 0.5 ? "healthy" : "warning",
+      status: aggregated.avgEfficiency > 0.5 ? "healthy" : "warning",
     },
     {
       title: "Node Metrics",
@@ -243,11 +98,13 @@ export default function Overview() {
       icon: <Box className="w-6 h-6" />,
       path: "/nodes",
       metrics: [
-        `${nodeStats?.totalNodes} Total Nodes`,
-        `${nodeStats?.healthyNodes} Healthy`,
-        `${(nodeStats?.avgEfficiency * 100).toFixed(1)}% Avg Efficiency`,
+        `${aggregated.totalNodes || 0} Total Nodes`,
+        `${aggregated.healthyNodes || 0} Healthy`,
+        `${
+          (aggregated.nodeAvgEfficiency * 100)?.toFixed(1) || "0.0"
+        }% Avg Efficiency`,
       ],
-      status: nodeStats?.warningNodes > 0 ? "warning" : "healthy",
+      status: aggregated.warningNodes > 0 ? "warning" : "healthy",
     },
     {
       title: "Pod Metrics",
@@ -255,9 +112,9 @@ export default function Overview() {
       icon: <Layers className="w-6 h-6" />,
       path: "/pods",
       metrics: [
-        `${podStats?.totalPods} Total Pods`,
-        `${podStats?.runningPods} Active`,
-        `${podStats?.idlePods} Idle`,
+        `${aggregated.totalPods || 0} Total Pods`,
+        `${aggregated.runningPods || 0} Active`,
+        `${aggregated.idlePods || 0} Idle`,
       ],
       status: "healthy",
     },
@@ -292,7 +149,9 @@ export default function Overview() {
   return (
     <Layout
       title="Overview"
-      subtitle="Complete Kubernetes metrics visualization in one unified view (last 7 days)"
+      subtitle={`Complete Kubernetes metrics visualization across ${
+        aggregated.clusterCount || 0
+      } clusters (last 7 days)`}
     >
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -305,28 +164,30 @@ export default function Overview() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                ${clusterStats?.totalCost.toFixed(2)}
+                ${aggregated.totalCost?.toFixed(2) || "0.00"}
               </div>
-              <p className="text-xs text-muted-foreground">Last 7 days</p>
+              <p className="text-xs text-muted-foreground">
+                Across {aggregated.clusterCount || 0} clusters
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
-                Cluster Efficiency
+                Avg Efficiency
               </CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div
                 className={`text-2xl font-bold ${
-                  clusterStats?.efficiency > 0.5
+                  aggregated.avgEfficiency > 0.5
                     ? "text-green-600"
                     : "text-yellow-600"
                 }`}
               >
-                {(clusterStats?.efficiency * 100).toFixed(1)}%
+                {(aggregated.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
               </div>
               <p className="text-xs text-muted-foreground">
                 Resource utilization
@@ -336,18 +197,16 @@ export default function Overview() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Active Nodes
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Total Nodes</CardTitle>
               <Server className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {nodeStats?.totalNodes}
+                {aggregated.totalNodes || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {nodeStats?.healthyNodes} healthy, {nodeStats?.warningNodes}{" "}
-                need attention
+                {aggregated.healthyNodes || 0} healthy,{" "}
+                {aggregated.warningNodes || 0} need attention
               </p>
             </CardContent>
           </Card>
@@ -361,10 +220,11 @@ export default function Overview() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {podStats?.runningPods}
+                {aggregated.runningPods || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {podStats?.totalPods} total, {podStats?.idlePods} idle
+                {aggregated.totalPods || 0} total, {aggregated.idlePods || 0}{" "}
+                idle
               </p>
             </CardContent>
           </Card>
@@ -373,31 +233,41 @@ export default function Overview() {
         {/* Introduction */}
         <Card>
           <CardHeader>
-            <CardTitle>Kubernetes Cost Monitoring Dashboard</CardTitle>
+            <CardTitle>
+              Multi-Cluster Kubernetes Cost Monitoring Dashboard
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
-              Monitor cost efficiency and resource utilization across your
-              Kubernetes infrastructure. Track spending patterns, identify
-              optimization opportunities, and ensure optimal resource
-              allocation.
+              Monitor cost efficiency and resource utilization across{" "}
+              {aggregated.clusterCount || 0} Kubernetes clusters. Track spending
+              patterns, identify optimization opportunities, and ensure optimal
+              resource allocation across your infrastructure.
             </p>
-            <div className="flex gap-2 text-sm items-center">
-              <span className="text-muted-foreground">System Status:</span>
-              {getStatusIcon(
-                clusterStats?.efficiency > 0.5 ? "healthy" : "warning"
-              )}
-              <span
-                className={
-                  clusterStats?.efficiency > 0.5
-                    ? "text-green-600"
-                    : "text-yellow-600"
-                }
-              >
-                {clusterStats?.efficiency > 0.5
-                  ? "Optimal"
-                  : "Needs Optimization"}
-              </span>
+            <div className="flex gap-4 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">System Status:</span>
+                {getStatusIcon(
+                  aggregated.avgEfficiency > 0.5 ? "healthy" : "warning"
+                )}
+                <span
+                  className={
+                    aggregated.avgEfficiency > 0.5
+                      ? "text-green-600"
+                      : "text-yellow-600"
+                  }
+                >
+                  {aggregated.avgEfficiency > 0.5
+                    ? "Optimal"
+                    : "Needs Optimization"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Clusters:</span>
+                <span className="font-medium">
+                  {aggregated.clusterCount || 0} Active
+                </span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -484,8 +354,8 @@ export default function Overview() {
                   </div>
                   <span className="font-medium">
                     $
-                    {clusterStats?.totalCost
-                      ? (clusterStats.totalCost * 0.63).toFixed(2)
+                    {aggregated.totalCost
+                      ? (aggregated.totalCost * 0.63).toFixed(2)
                       : "0.00"}
                   </span>
                 </div>
@@ -496,8 +366,8 @@ export default function Overview() {
                   </div>
                   <span className="font-medium">
                     $
-                    {clusterStats?.totalCost
-                      ? (clusterStats.totalCost * 0.33).toFixed(2)
+                    {aggregated.totalCost
+                      ? (aggregated.totalCost * 0.33).toFixed(2)
                       : "0.00"}
                   </span>
                 </div>
@@ -508,8 +378,8 @@ export default function Overview() {
                   </div>
                   <span className="font-medium">
                     $
-                    {clusterStats?.totalCost
-                      ? (clusterStats.totalCost * 0.04).toFixed(2)
+                    {aggregated.totalCost
+                      ? (aggregated.totalCost * 0.04).toFixed(2)
                       : "0.00"}
                   </span>
                 </div>
@@ -527,34 +397,31 @@ export default function Overview() {
                   <span className="text-sm">Overall Efficiency</span>
                   <div className="flex items-center gap-2">
                     {getStatusIcon(
-                      clusterStats?.efficiency > 0.5 ? "healthy" : "warning"
+                      aggregated.avgEfficiency > 0.5 ? "healthy" : "warning"
                     )}
                     <span
                       className={`font-medium ${
-                        clusterStats?.efficiency > 0.5
+                        aggregated.avgEfficiency > 0.5
                           ? "text-green-600"
                           : "text-yellow-600"
                       }`}
                     >
-                      {(clusterStats?.efficiency * 100).toFixed(1)}%
+                      {(aggregated.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
                     </span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Idle Resources</span>
                   <span className="font-medium text-red-600">
-                    $
-                    {nodeData
-                      ? nodeData?.__idle__.totalCost.toFixed(2)
-                      : "0.00"}
+                    ${aggregated.idleCost?.toFixed(2) || "0.00"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Optimization Potential</span>
                   <span className="font-medium text-green-600">
-                    {clusterStats?.efficiency < 0.5
+                    {aggregated.avgEfficiency < 0.5
                       ? "High"
-                      : clusterStats?.efficiency < 0.8
+                      : aggregated.avgEfficiency < 0.8
                       ? "Medium"
                       : "Low"}
                   </span>
@@ -563,6 +430,77 @@ export default function Overview() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Cluster Details */}
+        {clusters.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Cluster Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {clusters.map((cluster, index) => {
+                  if (cluster.error) {
+                    return (
+                      <div
+                        key={index}
+                        className="p-4 border border-red-200 rounded-lg bg-red-50"
+                      >
+                        <h4 className="font-semibold mb-2 text-red-600">
+                          {cluster.name}
+                        </h4>
+                        <p className="text-sm text-red-500">
+                          Error: {cluster.error}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={index} className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">{cluster.name}</h4>
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span>Cost:</span>
+                          <span className="font-medium">
+                            ${cluster.cluster?.totalCost?.toFixed(2) || "0.00"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Efficiency:</span>
+                          <span
+                            className={`font-medium ${
+                              cluster.cluster?.efficiency > 0.5
+                                ? "text-green-600"
+                                : "text-yellow-600"
+                            }`}
+                          >
+                            {((cluster.cluster?.efficiency || 0) * 100).toFixed(
+                              1
+                            )}
+                            %
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Nodes:</span>
+                          <span className="font-medium">
+                            {cluster.node?.totalNodes || 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Pods:</span>
+                          <span className="font-medium">
+                            {cluster.pod?.totalPods || 0}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </Layout>
   );
