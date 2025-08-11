@@ -59,7 +59,7 @@ export default function Overview() {
     // Set up interval to fetch data every 30 seconds
     const interval = setInterval(() => {
       loadData();
-    }, 3000);
+    }, 10000);
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
