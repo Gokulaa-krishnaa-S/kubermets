@@ -38,3 +38,4 @@ __pycache__
 # Alembic cache / state files
 migrations/__pycache__/
 migrations/*.pyc
+backend_inProgress/migrations

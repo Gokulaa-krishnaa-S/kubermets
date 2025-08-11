@@ -170,11 +170,11 @@ class PodMetric(Base):
     # Efficiency metrics
     cpu_efficiency = Column(Float, default=0.0)
     memory_efficiency = Column(Float, default=0.0)
-
-    # Additional metadata
-    raw_data = Column(JSON)
     argument_hash = Column(String(255), nullable=True)
     query_params = Column(JSON, nullable=True)
+    # Additional metadata
+    raw_data = Column(JSON)
+
 
     # Relationships
     pod = relationship("Pod", back_populates="pod_metrics")
