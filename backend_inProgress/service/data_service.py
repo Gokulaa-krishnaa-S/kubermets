@@ -69,8 +69,6 @@ class KubecostDataService:
             logger.error(f"Kubecost API request failed: {str(e)}")
             raise Exception(f"Kubecost API request failed: {str(e)}")
 
-   
-
     def _is_cache_valid(self, timestamp: datetime) -> bool:
         """Check if cached data is still valid"""
         return datetime.utcnow() - timestamp < timedelta(
@@ -218,7 +216,7 @@ class KubecostDataService:
 
                 # Store the response with argument hash
                 self._store_cluster_argument_based_data(
-                    session, api_data, argument_hash, query_params, window , domain
+                    session, api_data, argument_hash, query_params, window, domain
                 )
 
                 return {
@@ -233,7 +231,9 @@ class KubecostDataService:
                 logger.warning(f"Cluster API request failed: {str(api_error)}")
 
                 # API failed, try to get fallback data from cache
-                fallback_data = self._get_cluster_fallback_cache_data(session , query_params)
+                fallback_data = self._get_cluster_fallback_cache_data(
+                    session, query_params
+                )
 
                 if fallback_data:
                     logger.info(
@@ -271,7 +271,7 @@ class KubecostDataService:
         argument_hash: str,
         query_params: Dict,
         window: str,
-        domain:str
+        domain: str,
     ):
         """Store cluster API response with argument hash for caching"""
         try:
@@ -283,7 +283,7 @@ class KubecostDataService:
                 raw_data=api_data,
                 argument_hash=argument_hash,
                 query_params=query_params,
-                domain=domain
+                unique_hash=domain,
             )
             session.add(cache_record)
             session.commit()
@@ -296,7 +296,9 @@ class KubecostDataService:
             logger.error(f"Error storing cluster argument-based data: {str(e)}")
             raise
 
-    def _get_cluster_fallback_cache_data(self, session: Session , query_params:Dict) -> Dict[str, Any]:
+    def _get_cluster_fallback_cache_data(
+        self, session: Session, query_params: Dict
+    ) -> Dict[str, Any]:
         """Get the cluster record with maximum window and maximum limit when API fails"""
         try:
             # Get all cached cluster records
@@ -317,20 +319,25 @@ class KubecostDataService:
                 try:
                     if isinstance(record.query_params, str):
                         import json
+
                         params = json.loads(record.query_params)
                     else:
                         params = record.query_params
 
-                    print(params == query_params , '---check query')
+                    print(params == query_params, "---check query")
                     if params == query_params:
-                        logger.info("Found exact cached match for query_params, returning it.")
+                        logger.info(
+                            "Found exact cached match for query_params, returning it."
+                        )
                         return {
                             "data": record.raw_data,
                             "timestamp": record.timestamp.isoformat(),
                             "query_params": record.query_params,
                         }
                 except Exception as e:
-                    logger.warning(f"Error parsing record query_params during exact match check: {str(e)}")
+                    logger.warning(
+                        f"Error parsing record query_params during exact match check: {str(e)}"
+                    )
                     continue
             best_record = None
             max_window_days = 0
@@ -379,7 +386,6 @@ class KubecostDataService:
             logger.error(f"Error getting cluster fallback cache data: {str(e)}")
             return None
 
-
     def get_pod_data(
         self,
         window: str = "7d",
@@ -410,7 +416,7 @@ class KubecostDataService:
                     "filter_pods": filter_pods,
                     "offset": offset,
                     "limit": limit,
-                "domain":domain
+                    "domain": domain,
                 }
             argument_hash = hashlib.md5(
                 str(sorted(query_params.items())).encode()
@@ -487,7 +493,7 @@ class KubecostDataService:
 
                 # API failed, try to get fallback data from cache
                 fallback_data = self._get_fallback_cache_data(
-                    session, aggregate, filter_pods , query_params
+                    session, aggregate, filter_pods, query_params
                 )
 
                 if fallback_data:
@@ -518,7 +524,11 @@ class KubecostDataService:
             session.close()
 
     def _get_fallback_cache_data(
-        self, session: Session, aggregate: str, filter_pods: str = None , query_params : Dict = {}
+        self,
+        session: Session,
+        aggregate: str,
+        filter_pods: str = None,
+        query_params: Dict = {},
     ) -> Dict[str, Any]:
         """Get the record with maximum window and maximum limit when API fails"""
         try:
@@ -539,20 +549,25 @@ class KubecostDataService:
                 try:
                     if isinstance(record.query_params, str):
                         import json
+
                         params = json.loads(record.query_params)
                     else:
                         params = record.query_params
 
-                    print(params == query_params , '---check query')
+                    print(params == query_params, "---check query")
                     if params == query_params:
-                        logger.info("Found exact cached match for query_params, returning it.")
+                        logger.info(
+                            "Found exact cached match for query_params, returning it."
+                        )
                         return {
                             "data": record.raw_data,
                             "timestamp": record.timestamp.isoformat(),
                             "query_params": record.query_params,
                         }
                 except Exception as e:
-                    logger.warning(f"Error parsing record query_params during exact match check: {str(e)}")
+                    logger.warning(
+                        f"Error parsing record query_params during exact match check: {str(e)}"
+                    )
                     continue
 
             best_record = None
@@ -835,7 +850,9 @@ class KubecostDataService:
                 logger.warning(f"Node API request failed: {str(api_error)}")
 
                 # API failed, try to get fallback data from cache
-                fallback_data = self._get_node_fallback_cache_data(session , query_params)
+                fallback_data = self._get_node_fallback_cache_data(
+                    session, query_params
+                )
 
                 if fallback_data:
                     logger.info(
@@ -894,7 +911,9 @@ class KubecostDataService:
             logger.error(f"Error storing node argument-based data: {str(e)}")
             raise
 
-    def _get_node_fallback_cache_data(self, session: Session , query_params:Dict) -> Dict[str, Any]:
+    def _get_node_fallback_cache_data(
+        self, session: Session, query_params: Dict
+    ) -> Dict[str, Any]:
         """Get the node record with maximum window and maximum limit when API fails"""
         try:
             # Get all cached node records
@@ -915,20 +934,25 @@ class KubecostDataService:
                 try:
                     if isinstance(record.query_params, str):
                         import json
+
                         params = json.loads(record.query_params)
                     else:
                         params = record.query_params
 
-                    print(params == query_params , '---check query')
+                    print(params == query_params, "---check query")
                     if params == query_params:
-                        logger.info("Found exact cached match for query_params, returning it.")
+                        logger.info(
+                            "Found exact cached match for query_params, returning it."
+                        )
                         return {
                             "data": record.raw_data,
                             "timestamp": record.timestamp.isoformat(),
                             "query_params": record.query_params,
                         }
                 except Exception as e:
-                    logger.warning(f"Error parsing record query_params during exact match check: {str(e)}")
+                    logger.warning(
+                        f"Error parsing record query_params during exact match check: {str(e)}"
+                    )
                     continue
             best_record = None
             max_window_days = 0
@@ -1094,7 +1118,7 @@ class KubecostDataService:
                     "api_url": data["api_url"],
                     "client_name": data.get("client_name", ""),
                 },
-                sort_keys=True
+                sort_keys=True,
             ).encode("utf-8")
 
             unique_hash = hashlib.sha256(hash_source).hexdigest()
