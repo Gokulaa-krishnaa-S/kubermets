@@ -2,8 +2,8 @@ version: "3.8"
 
 services:
   frontend:
-    build:
-      context: ./frontend
+    # build:
+    #   context: ./frontend
     image: sanjaysify/vite-frontend:latest
     ports:
       - "4000:80"
@@ -13,12 +13,19 @@ services:
       VITE_API_BASE_URL: http://1.7.187.117/api/v1
 
   backend:
-    build:
-      context: ./backend
+    # build:
+    #   context: ./backend_inProgress
     image: sanjaysify/backend:latest
     ports:
       - "8000:8000"
+      - "5432:5432" # expose Postgres
     volumes:
       - ./backend:/app
-    environment:
-      domain: http://172.16.20.110/kubecost
+      - postgres_data:/var/lib/postgresql/data # persist Postgres data
+    env_file:
+      - ./backend/.env # load env vars from .env file
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres_data:
