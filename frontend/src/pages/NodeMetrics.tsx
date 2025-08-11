@@ -241,6 +241,7 @@ const NodeMetricsDashboard = () => {
       offset: 0,
       limit: 25,
       domain: selectedHash,
+      force_refesh: true,
     };
 
     fetchNodeData(queryParams);
@@ -397,35 +398,35 @@ const NodeMetricsDashboard = () => {
         : "hsl(var(--destructive))",
   }));
 
-  if (loading) {
-    return (
-      <Layout
-        title="Node Metrics"
-        subtitle="CPU, memory, disk, network, and node health monitoring"
-      >
-        <div className="min-h-screen bg-background p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center text-muted-foreground">Loading...</div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <Layout
+  //       title="Node Metrics"
+  //       subtitle="CPU, memory, disk, network, and node health monitoring"
+  //     >
+  //       <div className="min-h-screen bg-background p-6">
+  //         <div className="max-w-7xl mx-auto">
+  //           <div className="text-center text-muted-foreground">Loading...</div>
+  //         </div>
+  //       </div>
+  //     </Layout>
+  //   );
+  // }
 
-  if (error) {
-    return (
-      <Layout
-        title="Node Metrics"
-        subtitle="CPU, memory, disk, network, and node health monitoring"
-      >
-        <div className="min-h-screen bg-background p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center text-destructive">{error}</div>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  // if (error) {
+  //   return (
+  //     <Layout
+  //       title="Node Metrics"
+  //       subtitle="CPU, memory, disk, network, and node health monitoring"
+  //     >
+  //       <div className="min-h-screen bg-background p-6">
+  //         <div className="max-w-7xl mx-auto">
+  //           <div className="text-center text-destructive">{error}</div>
+  //         </div>
+  //       </div>
+  //     </Layout>
+  //   );
+  // }
 
   return (
     <Layout

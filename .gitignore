@@ -39,3 +39,7 @@ __pycache__
 migrations/__pycache__/
 migrations/*.pyc
 backend_inProgress/migrations
+
+#python venv
+backend/venv/
+backend_inProgress/venv/
