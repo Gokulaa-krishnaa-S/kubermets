@@ -75,7 +75,7 @@ const SearchInput: React.FC<SearchProps> = ({
 
 const KubecostDashboard = () => {
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sortField, setSortField] = useState("totalCost");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -164,7 +164,7 @@ const KubecostDashboard = () => {
       chartType: "costovertime",
       costUnit: "cumulative",
       domain: selectedHash || "",
-      // force_refresh: true,
+      force_refresh: true,
     };
 
     try {

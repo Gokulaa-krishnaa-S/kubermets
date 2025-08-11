@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 import { FilterBar } from "@/components/reusable/filterbar";
 import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
 import DomainDropdown from "@/components/reusable/domainDropdown";
+import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 
 import {
   Server,
@@ -1012,7 +1013,7 @@ export default function ClusterMetrics() {
         <>
           {/* Overlay */}
           <div
-            className="fixed inset-0 z-40 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 z-40  backdrop-blur-sm transition-opacity"
             style={{ pointerEvents: "auto" }}
           />
           {/* Centered Modal */}
