@@ -57,6 +57,7 @@ export default function ClusterMetrics() {
   const [showClusterModal, setShowClusterModal] = useState(false);
   const [selectedHash, setSelectedHash] = useState<string>("");
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
+  const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
 
 
   // Add loading state to prevent multiple simultaneous calls
@@ -109,8 +110,14 @@ export default function ClusterMetrics() {
       const res = await ClusterService.getClusterAllocationSummary(queryParams);
 
       // Enhanced API failure checking
-      if (res?.data?.api_failed === true) {
+      console.log(res, "condition 5-----------------");
+
+      console.log(res.data, "condition 2------------------");
+      if (res?.api_failed === true) {
+        console.log("came to conditon 2")
+
         setServerStatus("down");
+        setIsAutoRefreshPaused(true);
         console.warn("API reported failure:", res.data);
 
         // Still process data if available despite API failure
@@ -227,6 +234,8 @@ export default function ClusterMetrics() {
       ]);
     } catch (error) {
       console.error("Failed to fetch cluster summary", error);
+      setServerStatus("down");
+      setIsAutoRefreshPaused(true);
       handleApiFailure(error);
       throw error;
     }
@@ -239,8 +248,20 @@ export default function ClusterMetrics() {
       const res = await ClusterService.getClusterAllocationSummary(queryParams);
       console.log(res, "2------------------");
       // Check API failure flag
+      console.log(res.data, "condition 1------------------");
+
       if (res?.data?.api_failed === true) {
+        console.log("came to conditon 1")
         setServerStatus("down");
+        setIsAutoRefreshPaused(true);
+        console.warn("API reported failure:", res.data);
+
+        // Still process data if available despite API failure
+        if (res?.data?.data?.sets?.[0]?.allocations) {
+          // Process cached data...
+        } else {
+          throw new Error("No data available and API failed");
+        }
       } else {
         setServerStatus("live");
       }
@@ -299,13 +320,15 @@ export default function ClusterMetrics() {
         costBreakdown: costData,
       });
     } catch (error) {
+      setServerStatus("down");
+      setIsAutoRefreshPaused(true); // Pause auto-refresh on error
       console.error("Failed to fetch cluster chart data", error);
       throw error;
     }
   }, []);
 
   // Consolidated data fetching function that accepts explicit parameters
-  const fetchAllData = useCallback(async (window: string, domain: string, showToast = false) => {
+  const fetchAllData = useCallback(async (window: string, domain: string, showToast = false, isManualRefresh = false) => {
     // Prevent multiple simultaneous calls
     if (isLoadingData) {
       console.log("Data loading already in progress, skipping...");
@@ -344,20 +367,32 @@ export default function ClusterMetrics() {
 
       setLastUpdated(new Date());
 
+      // If this was a manual refresh and server is back online, resume auto-refresh
+      if (isManualRefresh && serverStatus === "live") {
+        setIsAutoRefreshPaused(false);
+        console.log("Server is back online - resuming auto-refresh");
+      }
+
       if (showToast) {
         toast({
-          title: "Data Refreshed",
-          description: "Cluster metrics have been updated successfully.",
-          variant: "default",
+          title: serverStatus === "live" ? "Data Refreshed" : "Data Retrieved",
+          description: serverStatus === "live"
+            ? "Cluster metrics have been updated successfully."
+            : "Retrieved cached data. Server connection issues detected.",
+          variant: serverStatus === "live" ? "default" : "destructive",
         });
       }
     } catch (error) {
       console.error("Error fetching data:", error);
 
+      // Pause auto-refresh when there's an error
+      setIsAutoRefreshPaused(true);
+      console.log("Auto-refresh paused due to error");
+
       if (showToast) {
         toast({
           title: "Refresh Failed",
-          description: "Failed to update cluster metrics. Please try again.",
+          description: "Failed to update cluster metrics. Auto-refresh paused until manual retry.",
           variant: "destructive",
         });
       }
@@ -365,7 +400,7 @@ export default function ClusterMetrics() {
       setIsLoadingData(false);
       setIsRefreshing(false);
     }
-  }, [isLoadingData, handleCallClusterData, handleClusterChartData]);
+  }, [isLoadingData, handleCallClusterData, handleClusterChartData, serverStatus]);
 
   // Handle domain selection - immediately fetch data with new domain
   const handleDomainSelect = useCallback((hash: string) => {
@@ -387,8 +422,9 @@ export default function ClusterMetrics() {
   // Manual refresh function - uses current state values
   const refreshAllData = useCallback((showToast?: boolean) => {
     console.log("Manual refresh triggered");
-    return fetchAllData(timeRange, selectedHash, showToast ?? true);
+    return fetchAllData(timeRange, selectedHash, showToast ?? true, true); // Pass isManualRefresh = true
   }, [fetchAllData, timeRange, selectedHash]);
+
 
   const handleRefreshIntervalChange = useCallback((interval: number) => {
     setRefreshInterval(interval);
@@ -416,12 +452,17 @@ export default function ClusterMetrics() {
 
   // Auto-refresh interval effect
   useEffect(() => {
-    if (refreshInterval > 0) {
+    if (refreshInterval > 0 && !isAutoRefreshPaused) {
       console.log(`Setting up auto-refresh every ${refreshInterval}ms`);
 
       intervalRef.current = setInterval(() => {
-        console.log("Auto-refresh triggered");
-        fetchAllData(timeRange, selectedHash);
+        // Double-check the pause state before auto-refreshing
+        if (!isAutoRefreshPaused) {
+          console.log("Auto-refresh triggered");
+          fetchAllData(timeRange, selectedHash, false, false); // isManualRefresh = false
+        } else {
+          console.log("Auto-refresh skipped - paused due to server issues");
+        }
       }, refreshInterval);
 
       return () => {
@@ -430,8 +471,10 @@ export default function ClusterMetrics() {
           clearInterval(intervalRef.current);
         }
       };
+    } else if (isAutoRefreshPaused) {
+      console.log("Auto-refresh is paused - not setting up interval");
     }
-  }, [refreshInterval, timeRange, selectedHash, fetchAllData]);
+  }, [refreshInterval, timeRange, selectedHash, fetchAllData, isAutoRefreshPaused]);
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -441,6 +484,54 @@ export default function ClusterMetrics() {
       }
     };
   }, []);
+
+  const ServerStatusBanner = () => {
+    if (serverStatus === "down" || isAutoRefreshPaused) {
+      return (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-red-800">
+                {serverStatus === "down" ? "Server Down" : "Connection Issues"}
+              </h4>
+              <p className="text-sm text-red-700 mt-1">
+                {serverStatus === "down"
+                  ? "Unable to reach the server. Auto-refresh is paused to prevent continuous failed requests."
+                  : "Auto-refresh has been paused due to connection issues."
+                }
+                {" "}Click the refresh button to retry and resume automatic updates.
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <button
+                  onClick={() => refreshAllData(true)}
+                  disabled={isRefreshing}
+                  className="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {isRefreshing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Retry Connection
+                    </>
+                  )}
+                </button>
+                <div className="text-sm text-red-600 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  Auto-refresh paused
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Calculate resource metrics from clusters data
   const getResourceMetrics = () => {
@@ -609,6 +700,7 @@ export default function ClusterMetrics() {
       title="Cluster Metrics"
       subtitle="Comprehensive monitoring and resource analytics"
     >
+      <ServerStatusBanner />
       {/* Loading indicator */}
       {isLoadingData && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -634,6 +726,7 @@ export default function ClusterMetrics() {
         lastUpdated={lastUpdated}
         showRefresh={true}
         className="mb-6"
+        // Add these props if FilterBar supports them
       />
 
       <div className="space-y-6">
@@ -679,7 +772,7 @@ export default function ClusterMetrics() {
                     <NetworkStatusIndicator serverStatus={serverStatus} />
                   </div>
 
-
+{/* 
                   {serverStatus === "down" && (
                     <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
                       <div className="flex items-start gap-3">
@@ -699,7 +792,7 @@ export default function ClusterMetrics() {
                         </div>
                       </div>
                     </div>
-                  )}
+                  )} */}
                 </div>
               </CardHeader>
               <CardContent>
@@ -986,15 +1079,31 @@ export default function ClusterMetrics() {
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-3">
                             <div
-                              className={`w-4 h-4 rounded-full ${item.name === "Idle Resources"
-                                ? "bg-gray-400"
-                                : "bg-gradient-to-r from-blue-500 to-blue-600"
+                              className={`flex items-center gap-2 px-3 py-1 rounded-full border ${serverStatus === "live"
+                                  ? "bg-green-100 border-green-200"
+                                  : "bg-red-100 border-red-200"
                                 }`}
-                            ></div>
-                            <span className="text-sm font-medium text-gray-700 truncate">
-                              {item.name}
-                            </span>
+                            >
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className={`w-2 h-2 rounded-full ${serverStatus === "live" ? "bg-green-500 animate-pulse" : "bg-red-500"
+                                    }`}
+                                ></div>
+                                <span
+                                  className={`text-sm font-medium ${serverStatus === "live" ? "text-green-800" : "text-red-800"
+                                    }`}
+                                >
+                                  {serverStatus === "live" ? "Live" : "Server Down"}
+                                </span>
+                              </div>
+                              {isAutoRefreshPaused && (
+                                <div className="ml-2 pl-2 border-l border-red-300">
+                                  <span className="text-xs text-red-600">Auto-refresh paused</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
+
                           <div className="text-right">
                             <div className="text-sm font-bold text-gray-900">
                               ${item.value}
