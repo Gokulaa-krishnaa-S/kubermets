@@ -32,7 +32,7 @@ import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import DomainDropdown from "@/components/reusable/domainDropdown";
 import { useSelectedHash } from "@/hooks/selected-hash";
-import { ResponsiveLoader } from "@/components/loader/loader";
+import { PodMetricsLoader  } from "@/components/loader/podloader";
 
 // Search Component
 interface SearchProps {
@@ -429,16 +429,14 @@ const KubecostDashboard = () => {
     if (sortField !== field) return "↕️";
     return sortDirection === "asc" ? "↑" : "↓";
   };
-    if (isInitialLoading) {
-    return (
-      <div className="p-4 lg:p-6">
-        <ResponsiveLoader 
-          title="Pod Metrics" 
-          subtitle={`Loading comprehensive monitoring and resource analytics...`}
-        />
-      </div>
-    );
-  }
+if (isInitialLoading) {
+  return (
+    <PodMetricsLoader 
+      title="Pod Metrics" 
+      subtitle="Loading comprehensive monitoring and resource analytics..." 
+    />
+  );
+}
 
   if (loading && !data) {
     return (

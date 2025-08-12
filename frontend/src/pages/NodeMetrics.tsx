@@ -21,7 +21,7 @@ import { FilterBar } from "@/components/reusable/filterbar";
 import { toast } from "@/components/ui/use-toast";
 import DomainDropdown from "@/components/reusable/domainDropdown";
 import { useSelectedHash } from "@/hooks/selected-hash";
-import { ResponsiveLoader } from "@/components/loader/loader";
+import { NodeMetricsLoader } from "@/components/loader/nodeloader";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
@@ -582,16 +582,14 @@ const NodeMetricsDashboard = () => {
   //   );
   // }
 
-  if (isInitialLoading) {
-    return (
-      <div className="p-4 lg:p-6">
-        <ResponsiveLoader
-          title="Node Metrics"
-          subtitle={`Loading comprehensive monitoring and resource analytics...`}
-        />
-      </div>
-    );
-  }
+if (isInitialLoading) {
+  return (
+    <NodeMetricsLoader 
+      title="Node Metrics" 
+      subtitle="Loading comprehensive monitoring and resource analytics..." 
+    />
+  );
+}
 
   return (
     <div className="p-4 lg:p-6">

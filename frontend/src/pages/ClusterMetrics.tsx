@@ -10,7 +10,7 @@ import { FilterBar } from "@/components/reusable/filterbar";
 import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { useSelectedHash } from "@/hooks/selected-hash";
-import { ResponsiveLoader } from "@/components/loader/loader";
+import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 
 import {
   Server,
@@ -780,16 +780,12 @@ export default function ClusterMetrics() {
       </div>
     </div>
   );
-  if (isInitialLoading) {
-    return (
-      <div className="p-4 lg:p-6">
-        <ResponsiveLoader 
-          title="Cluster Metrics" 
-          subtitle={`Loading comprehensive monitoring and resource analytics...`}
-        />
-      </div>
-    );
-  }
+if (isInitialLoading) {
+  return <ClusterLayoutLoader 
+    title="Cluster Metrics" 
+    subtitle="Loading comprehensive monitoring and resource analytics..." 
+  />;
+}
   const resourceMetrics = getResourceMetrics();
   const efficiencyStats = getEfficiencyStats();
 
@@ -1202,7 +1198,7 @@ export default function ClusterMetrics() {
             )}
 
             {/* Quick Actions */}
-            <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+            {/* <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
                   <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
@@ -1255,10 +1251,10 @@ export default function ClusterMetrics() {
                   </button>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* System Health */}
-            <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+            {/* <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
                   <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
@@ -1304,7 +1300,7 @@ export default function ClusterMetrics() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
         </div>
       </div>
