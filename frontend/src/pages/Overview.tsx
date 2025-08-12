@@ -93,10 +93,11 @@ export default function Overview() {
       title: "Cluster Metrics",
       description: "Overall cluster cost, efficiency, and resource utilization",
       icon: <Server className="w-6 h-6" />,
-      path: "/cluster",
+      path: "/metric/cluster",
       metrics: [
         `$${aggregated.totalCost?.toFixed(2) || "0.00"} Total Cost`,
-        `${(aggregated.avgEfficiency * 100)?.toFixed(1) || "0.0"
+        `${
+          (aggregated.avgEfficiency * 100)?.toFixed(1) || "0.0"
         }% Avg Efficiency`,
         `${aggregated.avgCpuUsage?.toFixed(1) || "0.0"}% Avg CPU Utilization`,
       ],
@@ -106,11 +107,12 @@ export default function Overview() {
       title: "Node Metrics",
       description: "Node costs, efficiency, and resource allocation",
       icon: <Box className="w-6 h-6" />,
-      path: "/nodes",
+      path: "/metric/nodes",
       metrics: [
         `${aggregated.totalNodes || 0} Total Nodes`,
         `${aggregated.healthyNodes || 0} Healthy`,
-        `${(aggregated.nodeAvgEfficiency * 100)?.toFixed(1) || "0.0"
+        `${
+          (aggregated.nodeAvgEfficiency * 100)?.toFixed(1) || "0.0"
         }% Avg Efficiency`,
       ],
       status: aggregated.warningNodes > 0 ? "warning" : "healthy",
@@ -119,7 +121,7 @@ export default function Overview() {
       title: "Pod Metrics",
       description: "Pod costs, resource usage, and efficiency tracking",
       icon: <Layers className="w-6 h-6" />,
-      path: "/pods",
+      path: "/metric/pods",
       metrics: [
         `${aggregated.totalPods || 0} Total Pods`,
         `${aggregated.runningPods || 0} Active`,
@@ -158,12 +160,15 @@ export default function Overview() {
   return (
     <Layout
       title="Overview"
-      subtitle={`Complete Kubernetes metrics visualization across ${aggregated.clusterCount || 0
-        } clusters (last 7 days)`}
+      subtitle={`Complete Kubernetes metrics visualization across ${
+        aggregated.clusterCount || 0
+      } clusters (last 7 days)`}
     >
-      
-     <TopBar title={"Overview"} subtitle={`Complete Kubernetes metrics visualization across
-                  ${aggregated.clusterCount || 0} cluster`} />
+      <TopBar
+        title={"Overview"}
+        subtitle={`Complete Kubernetes metrics visualization across
+                  ${aggregated.clusterCount || 0} cluster(last 7 days)`}
+      />
       <div className="space-y-6 p-4 lg:p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -192,10 +197,11 @@ export default function Overview() {
             </CardHeader>
             <CardContent>
               <div
-                className={`text-2xl font-bold ${aggregated.avgEfficiency > 0.5
+                className={`text-2xl font-bold ${
+                  aggregated.avgEfficiency > 0.5
                     ? "text-green-600"
                     : "text-yellow-600"
-                  }`}
+                }`}
               >
                 {(aggregated.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
               </div>
@@ -293,20 +299,21 @@ export default function Overview() {
                   category.status === "healthy"
                     ? "#10b981"
                     : category.status === "warning"
-                      ? "#f59e0b"
-                      : "#ef4444",
+                    ? "#f59e0b"
+                    : "#ef4444",
               }}
               onClick={() => navigate(`${category.path}`)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div
-                    className={`p-2 rounded-lg ${category.status === "healthy"
+                    className={`p-2 rounded-lg ${
+                      category.status === "healthy"
                         ? "bg-green-100"
                         : category.status === "warning"
-                          ? "bg-yellow-100"
-                          : "bg-red-100"
-                      }`}
+                        ? "bg-yellow-100"
+                        : "bg-red-100"
+                    }`}
                   >
                     <div className={getStatusColor(category.status)}>
                       {category.icon}
@@ -331,12 +338,13 @@ export default function Overview() {
                       className="flex items-center gap-2 text-sm"
                     >
                       <div
-                        className={`w-1.5 h-1.5 rounded-full ${category.status === "healthy"
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          category.status === "healthy"
                             ? "bg-green-500"
                             : category.status === "warning"
-                              ? "bg-yellow-500"
-                              : "bg-red-500"
-                          }`}
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                        }`}
                       />
                       <span className="text-muted-foreground">{metric}</span>
                     </div>
@@ -408,10 +416,11 @@ export default function Overview() {
                       aggregated.avgEfficiency > 0.5 ? "healthy" : "warning"
                     )}
                     <span
-                      className={`font-medium ${aggregated.avgEfficiency > 0.5
+                      className={`font-medium ${
+                        aggregated.avgEfficiency > 0.5
                           ? "text-green-600"
                           : "text-yellow-600"
-                        }`}
+                      }`}
                     >
                       {(aggregated.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
                     </span>
@@ -429,8 +438,8 @@ export default function Overview() {
                     {aggregated.avgEfficiency < 0.5
                       ? "High"
                       : aggregated.avgEfficiency < 0.8
-                        ? "Medium"
-                        : "Low"}
+                      ? "Medium"
+                      : "Low"}
                   </span>
                 </div>
               </div>
@@ -476,10 +485,11 @@ export default function Overview() {
                         <div className="flex justify-between">
                           <span>Efficiency:</span>
                           <span
-                            className={`font-medium ${cluster.cluster?.efficiency > 0.5
+                            className={`font-medium ${
+                              cluster.cluster?.efficiency > 0.5
                                 ? "text-green-600"
                                 : "text-yellow-600"
-                              }`}
+                            }`}
                           >
                             {((cluster.cluster?.efficiency || 0) * 100).toFixed(
                               1

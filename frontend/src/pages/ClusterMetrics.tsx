@@ -1062,23 +1062,23 @@ export default function ClusterMetrics() {
             {/* CPU and Memory Charts */}
             {/* {(chartData.cpuData.length > 0 ||
               chartData.memoryData.length > 0) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {chartData.cpuData.length > 0 && (
-                    <Card className="shadow-lg border-0">
-                      <CardHeader>
-                        <CardTitle className="text-lg font-bold text-gray-900">
-                          CPU Usage
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <GroupedBarChart
-                          data={chartData.cpuData}
-                          title={undefined}
-                          yAxisLabel={undefined}
-                        />
-                      </CardContent>
-                    </Card>
-                  )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {chartData.cpuData.length > 0 && (
+                  <Card className="shadow-lg border-0">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-bold text-gray-900">
+                        CPU Usage
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <GroupedBarChart
+                        data={chartData.cpuData}
+                        title={undefined}
+                        yAxisLabel={undefined}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
 
                   {chartData.memoryData.length > 0 && (
                     <Card className="shadow-lg border-0">
