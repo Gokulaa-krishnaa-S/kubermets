@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Settings as SettingsIcon, Plus, RefreshCcw } from "lucide-react";
 import InstanceForm from "./CreateInstance";
 import ClusterService from "@/services/ClusterService";
+import { SettingsMetricsLoader } from "@/components/loader/settingsloader";
 
 interface KubernetesInstance {
   id: number;
@@ -21,6 +22,7 @@ const KubernetesInstanceList: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingInstance, setEditingInstance] = useState<KubernetesInstance | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const fetchInstances = async () => {
     try {
@@ -33,10 +35,14 @@ const KubernetesInstanceList: React.FC = () => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setIsInitialLoading(false);
     }
   };
 
   useEffect(() => {
+    setIsInitialLoading(true);
+
+
     fetchInstances();
   }, []);
 
@@ -54,7 +60,12 @@ const KubernetesInstanceList: React.FC = () => {
     setShowForm(false);
     setEditingInstance(null);
   };
-
+  if (isInitialLoading) {
+    return <SettingsMetricsLoader
+      title="Cluster Metrics"
+      subtitle="Loading comprehensive monitoring and resource analytics..."
+    />;
+  }
   if (showForm) {
     return (
       <InstanceForm
@@ -139,11 +150,10 @@ const KubernetesInstanceList: React.FC = () => {
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="text-lg font-bold text-blue-600 truncate">{instance.name}</h3>
                   <span
-                    className={`px-2 py-1 text-xs rounded-full font-medium ${
-                      instance.status === "active"
+                    className={`px-2 py-1 text-xs rounded-full font-medium ${instance.status === "active"
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"
-                    }`}
+                      }`}
                   >
                     {instance.status}
                   </span>
