@@ -115,7 +115,7 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
   if (success) {
     return (
       <Layout
-        title={mode === "create" ? "Create Instance" : "Edit Instance"}
+        title={mode === "create" ? "Create Cluster" : "Edit Cluster"}
         subtitle={
           mode === "create"
             ? "Create a new Kubernetes instance"
@@ -165,7 +165,7 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
             <ArrowLeft className="w-5 h-5 mr-1" />
           </button>
           <h2 className="text-2xl font-bold text-gray-800">
-            {mode === "create" ? "Create New Instance" : "Edit Instance"}
+            {mode === "create" ? "Create New Cluster" : "Edit Cluster"}
           </h2>
         </div>
 
@@ -185,7 +185,7 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
                 htmlFor="name"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                customer name <span className="text-red-500">*</span>
+                Customer Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -313,7 +313,7 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  {mode === "create" ? "Create" : "Update"} Instance
+                  {mode === "create" ? "Create" : "Update"} 
                 </>
               )}
             </button>
