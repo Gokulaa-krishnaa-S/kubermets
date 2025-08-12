@@ -14,16 +14,27 @@ import K8sDashboard from "./pages/K8newDashbaord";
 import { AlertsAndCost } from "@/pages/AlertsAndCost";
 import { BillingAndCost } from "./pages/BillingAndCost";
 import KubernetesInstanceList from "./pages/kubernetesInstance";
+import { Layout } from "./components/layout/Layout";
 
 const queryClient = new QueryClient();
 
+const handleDomainSelect = (hash: string) => {
+    console.log("Selected Unique Hash:", hash);
+    // setSelectedHash(hash);
+    // refreshAllData(true);
+  };
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
+     
       <BrowserRouter>
         <Routes>
+           {/* <Layout
+      title="Node Metrics"
+      subtitle="CPU, memory, disk, network, and node health monitoring"
+      onDomainChange={handleDomainSelect}> */}
           <Route path="/new" element={<K8sDashboard />} />
           <Route path="/" element={<Overview />} />
           <Route path="/overview" element={<Overview />} />
@@ -36,8 +47,10 @@ const App = () => (
           <Route path="/instance" element={<KubernetesInstanceList />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
+          {/* </Layout> */}
         </Routes>
       </BrowserRouter>
+      
     </TooltipProvider>
   </QueryClientProvider>
 );

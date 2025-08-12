@@ -9,7 +9,6 @@ import { DonutChart } from "@/components/chart/DonutChart";
 import { toast } from "@/components/ui/use-toast";
 import { FilterBar } from "@/components/reusable/filterbar";
 import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
-import DomainDropdown from "@/components/reusable/domainDropdown";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 
 import {
@@ -59,7 +58,6 @@ export default function ClusterMetrics() {
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
 
-
   // Add loading state to prevent multiple simultaneous calls
   const [isLoadingData, setIsLoadingData] = useState(false);
 
@@ -69,9 +67,12 @@ export default function ClusterMetrics() {
   const getServerStatusDisplay = (status: "live" | "down") => {
     return {
       text: status === "live" ? "Live" : "Server Down",
-      bgClass: status === "live" ? "bg-green-100 border-green-200" : "bg-red-100 border-red-200",
+      bgClass:
+        status === "live"
+          ? "bg-green-100 border-green-200"
+          : "bg-red-100 border-red-200",
       dotClass: status === "live" ? "bg-green-500" : "bg-red-500",
-      textClass: status === "live" ? "text-green-800" : "text-red-800"
+      textClass: status === "live" ? "text-green-800" : "text-red-800",
     };
   };
 
@@ -114,7 +115,7 @@ export default function ClusterMetrics() {
 
       console.log(res.data, "condition 2------------------");
       if (res?.api_failed === true) {
-        console.log("came to conditon 2")
+        console.log("came to conditon 2");
 
         setServerStatus("down");
         setIsAutoRefreshPaused(true);
@@ -241,7 +242,6 @@ export default function ClusterMetrics() {
     }
   }, []);
 
-
   const handleClusterChartData = useCallback(async (queryParams) => {
     try {
       console.log("Calling cluster chart data API with:", queryParams);
@@ -251,7 +251,7 @@ export default function ClusterMetrics() {
       console.log(res.data, "condition 1------------------");
 
       if (res?.data?.api_failed === true) {
-        console.log("came to conditon 1")
+        console.log("came to conditon 1");
         setServerStatus("down");
         setIsAutoRefreshPaused(true);
         console.warn("API reported failure:", res.data);
@@ -274,11 +274,11 @@ export default function ClusterMetrics() {
           name,
           used: parseFloat(
             (cluster as ClusterAllocation).cpuCoreUsageAverage?.toFixed(2) ||
-            "0"
+              "0"
           ),
           requested: parseFloat(
             (cluster as ClusterAllocation).cpuCoreRequestAverage?.toFixed(2) ||
-            "0"
+              "0"
           ),
         }));
 
@@ -328,103 +328,122 @@ export default function ClusterMetrics() {
   }, []);
 
   // Consolidated data fetching function that accepts explicit parameters
-  const fetchAllData = useCallback(async (window: string, domain: string, showToast = false, isManualRefresh = false) => {
-    // Prevent multiple simultaneous calls
-    if (isLoadingData) {
-      console.log("Data loading already in progress, skipping...");
-      return;
-    }
-
-    setIsLoadingData(true);
-    setIsRefreshing(true);
-
-    try {
-      const queryParams = {
-        window,
-        aggregate: "cluster",
-        accumulate: true,
-        external: false,
-        shareCost: 0,
-        shareTenancyCosts: true,
-        idle: true,
-        shareIdle: true,
-        idleByNode: true,
-        shareLabels: "",
-        shareNamespaces: "",
-        shareSplit: "weighted",
-        filter: "",
-        domain,
-        force_refresh: true,
-      };
-
-      console.log("Fetching all data with params:", queryParams);
-
-      // Call both APIs concurrently with the same params
-      await Promise.all([
-        handleCallClusterData(queryParams),
-        handleClusterChartData(queryParams),
-      ]);
-
-      setLastUpdated(new Date());
-
-      // If this was a manual refresh and server is back online, resume auto-refresh
-      if (isManualRefresh && serverStatus === "live") {
-        setIsAutoRefreshPaused(false);
-        console.log("Server is back online - resuming auto-refresh");
+  const fetchAllData = useCallback(
+    async (
+      window: string,
+      domain: string,
+      showToast = false,
+      isManualRefresh = false
+    ) => {
+      // Prevent multiple simultaneous calls
+      if (isLoadingData) {
+        console.log("Data loading already in progress, skipping...");
+        return;
       }
 
-      if (showToast) {
-        toast({
-          title: serverStatus === "live" ? "Data Refreshed" : "Data Retrieved",
-          description: serverStatus === "live"
-            ? "Cluster metrics have been updated successfully."
-            : "Retrieved cached data. Server connection issues detected.",
-          variant: serverStatus === "live" ? "default" : "destructive",
-        });
+      setIsLoadingData(true);
+      setIsRefreshing(true);
+
+      try {
+        const queryParams = {
+          window,
+          aggregate: "cluster",
+          accumulate: true,
+          external: false,
+          shareCost: 0,
+          shareTenancyCosts: true,
+          idle: true,
+          shareIdle: true,
+          idleByNode: true,
+          shareLabels: "",
+          shareNamespaces: "",
+          shareSplit: "weighted",
+          filter: "",
+          domain,
+          force_refresh: true,
+        };
+
+        console.log("Fetching all data with params:", queryParams);
+
+        // Call both APIs concurrently with the same params
+        await Promise.all([
+          handleCallClusterData(queryParams),
+          handleClusterChartData(queryParams),
+        ]);
+
+        setLastUpdated(new Date());
+
+        // If this was a manual refresh and server is back online, resume auto-refresh
+        if (isManualRefresh && serverStatus === "live") {
+          setIsAutoRefreshPaused(false);
+          console.log("Server is back online - resuming auto-refresh");
+        }
+
+        if (showToast) {
+          toast({
+            title:
+              serverStatus === "live" ? "Data Refreshed" : "Data Retrieved",
+            description:
+              serverStatus === "live"
+                ? "Cluster metrics have been updated successfully."
+                : "Retrieved cached data. Server connection issues detected.",
+            variant: serverStatus === "live" ? "default" : "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+
+        // Pause auto-refresh when there's an error
+        setIsAutoRefreshPaused(true);
+        console.log("Auto-refresh paused due to error");
+
+        if (showToast) {
+          toast({
+            title: "Refresh Failed",
+            description:
+              "Failed to update cluster metrics. Auto-refresh paused until manual retry.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        setIsLoadingData(false);
+        setIsRefreshing(false);
       }
-    } catch (error) {
-      console.error("Error fetching data:", error);
+    },
+    [isLoadingData, handleCallClusterData, handleClusterChartData, serverStatus]
+  );
 
-      // Pause auto-refresh when there's an error
-      setIsAutoRefreshPaused(true);
-      console.log("Auto-refresh paused due to error");
-
-      if (showToast) {
-        toast({
-          title: "Refresh Failed",
-          description: "Failed to update cluster metrics. Auto-refresh paused until manual retry.",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setIsLoadingData(false);
-      setIsRefreshing(false);
-    }
-  }, [isLoadingData, handleCallClusterData, handleClusterChartData, serverStatus]);
-
-  // Handle domain selection - immediately fetch data with new domain
-  const handleDomainSelect = useCallback((hash: string) => {
-    console.log("Domain selected:", hash);
-    setSelectedHash(hash);
-    // Immediately fetch data with the new domain hash
-    fetchAllData(timeRange, hash, true);
-  }, [timeRange, fetchAllData]);
+  // Handle domain change from Layout component
+  const handleDomainChange = useCallback(
+    (hash: string) => {
+      console.log("Domain changed in ClusterMetrics:", hash);
+      setSelectedHash(hash);
+      // Immediately fetch data with the new domain hash
+      fetchAllData(timeRange, hash, true);
+    },
+    [timeRange, fetchAllData]
+  );
 
   // Handle time range changes - immediately fetch data with new time range
-  const handleTimeRangeChange = useCallback((range: string) => {
-    console.log("Time range changed to:", range);
-    setTimeRange(range);
-    setSearchParams({ window: range });
-    // Immediately fetch data with the new time range
-    fetchAllData(range, selectedHash, false);
-  }, [selectedHash, fetchAllData, setSearchParams]);
+  const handleTimeRangeChange = useCallback(
+    (range: string) => {
+      console.log("Time range changed to:", range);
+      setTimeRange(range);
+      setSearchParams({ window: range });
+      // Immediately fetch data with the new time range
+      fetchAllData(range, selectedHash, false);
+    },
+    [selectedHash, fetchAllData, setSearchParams]
+  );
 
   // Manual refresh function - uses current state values
-  const refreshAllData = useCallback((showToast?: boolean) => {
-    console.log("Manual refresh triggered");
-    return fetchAllData(timeRange, selectedHash, showToast ?? true, true); // Pass isManualRefresh = true
-  }, [fetchAllData, timeRange, selectedHash]);
-
+  const refreshAllData = useCallback(
+    (showToast?: boolean) => {
+      console.log("Manual refresh triggered");
+      return fetchAllData(timeRange, selectedHash, showToast ?? true, true); // Pass isManualRefresh = true
+    },
+    [fetchAllData, timeRange, selectedHash]
+  );
 
   const handleRefreshIntervalChange = useCallback((interval: number) => {
     setRefreshInterval(interval);
@@ -474,7 +493,13 @@ export default function ClusterMetrics() {
     } else if (isAutoRefreshPaused) {
       console.log("Auto-refresh is paused - not setting up interval");
     }
-  }, [refreshInterval, timeRange, selectedHash, fetchAllData, isAutoRefreshPaused]);
+  }, [
+    refreshInterval,
+    timeRange,
+    selectedHash,
+    fetchAllData,
+    isAutoRefreshPaused,
+  ]);
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -498,9 +523,8 @@ export default function ClusterMetrics() {
               <p className="text-sm text-red-700 mt-1">
                 {serverStatus === "down"
                   ? "Unable to reach the server. Auto-refresh is paused to prevent continuous failed requests."
-                  : "Auto-refresh has been paused due to connection issues."
-                }
-                {" "}Click the refresh button to retry and resume automatic updates.
+                  : "Auto-refresh has been paused due to connection issues."}{" "}
+                Click the refresh button to retry and resume automatic updates.
               </p>
               <div className="mt-3 flex items-center gap-3">
                 <button
@@ -590,11 +614,17 @@ export default function ClusterMetrics() {
 
     return { high, medium, low };
   };
-  const NetworkStatusIndicator = ({ serverStatus }: { serverStatus: "live" | "down" }) => {
+  const NetworkStatusIndicator = ({
+    serverStatus,
+  }: {
+    serverStatus: "live" | "down";
+  }) => {
     const statusInfo = getServerStatusDisplay(serverStatus);
 
     return (
-      <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border-2 ${statusInfo.bgClass}`}>
+      <div
+        className={`flex items-center gap-3 px-4 py-2 rounded-lg border-2 ${statusInfo.bgClass}`}
+      >
         <div className="relative">
           <div className={`w-3 h-3 rounded-full ${statusInfo.dotClass}`}>
             {serverStatus === "live" && (
@@ -631,7 +661,9 @@ export default function ClusterMetrics() {
         }
 
         // Wait before retry (exponential backoff)
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(2, attempt) * 1000)
+        );
       }
     }
   };
@@ -642,18 +674,20 @@ export default function ClusterMetrics() {
       if (apiResponse?.cached) {
         return {
           type: "warning",
-          message: `Server Down - Showing cached data from ${new Date(apiResponse.cache_timestamp).toLocaleString()}`
+          message: `Server Down - Showing cached data from ${new Date(
+            apiResponse.cache_timestamp
+          ).toLocaleString()}`,
         };
       } else {
         return {
           type: "error",
-          message: "Server Down - No data available"
+          message: "Server Down - No data available",
         };
       }
     }
     return {
       type: "success",
-      message: "Live connection established"
+      message: "Live connection established",
     };
   };
 
@@ -699,14 +733,17 @@ export default function ClusterMetrics() {
     <Layout
       title="Cluster Metrics"
       subtitle="Comprehensive monitoring and resource analytics"
+      onDomainChange={handleDomainChange} 
     >
-      <ServerStatusBanner />
+      {/* <ServerStatusBanner /> */}
       {/* Loading indicator */}
       {isLoadingData && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-blue-800 text-sm">Loading cluster data...</span>
+            <span className="text-blue-800 text-sm">
+              Loading cluster data...
+            </span>
           </div>
         </div>
       )}
@@ -730,16 +767,17 @@ export default function ClusterMetrics() {
       />
 
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <DomainDropdown onSelect={handleDomainSelect} />
-          {selectedHash && (
+        {/* Remove the DomainDropdown section completely */}
+        {/* Display selected domain info if available */}
+        {selectedHash && (
+          <div className="flex items-center gap-4">
             <div className="px-3 py-1 bg-green-100 border border-green-200 rounded-full">
-              {/* <span className="text-sm text-green-800 font-medium">
+              <span className="text-sm text-green-800 font-medium">
                 Domain: {selectedHash}
-              </span> */}
+              </span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Enhanced Metric Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -771,28 +809,6 @@ export default function ClusterMetrics() {
                   <div className="flex items-center gap-3">
                     <NetworkStatusIndicator serverStatus={serverStatus} />
                   </div>
-
-{/* 
-                  {serverStatus === "down" && (
-                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                        <div>
-                          <h4 className="font-semibold text-red-800">Server Connection Lost</h4>
-                          <p className="text-sm text-red-700 mt-1">
-                            Unable to reach the server. Displaying last available data.
-                            The system will automatically retry connecting.
-                          </p>
-                          <button
-                            onClick={() => refreshAllData(true)}
-                            className="mt-2 px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
-                          >
-                            Retry Connection
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )} */}
                 </div>
               </CardHeader>
               <CardContent>
@@ -806,7 +822,9 @@ export default function ClusterMetrics() {
                         No clusters found
                       </p>
                       <p className="text-sm text-gray-400">
-                        {selectedHash ? "No clusters for selected domain" : "Check your configuration"}
+                        {selectedHash
+                          ? "No clusters for selected domain"
+                          : "Check your configuration"}
                       </p>
                     </div>
                   ) : (
@@ -927,7 +945,10 @@ export default function ClusterMetrics() {
                           <div className="flex items-center gap-4 text-sm text-gray-600">
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              Updated {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'just now'}
+                              Updated{" "}
+                              {lastUpdated
+                                ? new Date(lastUpdated).toLocaleTimeString()
+                                : "just now"}
                             </span>
                           </div>
                           <button className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium group-hover:translate-x-1 transition-all duration-200">
@@ -969,42 +990,42 @@ export default function ClusterMetrics() {
             {/* CPU and Memory Charts */}
             {(chartData.cpuData.length > 0 ||
               chartData.memoryData.length > 0) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {chartData.cpuData.length > 0 && (
-                    <Card className="shadow-lg border-0">
-                      <CardHeader>
-                        <CardTitle className="text-lg font-bold text-gray-900">
-                          CPU Usage
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <GroupedBarChart
-                          data={chartData.cpuData}
-                          title={undefined}
-                          yAxisLabel={undefined}
-                        />
-                      </CardContent>
-                    </Card>
-                  )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {chartData.cpuData.length > 0 && (
+                  <Card className="shadow-lg border-0">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-bold text-gray-900">
+                        CPU Usage
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <GroupedBarChart
+                        data={chartData.cpuData}
+                        title={undefined}
+                        yAxisLabel={undefined}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
 
-                  {chartData.memoryData.length > 0 && (
-                    <Card className="shadow-lg border-0">
-                      <CardHeader>
-                        <CardTitle className="text-lg font-bold text-gray-900">
-                          Memory Usage
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <GroupedBarChart
-                          data={chartData.memoryData}
-                          title={undefined}
-                          yAxisLabel={undefined}
-                        />
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
+                {chartData.memoryData.length > 0 && (
+                  <Card className="shadow-lg border-0">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-bold text-gray-900">
+                        Memory Usage
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <GroupedBarChart
+                        data={chartData.memoryData}
+                        title={undefined}
+                        yAxisLabel={undefined}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right Column - Enhanced Sidebar */}
@@ -1078,32 +1099,10 @@ export default function ClusterMetrics() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-3">
-                            <div
-                              className={`flex items-center gap-2 px-3 py-1 rounded-full border ${serverStatus === "live"
-                                  ? "bg-green-100 border-green-200"
-                                  : "bg-red-100 border-red-200"
-                                }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={`w-2 h-2 rounded-full ${serverStatus === "live" ? "bg-green-500 animate-pulse" : "bg-red-500"
-                                    }`}
-                                ></div>
-                                <span
-                                  className={`text-sm font-medium ${serverStatus === "live" ? "text-green-800" : "text-red-800"
-                                    }`}
-                                >
-                                  {serverStatus === "live" ? "Live" : "Server Down"}
-                                </span>
-                              </div>
-                              {isAutoRefreshPaused && (
-                                <div className="ml-2 pl-2 border-l border-red-300">
-                                  <span className="text-xs text-red-600">Auto-refresh paused</span>
-                                </div>
-                              )}
-                            </div>
+                            <span className="text-sm font-medium text-gray-700 truncate">
+                              {item.name}
+                            </span>
                           </div>
-
                           <div className="text-right">
                             <div className="text-sm font-bold text-gray-900">
                               ${item.value}
@@ -1113,12 +1112,13 @@ export default function ClusterMetrics() {
                             </div>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 ml-7">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
-                            className={`h-2 rounded-full transition-all duration-500 ${item.name === "Idle Resources"
-                              ? "bg-gray-400"
-                              : "bg-gradient-to-r from-blue-500 to-blue-600"
-                              }`}
+                            className={`h-2 rounded-full transition-all duration-500 ${
+                              item.name === "Idle Resources"
+                                ? "bg-gray-400"
+                                : "bg-gradient-to-r from-blue-500 to-blue-600"
+                            }`}
                             style={{ width: `${item.percentage}%` }}
                           ></div>
                         </div>

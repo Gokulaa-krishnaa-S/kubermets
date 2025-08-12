@@ -463,6 +463,7 @@ const KubecostDashboard = () => {
       <Layout
         title="Pods & Containers"
         subtitle="CPU, memory, restarts, state, and health probe monitoring"
+        onDomainChange={handleDomainSelect}
       >
         <div className="min-h-screen p-6">
           <div className="mx-auto">
@@ -488,7 +489,7 @@ const KubecostDashboard = () => {
                   />
                 </div>
                 <div className="flex items-center gap-4">
-                  <DomainDropdown onSelect={handleDomainSelect} />
+                  {/* <DomainDropdown onSelect={handleDomainSelect} /> */}
                   {/* {selectedHash && <p className="mt-3 text-green-600">Selected: {selectedHash}</p>} */}
                 </div>
                 {/* Right side - Refresh Controls */}
