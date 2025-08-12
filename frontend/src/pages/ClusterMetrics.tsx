@@ -1032,30 +1032,7 @@ export default function ClusterMetrics() {
               </Card>
             )}
 
-            {/* Bottom Section - Cost Breakdown Donut Chart */}
-            {chartData.costBreakdown.length > 0 && (
-              <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-                <CardHeader>
-                  <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg">
-                      <DollarSign className="w-5 h-5 text-white" />
-                    </div>
-                    Cost Distribution Analysis
-                  </CardTitle>
-                  <p className="text-sm text-gray-600">
-                    Visual breakdown of cluster costs and idle resources
-                  </p>
-                </CardHeader>
-                <CardContent className="pb-14">
-                  <div className="flex justify-center">
-                    <DonutChart
-                      data={chartData.costBreakdown}
-                      title="Cost Breakdown by Cluster"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+          
 
             {/* CPU and Memory Charts */}
             {/* {(chartData.cpuData.length > 0 ||
@@ -1256,6 +1233,30 @@ export default function ClusterMetrics() {
             </Card> */}
 
             {/* System Health */}
+              {/* Bottom Section - Cost Breakdown Donut Chart */}
+            {chartData.costBreakdown.length > 0 && (
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg">
+                      <DollarSign className="w-5 h-5 text-white" />
+                    </div>
+                    Cost Distribution Analysis
+                  </CardTitle>
+                  <p className="text-sm text-gray-600">
+                    Visual breakdown of cluster costs and idle resources
+                  </p>
+                </CardHeader>
+                <CardContent className="pb-14">
+                  <div className="flex justify-center">
+                    <DonutChart
+                      data={chartData.costBreakdown}
+                      title="Cost Breakdown by Cluster"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {/* <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
               <CardHeader>
                 <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
