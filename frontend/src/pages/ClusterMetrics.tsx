@@ -9,7 +9,6 @@ import { DonutChart } from "@/components/chart/DonutChart";
 import { toast } from "@/components/ui/use-toast";
 import { FilterBar } from "@/components/reusable/filterbar";
 import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
-import DomainDropdown from "@/components/reusable/domainDropdown";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 
 import {
@@ -361,7 +360,7 @@ export default function ClusterMetrics() {
           shareSplit: "weighted",
           filter: "",
           domain,
-          force_refresh: false,
+          force_refresh: true,
         };
 
         console.log("Fetching all data with params:", queryParams);
@@ -414,10 +413,10 @@ export default function ClusterMetrics() {
     [isLoadingData, handleCallClusterData, handleClusterChartData, serverStatus]
   );
 
-  // Handle domain selection - immediately fetch data with new domain
-  const handleDomainSelect = useCallback(
+  // Handle domain change from Layout component
+  const handleDomainChange = useCallback(
     (hash: string) => {
-      console.log("Domain selected:", hash);
+      console.log("Domain changed in ClusterMetrics:", hash);
       setSelectedHash(hash);
       // Immediately fetch data with the new domain hash
       fetchAllData(timeRange, hash, true);
@@ -734,8 +733,9 @@ export default function ClusterMetrics() {
     <Layout
       title="Cluster Metrics"
       subtitle="Comprehensive monitoring and resource analytics"
+      onDomainChange={handleDomainChange}
     >
-      <ServerStatusBanner />
+      {/* <ServerStatusBanner /> */}
       {/* Loading indicator */}
       {isLoadingData && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -767,16 +767,17 @@ export default function ClusterMetrics() {
       />
 
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <DomainDropdown onSelect={handleDomainSelect} />
-          {selectedHash && (
+        {/* Remove the DomainDropdown section completely */}
+        {/* Display selected domain info if available */}
+        {selectedHash && (
+          <div className="flex items-center gap-4">
             <div className="px-3 py-1 bg-green-100 border border-green-200 rounded-full">
-              {/* <span className="text-sm text-green-800 font-medium">
+              <span className="text-sm text-green-800 font-medium">
                 Domain: {selectedHash}
-              </span> */}
+              </span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Enhanced Metric Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -808,28 +809,6 @@ export default function ClusterMetrics() {
                   <div className="flex items-center gap-3">
                     <NetworkStatusIndicator serverStatus={serverStatus} />
                   </div>
-
-                  {/* 
-                  {serverStatus === "down" && (
-                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                        <div>
-                          <h4 className="font-semibold text-red-800">Server Connection Lost</h4>
-                          <p className="text-sm text-red-700 mt-1">
-                            Unable to reach the server. Displaying last available data.
-                            The system will automatically retry connecting.
-                          </p>
-                          <button
-                            onClick={() => refreshAllData(true)}
-                            className="mt-2 px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 transition-colors"
-                          >
-                            Retry Connection
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )} */}
                 </div>
               </CardHeader>
               <CardContent>
@@ -1120,43 +1099,10 @@ export default function ClusterMetrics() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-3">
-                            <div
-                              className={`flex items-center gap-2 px-3 py-1 rounded-full border ${
-                                serverStatus === "live"
-                                  ? "bg-green-100 border-green-200"
-                                  : "bg-red-100 border-red-200"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={`w-2 h-2 rounded-full ${
-                                    serverStatus === "live"
-                                      ? "bg-green-500 animate-pulse"
-                                      : "bg-red-500"
-                                  }`}
-                                ></div>
-                                <span
-                                  className={`text-sm font-medium ${
-                                    serverStatus === "live"
-                                      ? "text-green-800"
-                                      : "text-red-800"
-                                  }`}
-                                >
-                                  {serverStatus === "live"
-                                    ? "Live"
-                                    : "Server Down"}
-                                </span>
-                              </div>
-                              {isAutoRefreshPaused && (
-                                <div className="ml-2 pl-2 border-l border-red-300">
-                                  <span className="text-xs text-red-600">
-                                    Auto-refresh paused
-                                  </span>
-                                </div>
-                              )}
-                            </div>
+                            <span className="text-sm font-medium text-gray-700 truncate">
+                              {item.name}
+                            </span>
                           </div>
-
                           <div className="text-right">
                             <div className="text-sm font-bold text-gray-900">
                               ${item.value}
@@ -1166,7 +1112,7 @@ export default function ClusterMetrics() {
                             </div>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 ml-7">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full transition-all duration-500 ${
                               item.name === "Idle Resources"

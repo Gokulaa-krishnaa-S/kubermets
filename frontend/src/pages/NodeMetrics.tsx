@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Server, Cpu, Activity, DollarSign } from "lucide-react";
 import {
@@ -398,6 +398,17 @@ const NodeMetricsDashboard = () => {
         : "hsl(var(--destructive))",
   }));
 
+    // Handle domain change from Layout component
+    // const handleDomainChange = useCallback(
+    //   (hash: string) => {
+    //     console.log("Domain changed in ClusterMetrics:", hash);
+    //     setSelectedHash(hash);
+    //     // Immediately fetch data with the new domain hash
+    //     fetchAllData(timeRange, hash, true);
+    //   },
+    //   [timeRange, fetchAllData]
+    // );
+
   // if (loading) {
   //   return (
   //     <Layout
@@ -432,6 +443,7 @@ const NodeMetricsDashboard = () => {
     <Layout
       title="Node Metrics"
       subtitle="CPU, memory, disk, network, and node health monitoring"
+      onDomainChange={handleDomainSelect}
     >
       <div className="min-h-screen bg-background">
         {/* Filter Bar */}
@@ -453,7 +465,7 @@ const NodeMetricsDashboard = () => {
 
         <div className="mx-auto space-y-6">
           <div className="flex items-center gap-4">
-            <DomainDropdown onSelect={handleDomainSelect} />
+            {/* <DomainDropdown onSelect={handleDomainSelect} /> */}
             {/* {selectedHash && <p className="mt-3 text-green-600">Selected: {selectedHash}</p>} */}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

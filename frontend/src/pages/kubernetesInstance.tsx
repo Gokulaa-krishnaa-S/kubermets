@@ -96,10 +96,7 @@ const KubernetesInstanceList: React.FC = () => {
   }
 
   return (
-    <Layout
-      title="Kubernetes Instances"
-      subtitle="Manage your Kubernetes cluster instances"
-    >
+   
       <div className="max-w-6xl ">
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -214,7 +211,6 @@ const KubernetesInstanceList: React.FC = () => {
           Total instances: {instances.length}
         </div>
       </div>
-    </Layout>
   );
 };
 

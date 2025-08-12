@@ -2,7 +2,9 @@ import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Settings as SettingsIcon, Moon, Sun, Bell, Shield } from "lucide-react";
+import { Settings as SettingsIcon, Moon, Bell, Shield } from "lucide-react";
+import KubernetesInstanceList from "./kubernetesInstance";
+
 
 export default function Settings() {
   return (
@@ -11,6 +13,12 @@ export default function Settings() {
       subtitle="Configure your Kubernetes monitoring dashboard"
     >
       <div className="space-y-6">
+        {/* Top full-width slot - 60% screen height */}
+        <div className="w-full" >
+          <KubernetesInstanceList />
+        </div>
+
+        {/* Existing settings cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -23,7 +31,9 @@ export default function Settings() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Dark Mode</p>
-                  <p className="text-sm text-muted-foreground">Toggle between light and dark themes</p>
+                  <p className="text-sm text-muted-foreground">
+                    Toggle between light and dark themes
+                  </p>
                 </div>
                 <Button variant="outline" size="sm">
                   <Moon className="w-4 h-4" />
@@ -32,9 +42,16 @@ export default function Settings() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Auto Refresh</p>
-                  <p className="text-sm text-muted-foreground">Refresh metrics every 30 seconds</p>
+                  <p className="text-sm text-muted-foreground">
+                    Refresh metrics every 30 seconds
+                  </p>
                 </div>
-                <Badge variant="outline" className="bg-success/10 text-success">Enabled</Badge>
+                <Badge
+                  variant="outline"
+                  className="bg-success/10 text-success"
+                >
+                  Enabled
+                </Badge>
               </div>
             </CardContent>
           </Card>
@@ -50,14 +67,23 @@ export default function Settings() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Alert Notifications</p>
-                  <p className="text-sm text-muted-foreground">Receive alerts for critical issues</p>
+                  <p className="text-sm text-muted-foreground">
+                    Receive alerts for critical issues
+                  </p>
                 </div>
-                <Badge variant="outline" className="bg-success/10 text-success">Enabled</Badge>
+                <Badge
+                  variant="outline"
+                  className="bg-success/10 text-success"
+                >
+                  Enabled
+                </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Email Reports</p>
-                  <p className="text-sm text-muted-foreground">Daily cluster health reports</p>
+                  <p className="text-sm text-muted-foreground">
+                    Daily cluster health reports
+                  </p>
                 </div>
                 <Badge variant="outline">Disabled</Badge>
               </div>
@@ -77,16 +103,24 @@ export default function Settings() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">Two-Factor Authentication</p>
-                  <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
+                  <p className="text-sm text-muted-foreground">
+                    Add an extra layer of security
+                  </p>
                 </div>
-                <Button variant="outline" size="sm">Configure</Button>
+                <Button variant="outline" size="sm">
+                  Configure
+                </Button>
               </div>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">API Access</p>
-                  <p className="text-sm text-muted-foreground">Manage API keys and permissions</p>
+                  <p className="text-sm text-muted-foreground">
+                    Manage API keys and permissions
+                  </p>
                 </div>
-                <Button variant="outline" size="sm">Manage</Button>
+                <Button variant="outline" size="sm">
+                  Manage
+                </Button>
               </div>
             </div>
           </CardContent>

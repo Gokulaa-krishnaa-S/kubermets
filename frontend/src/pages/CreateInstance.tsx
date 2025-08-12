@@ -151,14 +151,7 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
   }
 
   return (
-    <Layout
-      title={mode === "create" ? "Create Instance" : "Edit Instance"}
-      subtitle={
-        mode === "create"
-          ? "Create a new Kubernetes instance"
-          : "Update Kubernetes instance details"
-      }
-    >
+    
       <div className="max-w-2xl mx-auto p-6">
         <div className="bg-white shadow-lg rounded-xl p-6">
           <div className="flex items-center mb-6">
@@ -320,7 +313,6 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
           </div>
         </div>
       </div>
-    </Layout>
   );
 };
 

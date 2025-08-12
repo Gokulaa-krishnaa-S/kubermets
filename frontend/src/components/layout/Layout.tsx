@@ -2,6 +2,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { ThemeProvider } from "next-themes";
+import { useState } from "react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface LayoutProps {
   showAddButton?: boolean;
   addButtonText?: string;
   onAddClick?: () => void;
+  onDomainChange?: (hash: string) => void; // Add this optional prop for external handling
 }
 
 export function Layout({
@@ -19,7 +21,22 @@ export function Layout({
   showAddButton,
   addButtonText,
   onAddClick,
+  onDomainChange, // Add this prop
 }: LayoutProps) {
+  const [selectedDomain, setSelectedDomain] = useState<string>("");
+
+  // Handle domain selection from Header
+  const handleDomainSelect = (hash: string) => {
+    console.log("Domain selected in Layout:", hash);
+    setSelectedDomain(hash);
+    
+    // Call external callback if provided
+    if (onDomainChange) {
+      onDomainChange(hash);
+    }
+    
+  };
+
   return (
     <ThemeProvider
       attribute="class"
@@ -37,6 +54,7 @@ export function Layout({
               showAddButton={showAddButton}
               addButtonText={addButtonText}
               onAddClick={onAddClick}
+              onDomainSelect={handleDomainSelect} // Pass the callback
             />
             <main className="flex-1 overflow-y-auto">
               <div className="p-4 lg:p-6">
