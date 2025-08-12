@@ -48,14 +48,14 @@ export function Layout({
         <div className="min-h-screen flex w-full bg-background">
           <AppSidebar />
           <div className="flex-1 flex flex-col overflow-hidden">
-            <Header
+            {/* <Header
               title={title}
               subtitle={subtitle}
               showAddButton={showAddButton}
               addButtonText={addButtonText}
               onAddClick={onAddClick}
               onDomainSelect={handleDomainSelect} // Pass the callback
-            />
+            /> */}
             <main className="flex-1 overflow-y-auto">
               <div className="p-4 lg:p-6">
                 {children}

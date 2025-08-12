@@ -412,10 +412,10 @@ const KubecostDashboard = () => {
 
   if (loading && !data) {
     return (
-      <Layout
-        title="Pods & Containers"
-        subtitle="CPU, memory, restarts, state, and health probe monitoring"
-      >
+      // <Layout
+      //   title="Pods & Containers"
+      //   subtitle="CPU, memory, restarts, state, and health probe monitoring"
+      // >
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="animate-pulse">
@@ -435,16 +435,16 @@ const KubecostDashboard = () => {
             </div>
           </div>
         </div>
-      </Layout>
+      // </Layout>
     );
   }
 
   if (error) {
     return (
-      <Layout
-        title="Pods & Containers"
-        subtitle="CPU, memory, restarts, state, and health probe monitoring"
-      >
+      // <Layout
+      //   title="Pods & Containers"
+      //   subtitle="CPU, memory, restarts, state, and health probe monitoring"
+      // >
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
           <div className="bg-white rounded-xl p-8 border border-red-200 max-w-md text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -454,16 +454,16 @@ const KubecostDashboard = () => {
             <p className="text-gray-600">{error}</p>
           </div>
         </div>
-      </Layout>
+      // </Layout>
     );
   }
 
   return (
     <>
-      <Layout
-        title="Pods & Containers"
-        subtitle="CPU, memory, restarts, state, and health probe monitoring"
-        onDomainChange={handleDomainSelect}
+      <div
+        // title="Pods & Containers"
+        // subtitle="CPU, memory, restarts, state, and health probe monitoring"
+        // onDomainChange={handleDomainSelect}
       >
         <div className="min-h-screen p-6">
           <div className="mx-auto">
@@ -1192,7 +1192,7 @@ const KubecostDashboard = () => {
             )}
           </div>
         </div>
-      </Layout>
+      </div>
 
       <PodDetailsModal
         isOpen={showPodModal}

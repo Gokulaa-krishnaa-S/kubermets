@@ -15,6 +15,7 @@ import { AlertsAndCost } from "@/pages/AlertsAndCost";
 import { BillingAndCost } from "./pages/BillingAndCost";
 import KubernetesInstanceList from "./pages/kubernetesInstance";
 import { Layout } from "./components/layout/Layout";
+import { Header } from "./components/layout/Header";
 
 const queryClient = new QueryClient();
 
@@ -28,13 +29,21 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-     
+     {/* <Header
+              title={title}
+              subtitle={subtitle}
+              showAddButton={showAddButton}
+              addButtonText={addButtonText}
+              onAddClick={onAddClick}
+              onDomainSelect={handleDomainSelect} // Pass the callback
+            /> */}
       <BrowserRouter>
         <Routes>
            {/* <Layout
       title="Node Metrics"
       subtitle="CPU, memory, disk, network, and node health monitoring"
       onDomainChange={handleDomainSelect}> */}
+      
           <Route path="/new" element={<K8sDashboard />} />
           <Route path="/" element={<Overview />} />
           <Route path="/overview" element={<Overview />} />
