@@ -100,7 +100,7 @@ const KubecostDashboard = () => {
   const [lastUpdated, setLastUpdated] = useState(null);
   // const [selectedHash, setSelectedHash] = useState<string>("");
   const { selectedHash } = useSelectedHash();
-  const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
+  // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
   // const [selectedHash, setSelectedHash] = useState<string>("");
 
   // const handleDomainSelect = (hash: string) => {
@@ -172,20 +172,20 @@ const KubecostDashboard = () => {
 
     try {
       const res = await ClusterService.getClusterAllocationSummary(queryParams);
-      if (res?.cached === true && res?.cache_timestamp) {
-        const cacheDate = new Date(res.cache_timestamp);
-        const formattedTime = cacheDate.toLocaleTimeString();
-        setLastUpdated(cacheDate); // Set the actual Date object
-        setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
-      } else {
-        const currentDate = new Date();
-        const formattedTime = currentDate.toLocaleTimeString();
-        setLastUpdated(currentDate); // Set the actual Date object
-        setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
-      }
+      // if (res?.cached === true && res?.cache_timestamp) {
+      //   const cacheDate = new Date(res.cache_timestamp);
+      //   const formattedTime = cacheDate.toLocaleTimeString();
+      //   setLastUpdated(cacheDate); // Set the actual Date object
+      //   setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
+      // } else {
+      //   const currentDate = new Date();
+      //   const formattedTime = currentDate.toLocaleTimeString();
+      //   setLastUpdated(currentDate); // Set the actual Date object
+      //   setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
+      // }
 
       setData(res.data.data);
-      // setLastUpdated(new Date());
+      setLastUpdated(new Date());
 
       if (showToast) {
         console.log("Data refreshed successfully");

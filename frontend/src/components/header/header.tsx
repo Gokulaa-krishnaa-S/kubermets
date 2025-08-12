@@ -2,7 +2,7 @@ import React from 'react'
 
 const TopBar = ({title, subtitle}) => {
   return (
-     <div className="mb-6">
+     <div className=" p-4 lg:p-6">
             <div className="flex items-center justify-between">
               {/* Page Title */}
               <div>

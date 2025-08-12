@@ -50,7 +50,7 @@ export default function ClusterMetrics() {
   const [refreshInterval, setRefreshInterval] = useState(10000);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
+  // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const intervalRef = useRef(null);
   const [selectedCluster, setSelectedCluster] = useState(null);
@@ -119,19 +119,20 @@ export default function ClusterMetrics() {
       // Enhanced API failure checking
       console.log(res, "condition 5-----------------");
       console.log(res.data, "condition 2------------------");
+      //  setLastUpdated(new Date());
 
       // Handle cache timestamp for last updated
-      if (res?.cached === true && res?.cache_timestamp) {
-        const cacheDate = new Date(res.cache_timestamp);
-        const formattedTime = cacheDate.toLocaleTimeString();
-        setLastUpdated(cacheDate); // Set the actual Date object
-        setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
-      } else {
-        const currentDate = new Date();
-        const formattedTime = currentDate.toLocaleTimeString();
-        setLastUpdated(currentDate); // Set the actual Date object
-        setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
-      }
+      // if (res?.cached === true && res?.cache_timestamp) {
+      //   const cacheDate = new Date(res.cache_timestamp);
+      //   const formattedTime = cacheDate.toLocaleTimeString();
+      //   setLastUpdated(cacheDate); // Set the actual Date object
+      //   setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
+      // } else {
+      //   const currentDate = new Date();
+      //   const formattedTime = currentDate.toLocaleTimeString();
+      //   setLastUpdated(currentDate); // Set the actual Date object
+      //   setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
+      // }
 
       if (res?.api_failed === true) {
         console.log("came to conditon 2");
@@ -269,19 +270,20 @@ export default function ClusterMetrics() {
       const res = await ClusterService.getClusterAllocationSummary(queryParams);
       console.log(res, "2------------------");
       console.log(res.data, "condition 1------------------");
+      // setLastUpdated(new Date());
 
       // Handle cache timestamp for last updated
-      if (res?.cached === true && res?.cache_timestamp) {
-        const cacheDate = new Date(res.cache_timestamp);
-        const formattedTime = cacheDate.toLocaleTimeString();
-        setLastUpdated(cacheDate); // Set the actual Date object
-        setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
-      } else {
-        const currentDate = new Date();
-        const formattedTime = currentDate.toLocaleTimeString();
-        setLastUpdated(currentDate); // Set the actual Date object
-        setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
-      }
+      // if (res?.cached === true && res?.cache_timestamp) {
+      //   const cacheDate = new Date(res.cache_timestamp);
+      //   const formattedTime = cacheDate.toLocaleTimeString();
+      //   setLastUpdated(cacheDate); // Set the actual Date object
+      //   setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
+      // } else {
+      //   const currentDate = new Date();
+      //   const formattedTime = currentDate.toLocaleTimeString();
+      //   setLastUpdated(currentDate); // Set the actual Date object
+      //   setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
+      // }
 
       // Check API failure flag
       if (res?.data?.api_failed === true) {
@@ -349,7 +351,7 @@ export default function ClusterMetrics() {
               : "0.0",
         };
       });
-
+      setLastUpdated(new Date());
       setChartData({
         cpuData: cpuChartData,
         memoryData: memoryChartData,
@@ -406,6 +408,8 @@ export default function ClusterMetrics() {
           handleCallClusterData(queryParams),
           handleClusterChartData(queryParams),
         ]);
+
+        setLastUpdated(new Date());
 
         // Note: setLastUpdated is now handled within individual functions
         // based on cache status, so we don't need to set it here
@@ -547,7 +551,7 @@ export default function ClusterMetrics() {
     };
   }, []);
 
-   useEffect(() => {
+  useEffect(() => {
     if (selectedHash) {
       refreshAllData(false); // No toast, force refresh
     }
@@ -774,9 +778,9 @@ export default function ClusterMetrics() {
 
   return (
     <div className="p-4 lg:p-6"
-      // title="Cluster Metrics"
-      // subtitle="Comprehensive monitoring and resource analytics"
-      // onDomainChange={handleDomainChange}
+    // title="Cluster Metrics"
+    // subtitle="Comprehensive monitoring and resource analytics"
+    // onDomainChange={handleDomainChange}
     >
       {/* <ServerStatusBanner /> */}
       {/* Loading indicator */}
@@ -812,15 +816,6 @@ export default function ClusterMetrics() {
       <div className="space-y-6">
         {/* Remove the DomainDropdown section completely */}
         {/* Display selected domain info if available */}
-        {selectedHash && (
-          <div className="flex items-center gap-4">
-            <div className="px-3 py-1 bg-green-100 border border-green-200 rounded-full">
-              <span className="text-sm text-green-800 font-medium">
-                Domain: {selectedHash}
-              </span>
-            </div>
-          </div>
-        )}
 
         {/* Enhanced Metric Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -988,8 +983,12 @@ export default function ClusterMetrics() {
                           <div className="flex items-center gap-4 text-sm text-gray-600">
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              {lastUpdatedDisplay || "Loading..."}
+                              Updated{" "}
+                              {lastUpdated
+                                ? new Date(lastUpdated).toLocaleTimeString()
+                                : "just now"}
                             </span>
+
                           </div>
                           <button className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium group-hover:translate-x-1 transition-all duration-200">
                             View Details

@@ -31,7 +31,7 @@ const NodeMetricsDashboard = () => {
   const [refreshInterval, setRefreshInterval] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
+  // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   // const [selectedHash, setSelectedHash] = useState<string>("");
   const { selectedHash } = useSelectedHash();
@@ -57,17 +57,18 @@ const NodeMetricsDashboard = () => {
   const handleCallNodeData = async (params) => {
     try {
       const response = await ClusterService.getClusterAllocationSummary(params);
-      if (response.cached === true && response?.cache_timestamp) {
-        const cacheDate = new Date(response.cache_timestamp);
-        const formattedTime = cacheDate.toLocaleTimeString();
-        setLastUpdated(cacheDate); // Set the actual Date object
-        setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
-      } else {
-        const currentDate = new Date();
-        const formattedTime = currentDate.toLocaleTimeString();
-        setLastUpdated(currentDate); // Set the actual Date object
-        setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
-      }
+      //  setLastUpdated(new Date());
+      // if (response.cached === true && response?.cache_timestamp) {
+      //   const cacheDate = new Date(response.cache_timestamp);
+      //   const formattedTime = cacheDate.toLocaleTimeString();
+      //   setLastUpdated(cacheDate); // Set the actual Date object
+      //   setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
+      // } else {
+      //   const currentDate = new Date();
+      //   const formattedTime = currentDate.toLocaleTimeString();
+      //   setLastUpdated(currentDate); // Set the actual Date object
+      //   setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
+      // }
       return response.data;
     } catch (error) {
       console.error("Failed to fetch cluster summary", error);
@@ -308,7 +309,7 @@ const NodeMetricsDashboard = () => {
       };
 
       await fetchNodeData(queryParams);
-      // setLastUpdated(new Date());
+      setLastUpdated(new Date());
 
       if (showToast) {
         toast({

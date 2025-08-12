@@ -11,13 +11,14 @@ export default function Settings() {
     <Layout
       title="Settings"
       subtitle="Configure your Kubernetes monitoring dashboard"
+      
     >
       <TopBar
         title={"Settings"}
         subtitle={"You can configure your Kubernetes monitoring dashboard here"}
       />
 
-      <div className="space-y-8">
+      <div className="space-y-8 p-4 lg:p-6">
         {/* Instances section */}
         <div>
           <KubernetesInstanceList />
