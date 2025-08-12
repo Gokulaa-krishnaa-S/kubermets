@@ -31,6 +31,7 @@ const NodeMetricsDashboard = () => {
   const [refreshInterval, setRefreshInterval] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedHash, setSelectedHash] = useState<string>("");
 
@@ -52,6 +53,17 @@ const NodeMetricsDashboard = () => {
   const handleCallNodeData = async (params) => {
     try {
       const response = await ClusterService.getClusterAllocationSummary(params);
+      if (response.cached === true && response?.cache_timestamp) {
+        const cacheDate = new Date(response.cache_timestamp);
+        const formattedTime = cacheDate.toLocaleTimeString();
+        setLastUpdated(cacheDate); // Set the actual Date object
+        setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
+      } else {
+        const currentDate = new Date();
+        const formattedTime = currentDate.toLocaleTimeString();
+        setLastUpdated(currentDate); // Set the actual Date object
+        setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
+      }
       return response.data;
     } catch (error) {
       console.error("Failed to fetch cluster summary", error);
@@ -194,7 +206,7 @@ const NodeMetricsDashboard = () => {
       };
 
       await fetchNodeData(queryParams);
-      setLastUpdated(new Date());
+      // setLastUpdated(new Date());
 
       if (showToast) {
         toast({
@@ -394,20 +406,20 @@ const NodeMetricsDashboard = () => {
       status === "healthy"
         ? "hsl(var(--success))"
         : status === "warning"
-        ? "hsl(var(--warning))"
-        : "hsl(var(--destructive))",
+          ? "hsl(var(--warning))"
+          : "hsl(var(--destructive))",
   }));
 
-    // Handle domain change from Layout component
-    // const handleDomainChange = useCallback(
-    //   (hash: string) => {
-    //     console.log("Domain changed in ClusterMetrics:", hash);
-    //     setSelectedHash(hash);
-    //     // Immediately fetch data with the new domain hash
-    //     fetchAllData(timeRange, hash, true);
-    //   },
-    //   [timeRange, fetchAllData]
-    // );
+  // Handle domain change from Layout component
+  // const handleDomainChange = useCallback(
+  //   (hash: string) => {
+  //     console.log("Domain changed in ClusterMetrics:", hash);
+  //     setSelectedHash(hash);
+  //     // Immediately fetch data with the new domain hash
+  //     fetchAllData(timeRange, hash, true);
+  //   },
+  //   [timeRange, fetchAllData]
+  // );
 
   // if (loading) {
   //   return (
@@ -667,13 +679,12 @@ const NodeMetricsDashboard = () => {
                         </td>
                         <td className="p-3">
                           <span
-                            className={`text-sm font-medium ${
-                              parseFloat(node["efficiency"]) > 5
+                            className={`text-sm font-medium ${parseFloat(node["efficiency"]) > 5
                                 ? "text-success"
                                 : parseFloat(node["efficiency"]) > 1
-                                ? "text-warning"
-                                : "text-destructive"
-                            }`}
+                                  ? "text-warning"
+                                  : "text-destructive"
+                              }`}
                           >
                             {node["efficiency"]}%
                           </span>
