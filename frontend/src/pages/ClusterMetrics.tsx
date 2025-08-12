@@ -733,7 +733,7 @@ export default function ClusterMetrics() {
     <Layout
       title="Cluster Metrics"
       subtitle="Comprehensive monitoring and resource analytics"
-      onDomainChange={handleDomainChange} 
+      onDomainChange={handleDomainChange}
     >
       {/* <ServerStatusBanner /> */}
       {/* Loading indicator */}

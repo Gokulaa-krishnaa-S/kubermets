@@ -241,7 +241,7 @@ const NodeMetricsDashboard = () => {
       offset: 0,
       limit: 25,
       domain: selectedHash,
-      force_refesh: true,
+      force_refesh: false,
     };
 
     fetchNodeData(queryParams);
