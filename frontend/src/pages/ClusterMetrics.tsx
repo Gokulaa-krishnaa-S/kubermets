@@ -48,7 +48,7 @@ export default function ClusterMetrics() {
     costBreakdown: [],
   });
   const [timeRange, setTimeRange] = useState("24h");
-  const [refreshInterval, setRefreshInterval] = useState(10000);
+  const [refreshInterval, setRefreshInterval] = useState(30000);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
@@ -447,7 +447,7 @@ export default function ClusterMetrics() {
       } finally {
         setIsLoadingData(false);
         setIsRefreshing(false);
-         setIsInitialLoading(false);
+        setIsInitialLoading(false);
       }
     },
     [isLoadingData, handleCallClusterData, handleClusterChartData, serverStatus]
@@ -780,12 +780,14 @@ export default function ClusterMetrics() {
       </div>
     </div>
   );
-if (isInitialLoading) {
-  return <ClusterLayoutLoader 
-    title="Cluster Metrics" 
-    subtitle="Loading comprehensive monitoring and resource analytics..." 
-  />;
-}
+  if (isInitialLoading) {
+    return (
+      <ClusterLayoutLoader
+        title="Cluster Metrics"
+        subtitle="Loading comprehensive monitoring and resource analytics..."
+      />
+    );
+  }
   const resourceMetrics = getResourceMetrics();
   const efficiencyStats = getEfficiencyStats();
 

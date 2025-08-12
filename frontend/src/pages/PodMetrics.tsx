@@ -32,7 +32,7 @@ import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import DomainDropdown from "@/components/reusable/domainDropdown";
 import { useSelectedHash } from "@/hooks/selected-hash";
-import { PodMetricsLoader  } from "@/components/loader/podloader";
+import { PodMetricsLoader } from "@/components/loader/podloader";
 
 // Search Component
 interface SearchProps {
@@ -96,7 +96,7 @@ const KubecostDashboard = () => {
   const [podDetails, setPodDetails] = useState([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   // Refresh states
-  const [refreshInterval, setRefreshInterval] = useState(10000);
+  const [refreshInterval, setRefreshInterval] = useState(30000);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   // const [selectedHash, setSelectedHash] = useState<string>("");
@@ -198,7 +198,7 @@ const KubecostDashboard = () => {
     } finally {
       setLoading(false);
       setIsRefreshing(false);
-             setIsInitialLoading(false);
+      setIsInitialLoading(false);
     }
   };
 
@@ -272,7 +272,7 @@ const KubecostDashboard = () => {
     if (selectedHash) {
       // only fetch if we have a domain selected
       setSearchParams({ window: selectedTimeRange });
-          setIsInitialLoading(true);
+      setIsInitialLoading(true);
 
       fetchData();
     }
@@ -437,14 +437,14 @@ const KubecostDashboard = () => {
     if (sortField !== field) return "↕️";
     return sortDirection === "asc" ? "↑" : "↓";
   };
-if (isInitialLoading) {
-  return (
-    <PodMetricsLoader 
-      title="Pod Metrics" 
-      subtitle="Loading comprehensive monitoring and resource analytics..." 
-    />
-  );
-}
+  if (isInitialLoading) {
+    return (
+      <PodMetricsLoader
+        title="Pod Metrics"
+        subtitle="Loading comprehensive monitoring and resource analytics..."
+      />
+    );
+  }
 
   if (loading && !data) {
     return (
@@ -471,7 +471,6 @@ if (isInitialLoading) {
       </div>
     );
   }
-  
 
   if (error) {
     return (
