@@ -50,6 +50,7 @@ export default function ClusterMetrics() {
   const [refreshInterval, setRefreshInterval] = useState(10000);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const intervalRef = useRef(null);
   const [selectedCluster, setSelectedCluster] = useState(null);
@@ -109,6 +110,7 @@ export default function ClusterMetrics() {
   };
 
   // Memoized function to handle cluster data API call
+
   const handleCallClusterData = useCallback(async (queryParams) => {
     try {
       console.log("Calling cluster data API with:", queryParams);
@@ -116,11 +118,23 @@ export default function ClusterMetrics() {
 
       // Enhanced API failure checking
       console.log(res, "condition 5-----------------");
-
       console.log(res.data, "condition 2------------------");
+
+      // Handle cache timestamp for last updated
+      if (res?.cached === true && res?.cache_timestamp) {
+        const cacheDate = new Date(res.cache_timestamp);
+        const formattedTime = cacheDate.toLocaleTimeString();
+        setLastUpdated(cacheDate); // Set the actual Date object
+        setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
+      } else {
+        const currentDate = new Date();
+        const formattedTime = currentDate.toLocaleTimeString();
+        setLastUpdated(currentDate); // Set the actual Date object
+        setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
+      }
+
       if (res?.api_failed === true) {
         console.log("came to conditon 2");
-
         setServerStatus("down");
         setIsAutoRefreshPaused(true);
         console.warn("API reported failure:", res.data);
@@ -134,6 +148,8 @@ export default function ClusterMetrics() {
       } else {
         setServerStatus("live");
       }
+
+      // ... rest of the function remains the same
       const allocations = res?.data?.data?.sets?.[0]?.allocations || {};
 
       // Filter out idle data for cluster list
@@ -246,14 +262,28 @@ export default function ClusterMetrics() {
     }
   }, []);
 
+
   const handleClusterChartData = useCallback(async (queryParams) => {
     try {
       console.log("Calling cluster chart data API with:", queryParams);
       const res = await ClusterService.getClusterAllocationSummary(queryParams);
       console.log(res, "2------------------");
-      // Check API failure flag
       console.log(res.data, "condition 1------------------");
 
+      // Handle cache timestamp for last updated
+      if (res?.cached === true && res?.cache_timestamp) {
+        const cacheDate = new Date(res.cache_timestamp);
+        const formattedTime = cacheDate.toLocaleTimeString();
+        setLastUpdated(cacheDate); // Set the actual Date object
+        setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
+      } else {
+        const currentDate = new Date();
+        const formattedTime = currentDate.toLocaleTimeString();
+        setLastUpdated(currentDate); // Set the actual Date object
+        setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
+      }
+
+      // Check API failure flag
       if (res?.data?.api_failed === true) {
         console.log("came to conditon 1");
         setServerStatus("down");
@@ -269,8 +299,10 @@ export default function ClusterMetrics() {
       } else {
         setServerStatus("live");
       }
+
       const allocations = res?.data?.data?.sets?.[0]?.allocations || {};
 
+      // ... rest of the chart data processing remains the same
       // CPU usage data
       const cpuChartData = Object.entries(allocations)
         .filter(([name]) => name !== "__idle__")
@@ -278,11 +310,11 @@ export default function ClusterMetrics() {
           name,
           used: parseFloat(
             (cluster as ClusterAllocation).cpuCoreUsageAverage?.toFixed(2) ||
-              "0"
+            "0"
           ),
           requested: parseFloat(
             (cluster as ClusterAllocation).cpuCoreRequestAverage?.toFixed(2) ||
-              "0"
+            "0"
           ),
         }));
 
@@ -375,7 +407,8 @@ export default function ClusterMetrics() {
           handleClusterChartData(queryParams),
         ]);
 
-        setLastUpdated(new Date());
+        // Note: setLastUpdated is now handled within individual functions
+        // based on cache status, so we don't need to set it here
 
         // If this was a manual refresh and server is back online, resume auto-refresh
         if (isManualRefresh && serverStatus === "live") {
@@ -767,7 +800,7 @@ export default function ClusterMetrics() {
         lastUpdated={lastUpdated}
         showRefresh={true}
         className="mb-6"
-        // Add these props if FilterBar supports them
+      // Add these props if FilterBar supports them
       />
 
       <div className="space-y-6">
@@ -949,10 +982,7 @@ export default function ClusterMetrics() {
                           <div className="flex items-center gap-4 text-sm text-gray-600">
                             <span className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
-                              Updated{" "}
-                              {lastUpdated
-                                ? new Date(lastUpdated).toLocaleTimeString()
-                                : "just now"}
+                              {lastUpdatedDisplay || "Loading..."}
                             </span>
                           </div>
                           <button className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium group-hover:translate-x-1 transition-all duration-200">
@@ -994,42 +1024,42 @@ export default function ClusterMetrics() {
             {/* CPU and Memory Charts */}
             {(chartData.cpuData.length > 0 ||
               chartData.memoryData.length > 0) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {chartData.cpuData.length > 0 && (
-                  <Card className="shadow-lg border-0">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-bold text-gray-900">
-                        CPU Usage
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <GroupedBarChart
-                        data={chartData.cpuData}
-                        title={undefined}
-                        yAxisLabel={undefined}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {chartData.cpuData.length > 0 && (
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="text-lg font-bold text-gray-900">
+                          CPU Usage
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <GroupedBarChart
+                          data={chartData.cpuData}
+                          title={undefined}
+                          yAxisLabel={undefined}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
 
-                {chartData.memoryData.length > 0 && (
-                  <Card className="shadow-lg border-0">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-bold text-gray-900">
-                        Memory Usage
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <GroupedBarChart
-                        data={chartData.memoryData}
-                        title={undefined}
-                        yAxisLabel={undefined}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
+                  {chartData.memoryData.length > 0 && (
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="text-lg font-bold text-gray-900">
+                          Memory Usage
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <GroupedBarChart
+                          data={chartData.memoryData}
+                          title={undefined}
+                          yAxisLabel={undefined}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
           </div>
 
           {/* Right Column - Enhanced Sidebar */}
@@ -1118,11 +1148,10 @@ export default function ClusterMetrics() {
                         </div>
                         <div className="w-full bg-gray-200 rounded-full h-2">
                           <div
-                            className={`h-2 rounded-full transition-all duration-500 ${
-                              item.name === "Idle Resources"
-                                ? "bg-gray-400"
-                                : "bg-gradient-to-r from-blue-500 to-blue-600"
-                            }`}
+                            className={`h-2 rounded-full transition-all duration-500 ${item.name === "Idle Resources"
+                              ? "bg-gray-400"
+                              : "bg-gradient-to-r from-blue-500 to-blue-600"
+                              }`}
                             style={{ width: `${item.percentage}%` }}
                           ></div>
                         </div>
