@@ -20,7 +20,7 @@ import logging
 from threading import Thread
 import hashlib
 import base64
-
+import threading
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -133,6 +133,136 @@ class KubecostDataService:
             session.commit()
         return pod
 
+    # def get_cluster_data(
+    #     self,
+    #     window: str = "7d",
+    #     force_refresh: bool = False,
+    #     offset: str = "0",
+    #     limit: str = "0",
+    #     domain: str = "",
+    # ) -> Dict[str, Any]:
+    #     """Get cluster data from cache or fetch from API"""
+    #     session = db_manager.get_session()
+    #     try:
+    #         query_params = {
+    #             "window": window,
+    #             "aggregate": "cluster",
+    #         }
+
+    #         # Only add offset/limit if not both zero
+    #         if not (offset == "0" and limit == "0"):
+    #             query_params["offset"] = offset
+    #             query_params["limit"] = limit
+
+    #         # Create argument hash for caching
+           
+    #         argument_hash = hashlib.md5(
+    #             str(sorted(query_params.items())).encode()
+    #         ).hexdigest()
+
+    #         # Check cache if force_refresh is False
+    #         if not force_refresh:
+    #             cached_record = (
+    #                 session.query(ClusterMetric)
+    #                 .filter(ClusterMetric.argument_hash == argument_hash)
+    #                 .order_by(desc(ClusterMetric.timestamp))
+    #                 .first()
+    #             )
+
+    #             if cached_record and self._is_cache_valid(cached_record.timestamp):
+    #                 logger.info(
+    #                     f"Returning cached cluster data for argument hash: {argument_hash}"
+    #                 )
+    #                 return {
+    #                     "status": "success",
+    #                     "data": cached_record.raw_data,
+    #                     "cached": True,
+    #                     "cache_timestamp": cached_record.timestamp.isoformat(),
+    #                     "query_params": cached_record.query_params,
+    #                 }
+
+    #         # Try to fetch fresh data from Kubecost API
+    #         try:
+    #             logger.info(
+    #                 f"Fetching fresh cluster data for arguments: {query_params}"
+    #             )
+    #             params = {
+    #                 "window": window,
+    #                 "aggregate": "cluster",
+    #                 "accumulate": "true",
+    #                 "external": "false",
+    #                 "shareCost": "0",
+    #                 "shareTenancyCosts": "true",
+    #                 "idle": "true",
+    #                 "shareIdle": "true",
+    #                 "idleByNode": "true",
+    #                 "shareLabels": "",
+    #                 "shareNamespaces": "",
+    #                 "shareSplit": "weighted",
+    #                 "filter": "",
+    #                 # "offset": offset,
+    #                 # "limit": limit,
+    #             }
+    #             if not (offset == "0" and limit == "0"):
+    #                 params["offset"] = offset
+    #                 params["limit"] = limit
+    #             api_data = self._make_kubecost_request(
+    #                 "/model/allocation/summary", params, domain=domain
+    #             )
+    #             print(api_data, "----------CLUSTER API DATA")
+
+    #             # Store the response with argument hash
+    #             self._store_cluster_argument_based_data(
+    #                 session, api_data, argument_hash, query_params, window, domain
+    #             )
+
+    #             return {
+    #                 "status": "success",
+    #                 "data": api_data,
+    #                 "cached": False,
+    #                 "fetch_timestamp": datetime.utcnow().isoformat(),
+    #                 "query_params": query_params,
+    #             }
+
+    #         except Exception as api_error:
+    #             logger.warning(f"Cluster API request failed: {str(api_error)}")
+
+    #             # API failed, try to get fallback data from cache
+    #             fallback_data = self._get_cluster_fallback_cache_data(
+    #                 session, query_params
+    #             )
+
+    #             if fallback_data:
+    #                 logger.info(
+    #                     "Returning fallback cached cluster data due to API failure"
+    #                 )
+    #                 return {
+    #                     "status": "success",
+    #                     "data": fallback_data["data"],
+    #                     "cached": True,
+    #                     "api_failed": True,
+    #                     "requested_params": query_params,
+    #                     "returned_params": fallback_data["query_params"],
+    #                     "cache_timestamp": fallback_data["timestamp"],
+    #                 }
+    #             else:
+    #                 # No fallback data available
+    #                 logger.error(
+    #                     f"No fallback cluster data available and API failed: {str(api_error)}"
+    #                 )
+    #                 return {
+    #                     "status": "failed",
+    #                     "error": f"API unavailable and no cached cluster data found: {str(api_error)}",
+    #                 }
+
+    #     except Exception as e:
+    #         logger.error(f"Error getting cluster data: {str(e)}")
+    #         return {"status": "failed", "error": str(e)}
+    #     finally:
+    #         session.close()
+
+
+
     def get_cluster_data(
         self,
         window: str = "7d",
@@ -141,7 +271,7 @@ class KubecostDataService:
         limit: str = "0",
         domain: str = "",
     ) -> Dict[str, Any]:
-        """Get cluster data from cache or fetch from API"""
+        """Get cluster data from cache or fetch from API, update cache in background if needed"""
         session = db_manager.get_session()
         try:
             query_params = {
@@ -149,23 +279,15 @@ class KubecostDataService:
                 "aggregate": "cluster",
             }
 
-            # Only add offset/limit if not both zero
             if not (offset == "0" and limit == "0"):
                 query_params["offset"] = offset
                 query_params["limit"] = limit
 
-            # Create argument hash for caching
-            query_params = {
-                "window": window,
-                "aggregate": "cluster",
-                "offset": offset,
-                "limit": limit,
-            }
             argument_hash = hashlib.md5(
                 str(sorted(query_params.items())).encode()
             ).hexdigest()
 
-            # Check cache if force_refresh is False
+            # Check cache
             if not force_refresh:
                 cached_record = (
                     session.query(ClusterMetric)
@@ -175,9 +297,15 @@ class KubecostDataService:
                 )
 
                 if cached_record and self._is_cache_valid(cached_record.timestamp):
-                    logger.info(
-                        f"Returning cached cluster data for argument hash: {argument_hash}"
-                    )
+                    logger.info(f"Returning cached cluster data for argument hash: {argument_hash}")
+
+                    # Trigger background refresh without blocking
+                    threading.Thread(
+                        target=self._refresh_cluster_data_background,
+                        args=(argument_hash, query_params, window, offset, limit, domain),
+                        daemon=True
+                    ).start()
+
                     return {
                         "status": "success",
                         "data": cached_record.raw_data,
@@ -186,83 +314,115 @@ class KubecostDataService:
                         "query_params": cached_record.query_params,
                     }
 
-            # Try to fetch fresh data from Kubecost API
-            try:
-                logger.info(
-                    f"Fetching fresh cluster data for arguments: {query_params}"
-                )
-                params = {
-                    "window": window,
-                    "aggregate": "cluster",
-                    "accumulate": "true",
-                    "external": "false",
-                    "shareCost": "0",
-                    "shareTenancyCosts": "true",
-                    "idle": "true",
-                    "shareIdle": "true",
-                    "idleByNode": "true",
-                    "shareLabels": "",
-                    "shareNamespaces": "",
-                    "shareSplit": "weighted",
-                    "filter": "",
-                    "offset": offset,
-                    "limit": limit,
-                }
-
-                api_data = self._make_kubecost_request(
-                    "/model/allocation/summary", params, domain=domain
-                )
-                print(api_data, "----------CLUSTER API DATA")
-
-                # Store the response with argument hash
-                self._store_cluster_argument_based_data(
-                    session, api_data, argument_hash, query_params, window, domain
-                )
-
-                return {
-                    "status": "success",
-                    "data": api_data,
-                    "cached": False,
-                    "fetch_timestamp": datetime.utcnow().isoformat(),
-                    "query_params": query_params,
-                }
-
-            except Exception as api_error:
-                logger.warning(f"Cluster API request failed: {str(api_error)}")
-
-                # API failed, try to get fallback data from cache
-                fallback_data = self._get_cluster_fallback_cache_data(
-                    session, query_params
-                )
-
-                if fallback_data:
-                    logger.info(
-                        "Returning fallback cached cluster data due to API failure"
-                    )
-                    return {
-                        "status": "success",
-                        "data": fallback_data["data"],
-                        "cached": True,
-                        "api_failed": True,
-                        "requested_params": query_params,
-                        "returned_params": fallback_data["query_params"],
-                        "cache_timestamp": fallback_data["timestamp"],
-                    }
-                else:
-                    # No fallback data available
-                    logger.error(
-                        f"No fallback cluster data available and API failed: {str(api_error)}"
-                    )
-                    return {
-                        "status": "failed",
-                        "error": f"API unavailable and no cached cluster data found: {str(api_error)}",
-                    }
+            # If force refresh OR no cache
+            return self._fetch_and_store_cluster_data(
+                session, query_params, argument_hash, window, offset, limit, domain
+            )
 
         except Exception as e:
             logger.error(f"Error getting cluster data: {str(e)}")
             return {"status": "failed", "error": str(e)}
         finally:
             session.close()
+
+
+    def _refresh_cluster_data_background(self, argument_hash, query_params, window, offset, limit, domain):
+        """Fetch latest data from API and update DB in background"""
+        try:
+            params = {
+                "window": window,
+                "aggregate": "cluster",
+                "accumulate": "true",
+                "external": "false",
+                "shareCost": "0",
+                "shareTenancyCosts": "true",
+                "idle": "true",
+                "shareIdle": "true",
+                "idleByNode": "true",
+                "shareLabels": "",
+                "shareNamespaces": "",
+                "shareSplit": "weighted",
+                "filter": "",
+            }
+            if not (offset == "0" and limit == "0"):
+                params["offset"] = offset
+                params["limit"] = limit
+
+            logger.info(f"[Background Refresh] Fetching fresh cluster data for {query_params}")
+            api_data = self._make_kubecost_request(
+                "/model/allocation/summary", params, domain=domain
+            )
+
+            # Store in DB
+            session = db_manager.get_session()
+            self._store_cluster_argument_based_data(
+                session, api_data, argument_hash, query_params, window, domain
+            )
+            session.close()
+            logger.info("[Background Refresh] Cluster data updated successfully.")
+
+        except Exception as e:
+            logger.warning(f"[Background Refresh] Failed to update cluster data: {e}")
+
+
+    def _fetch_and_store_cluster_data(self, session, query_params, argument_hash, window, offset, limit, domain):
+        """Helper to fetch fresh data and store it"""
+        try:
+            logger.info(f"Fetching fresh cluster data for arguments: {query_params}")
+            params = {
+                "window": window,
+                "aggregate": "cluster",
+                "accumulate": "true",
+                "external": "false",
+                "shareCost": "0",
+                "shareTenancyCosts": "true",
+                "idle": "true",
+                "shareIdle": "true",
+                "idleByNode": "true",
+                "shareLabels": "",
+                "shareNamespaces": "",
+                "shareSplit": "weighted",
+                "filter": "",
+                "offset":offset
+            }
+            if not ( limit == "0"):
+                params["offset"] = offset
+                params["limit"] = limit
+
+            api_data = self._make_kubecost_request(
+                "/model/allocation/summary", params, domain=domain
+            )
+
+            self._store_cluster_argument_based_data(
+                session, api_data, argument_hash, query_params, window, domain
+            )
+
+            return {
+                "status": "success",
+                "data": api_data,
+                "cached": False,
+                "fetch_timestamp": datetime.utcnow().isoformat(),
+                "query_params": query_params,
+            }
+        except Exception as api_error:
+            logger.warning(f"Cluster API request failed: {str(api_error)}")
+            fallback_data = self._get_cluster_fallback_cache_data(session, query_params)
+            if fallback_data:
+                return {
+                    "status": "success",
+                    "data": fallback_data["data"],
+                    "cached": True,
+                    "api_failed": True,
+                    "requested_params": query_params,
+                    "returned_params": fallback_data["query_params"],
+                    "cache_timestamp": fallback_data["timestamp"],
+                }
+            else:
+                return {
+                    "status": "failed",
+                    "error": f"API unavailable and no cached cluster data found: {str(api_error)}",
+                }
+
 
     def _store_cluster_argument_based_data(
         self,
@@ -386,6 +546,8 @@ class KubecostDataService:
             logger.error(f"Error getting cluster fallback cache data: {str(e)}")
             return None
 
+   
+
     def get_pod_data(
         self,
         window: str = "7d",
@@ -396,33 +558,24 @@ class KubecostDataService:
         limit: str = "0",
         domain: str = "",
     ) -> Dict[str, Any]:
-        """Get pod data from cache or fetch from API"""
+        """Get pod data from cache or fetch from API, update cache in background if needed"""
         session = db_manager.get_session()
         try:
-
+            # Base query params for cache key
             query_params = {
                 "window": window,
-                "aggregate": "cluster",
+                "aggregate": aggregate,
+                "filter_pods": filter_pods,
+                "offset": offset,
+                "limit": limit,
+                "domain": domain,
             }
 
-            # Only add offset/limit if not both zero
-            if not (offset == "0" and limit == "0"):
-                query_params["offset"] = offset
-                query_params["limit"] = limit
-                # Create argument hash for caching
-                query_params = {
-                    "window": window,
-                    "aggregate": aggregate,
-                    "filter_pods": filter_pods,
-                    "offset": offset,
-                    "limit": limit,
-                    "domain": domain,
-                }
             argument_hash = hashlib.md5(
                 str(sorted(query_params.items())).encode()
             ).hexdigest()
 
-            # Check cache if force_refresh is False
+            # Serve from cache if available
             if not force_refresh:
                 cached_record = (
                     session.query(PodMetric)
@@ -432,9 +585,15 @@ class KubecostDataService:
                 )
 
                 if cached_record and self._is_cache_valid(cached_record.timestamp):
-                    logger.info(
-                        f"Returning cached data for argument hash: {argument_hash}"
-                    )
+                    logger.info(f"Returning cached pod data for argument hash: {argument_hash}")
+
+                    # Trigger background refresh
+                    threading.Thread(
+                        target=self._refresh_pod_data_background,
+                        args=(argument_hash, query_params, window, aggregate, filter_pods, offset, limit, domain),
+                        daemon=True
+                    ).start()
+
                     return {
                         "status": "success",
                         "data": cached_record.raw_data,
@@ -443,85 +602,123 @@ class KubecostDataService:
                         "query_params": cached_record.query_params,
                     }
 
-            # Try to fetch fresh data from Kubecost API
-            try:
-                logger.info(f"Fetching fresh data for arguments: {query_params}")
-                params = {
-                    "window": window,
-                    "accumulate": "true",
-                    "aggregate": aggregate,
-                    "chartType": "costovertime",
-                    "costUnit": "cumulative",
-                    "external": "false",
-                    "filter": "",
-                    "idle": "true",
-                    "idleByNode": "false",
-                    "includeSharedCostBreakdown": "true",
-                    "shareCost": "0",
-                    "shareIdle": "false",
-                    "shareLabels": "",
-                    "shareNamespaces": "",
-                    "shareSplit": "weighted",
-                    "shareTenancyCosts": "true",
-                    "offset": offset,
-                    "limit": limit,
-                }
-
-                if filter_pods:
-                    params["filterPods"] = filter_pods
-
-                endpoint = (
-                    "model/allocation" if filter_pods else "model/allocation/summary"
-                )
-                api_data = self._make_kubecost_request(endpoint, params, domain)
-
-                # Store the response with argument hash
-                self._store_argument_based_data(
-                    session, api_data, argument_hash, query_params, window
-                )
-
-                return {
-                    "status": "success",
-                    "data": api_data,
-                    "cached": False,
-                    "fetch_timestamp": datetime.utcnow().isoformat(),
-                    "query_params": query_params,
-                }
-
-            except Exception as api_error:
-                logger.warning(f"API request failed: {str(api_error)}")
-
-                # API failed, try to get fallback data from cache
-                fallback_data = self._get_fallback_cache_data(
-                    session, aggregate, filter_pods, query_params
-                )
-
-                if fallback_data:
-                    logger.info("Returning fallback cached data due to API failure")
-                    return {
-                        "status": "success",
-                        "data": fallback_data["data"],
-                        "cached": True,
-                        "api_failed": True,
-                        "requested_params": query_params,
-                        "returned_params": fallback_data["query_params"],
-                        "cache_timestamp": fallback_data["timestamp"],
-                    }
-                else:
-                    # No fallback data available
-                    logger.error(
-                        f"No fallback data available and API failed: {str(api_error)}"
-                    )
-                    return {
-                        "status": "failed",
-                        "error": f"API unavailable and no cached data found: {str(api_error)}",
-                    }
+            # No cache or force refresh → fetch directly
+            return self._fetch_and_store_pod_data(
+                session, query_params, argument_hash, window, aggregate, filter_pods, offset, limit, domain
+            )
 
         except Exception as e:
             logger.error(f"Error getting pod data: {str(e)}")
             return {"status": "failed", "error": str(e)}
         finally:
             session.close()
+
+
+    def _refresh_pod_data_background(self, argument_hash, query_params, window, aggregate, filter_pods, offset, limit, domain):
+        """Fetch latest pod data and update DB in background"""
+        try:
+            params = {
+                "window": window,
+                "accumulate": "true",
+                "aggregate": aggregate,
+                "chartType": "costovertime",
+                "costUnit": "cumulative",
+                "external": "false",
+                "filter": "",
+                "idle": "true",
+                "idleByNode": "false",
+                "includeSharedCostBreakdown": "true",
+                "shareCost": "0",
+                "shareIdle": "false",
+                "shareLabels": "",
+                "shareNamespaces": "",
+                "shareSplit": "weighted",
+                "shareTenancyCosts": "true",
+                "offset": offset,
+                "limit": limit,
+            }
+            if filter_pods:
+                params["filterPods"] = filter_pods
+
+            endpoint = "model/allocation" if filter_pods else "model/allocation/summary"
+
+            logger.info(f"[Background Refresh] Fetching fresh pod data for {query_params}")
+            api_data = self._make_kubecost_request(endpoint, params, domain)
+
+            session = db_manager.get_session()
+            self._store_argument_based_data(
+                session, api_data, argument_hash, query_params, window
+            )
+            session.close()
+
+            logger.info("[Background Refresh] Pod data updated successfully.")
+
+        except Exception as e:
+            logger.warning(f"[Background Refresh] Failed to update pod data: {e}")
+
+
+    def _fetch_and_store_pod_data(self, session, query_params, argument_hash, window, aggregate, filter_pods, offset, limit, domain):
+        """Fetch fresh pod data and store in DB"""
+        try:
+            params = {
+                "window": window,
+                "accumulate": "true",
+                "aggregate": aggregate,
+                "chartType": "costovertime",
+                "costUnit": "cumulative",
+                "external": "false",
+                "filter": "",
+                "idle": "true",
+                "idleByNode": "false",
+                "includeSharedCostBreakdown": "true",
+                "shareCost": "0",
+                "shareIdle": "false",
+                "shareLabels": "",
+                "shareNamespaces": "",
+                "shareSplit": "weighted",
+                "shareTenancyCosts": "true",
+                "offset": offset,
+                "limit": limit,
+            }
+            if filter_pods:
+                params["filterPods"] = filter_pods
+
+            endpoint = "model/allocation" if filter_pods else "model/allocation/summary"
+
+            logger.info(f"Fetching fresh pod data for arguments: {query_params}")
+            api_data = self._make_kubecost_request(endpoint, params, domain)
+
+            self._store_argument_based_data(
+                session, api_data, argument_hash, query_params, window
+            )
+
+            return {
+                "status": "success",
+                "data": api_data,
+                "cached": False,
+                "fetch_timestamp": datetime.utcnow().isoformat(),
+                "query_params": query_params,
+            }
+
+        except Exception as api_error:
+            logger.warning(f"Pod API request failed: {str(api_error)}")
+            fallback_data = self._get_fallback_cache_data(session, aggregate, filter_pods, query_params)
+
+            if fallback_data:
+                return {
+                    "status": "success",
+                    "data": fallback_data["data"],
+                    "cached": True,
+                    "api_failed": True,
+                    "requested_params": query_params,
+                    "returned_params": fallback_data["query_params"],
+                    "cache_timestamp": fallback_data["timestamp"],
+                }
+            else:
+                return {
+                    "status": "failed",
+                    "error": f"API unavailable and no cached pod data found: {str(api_error)}",
+                }
 
     def _get_fallback_cache_data(
         self,
@@ -751,6 +948,8 @@ class KubecostDataService:
             logger.error(f"Error processing cluster data: {str(e)}")
             raise
 
+  
+
     def get_node_data(
         self,
         window: str = "24h",
@@ -759,31 +958,23 @@ class KubecostDataService:
         limit: str = "0",
         domain: str = "",
     ) -> Dict[str, Any]:
-        """Get node data from cache or fetch from API"""
+        """Get node data from cache or fetch from API, update cache in background if needed"""
         session = db_manager.get_session()
         try:
-            print("working node----")
             query_params = {
                 "window": window,
-                "aggregate": "cluster",
+                "aggregate": "cluster",  # This is just for caching args; API uses "node"
             }
 
-            # Only add offset/limit if not both zero
             if not (offset == "0" and limit == "0"):
                 query_params["offset"] = offset
                 query_params["limit"] = limit
-                # Create argument hash for caching
-                query_params = {
-                    "window": window,
-                    "aggregate": "node",
-                    "offset": offset,
-                    "limit": limit,
-                }
+
             argument_hash = hashlib.md5(
                 str(sorted(query_params.items())).encode()
             ).hexdigest()
 
-            # Check cache if force_refresh is False
+            # Serve cached data if available
             if not force_refresh:
                 cached_record = (
                     session.query(NodeMetric)
@@ -793,9 +984,15 @@ class KubecostDataService:
                 )
 
                 if cached_record and self._is_cache_valid(cached_record.timestamp):
-                    logger.info(
-                        f"Returning cached node data for argument hash: {argument_hash}"
-                    )
+                    logger.info(f"Returning cached node data for argument hash: {argument_hash}")
+
+                    # Background refresh
+                    threading.Thread(
+                        target=self._refresh_node_data_background,
+                        args=(argument_hash, query_params, window, offset, limit, domain),
+                        daemon=True
+                    ).start()
+
                     return {
                         "status": "success",
                         "data": cached_record.raw_data,
@@ -804,84 +1001,122 @@ class KubecostDataService:
                         "query_params": cached_record.query_params,
                     }
 
-            # Try to fetch fresh data from Kubecost API
-            try:
-                logger.info(f"Fetching fresh node data for arguments: {query_params}")
-                params = {
-                    "window": window,
-                    "aggregate": "node",
-                    "accumulate": "true",
-                    "chartType": "costovertime",
-                    "costUnit": "cumulative",
-                    "external": "false",
-                    "filter": "",
-                    "idle": "true",
-                    "idleByNode": "false",
-                    "includeSharedCostBreakdown": "true",
-                    "shareCost": "0",
-                    "shareIdle": "false",
-                    "shareLabels": "",
-                    "shareNamespaces": "",
-                    "shareSplit": "weighted",
-                    "shareTenancyCosts": "true",
-                    "offset": offset,
-                    "limit": limit,
-                }
-
-                api_data = self._make_kubecost_request(
-                    "/model/allocation/summary", params, domain=domain
-                )
-                print(api_data, "----------NODE API DATA")
-
-                # Store the response with argument hash
-                self._store_node_argument_based_data(
-                    session, api_data, argument_hash, query_params, window
-                )
-
-                return {
-                    "status": "success",
-                    "data": api_data,
-                    "cached": False,
-                    "fetch_timestamp": datetime.utcnow().isoformat(),
-                    "query_params": query_params,
-                }
-
-            except Exception as api_error:
-                logger.warning(f"Node API request failed: {str(api_error)}")
-
-                # API failed, try to get fallback data from cache
-                fallback_data = self._get_node_fallback_cache_data(
-                    session, query_params
-                )
-
-                if fallback_data:
-                    logger.info(
-                        "Returning fallback cached node data due to API failure"
-                    )
-                    return {
-                        "status": "success",
-                        "data": fallback_data["data"],
-                        "cached": True,
-                        "api_failed": True,
-                        "requested_params": query_params,
-                        "returned_params": fallback_data["query_params"],
-                        "cache_timestamp": fallback_data["timestamp"],
-                    }
-                else:
-                    # No fallback data available
-                    logger.error(
-                        f"No fallback node data available and API failed: {str(api_error)}"
-                    )
-                    return {
-                        "status": "failed",
-                        "error": f"API unavailable and no cached node data found: {str(api_error)}",
-                    }
+            # No cache or force refresh → fetch directly
+            return self._fetch_and_store_node_data(
+                session, query_params, argument_hash, window, offset, limit, domain
+            )
 
         except Exception as e:
             logger.error(f"Error getting node data: {str(e)}")
             return {"status": "failed", "error": str(e)}
         finally:
             session.close()
+
+
+    def _refresh_node_data_background(self, argument_hash, query_params, window, offset, limit, domain):
+        """Fetch latest node data and update DB in background"""
+        try:
+            params = {
+                "window": window,
+                "aggregate": "node",
+                "accumulate": "true",
+                "chartType": "costovertime",
+                "costUnit": "cumulative",
+                "external": "false",
+                "filter": "",
+                "idle": "true",
+                "idleByNode": "false",
+                "includeSharedCostBreakdown": "true",
+                "shareCost": "0",
+                "shareIdle": "false",
+                "shareLabels": "",
+                "shareNamespaces": "",
+                "shareSplit": "weighted",
+                "shareTenancyCosts": "true",
+                "offset": offset,
+            }
+            if not (limit == "0"):
+                params["limit"] = limit
+
+            logger.info(f"[Background Refresh] Fetching fresh node data for {query_params}")
+            api_data = self._make_kubecost_request(
+                "/model/allocation/summary", params, domain=domain
+            )
+
+            session = db_manager.get_session()
+            self._store_node_argument_based_data(
+                session, api_data, argument_hash, query_params, window
+            )
+            session.close()
+
+            logger.info("[Background Refresh] Node data updated successfully.")
+
+        except Exception as e:
+            logger.warning(f"[Background Refresh] Failed to update node data: {e}")
+
+
+    def _fetch_and_store_node_data(self, session, query_params, argument_hash, window, offset, limit, domain):
+        """Fetch fresh node data and store in DB"""
+        try:
+            params = {
+                "window": window,
+                "aggregate": "node",
+                "accumulate": "true",
+                "chartType": "costovertime",
+                "costUnit": "cumulative",
+                "external": "false",
+                "filter": "",
+                "idle": "true",
+                "idleByNode": "false",
+                "includeSharedCostBreakdown": "true",
+                "shareCost": "0",
+                "shareIdle": "false",
+                "shareLabels": "",
+                "shareNamespaces": "",
+                "shareSplit": "weighted",
+                "shareTenancyCosts": "true",
+                "offset": offset,
+            }
+            if not (limit == "0"):
+                params["limit"] = limit
+
+            logger.info(f"Fetching fresh node data for arguments: {query_params}")
+            api_data = self._make_kubecost_request(
+                "/model/allocation/summary", params, domain=domain
+            )
+
+            self._store_node_argument_based_data(
+                session, api_data, argument_hash, query_params, window
+            )
+
+            return {
+                "status": "success",
+                "data": api_data,
+                "cached": False,
+                "fetch_timestamp": datetime.utcnow().isoformat(),
+                "query_params": query_params,
+            }
+
+        except Exception as api_error:
+            logger.warning(f"Node API request failed: {str(api_error)}")
+            fallback_data = self._get_node_fallback_cache_data(session, query_params)
+
+            if fallback_data:
+                return {
+                    "status": "success",
+                    "data": fallback_data["data"],
+                    "cached": True,
+                    "api_failed": True,
+                    "requested_params": query_params,
+                    "returned_params": fallback_data["query_params"],
+                    "cache_timestamp": fallback_data["timestamp"],
+                }
+            else:
+                return {
+                    "status": "failed",
+                    "error": f"API unavailable and no cached node data found: {str(api_error)}",
+                }
+
 
     def _store_node_argument_based_data(
         self,
