@@ -30,6 +30,7 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
           setSelected(data.instances[0]);
           onSelect(data.instances[0].unique_hash);
         }
+        
       } catch (error) {
         console.error("Error fetching instances:", error);
       } finally {

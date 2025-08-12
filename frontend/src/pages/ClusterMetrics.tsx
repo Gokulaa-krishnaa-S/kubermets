@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import ClusterService from "../services/ClusterService";
-import { Layout } from "@/components/layout/Layout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +9,7 @@ import { toast } from "@/components/ui/use-toast";
 import { FilterBar } from "@/components/reusable/filterbar";
 import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
+import { useSelectedHash } from "@/hooks/selected-hash";
 
 import {
   Server,
@@ -54,15 +54,19 @@ export default function ClusterMetrics() {
   const intervalRef = useRef(null);
   const [selectedCluster, setSelectedCluster] = useState(null);
   const [showClusterModal, setShowClusterModal] = useState(false);
-  const [selectedHash, setSelectedHash] = useState<string>("");
+  // const [selectedHash, setSelectedHash] = useState<string>("");
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
 
   // Add loading state to prevent multiple simultaneous calls
   const [isLoadingData, setIsLoadingData] = useState(false);
 
+
   // Helper function to convert bytes to GB
   const bytesToGB = (bytes) => (bytes / 1024 ** 3).toFixed(2);
+
+  const { selectedHash } = useSelectedHash();
+
 
   const getServerStatusDisplay = (status: "live" | "down") => {
     return {
@@ -413,16 +417,16 @@ export default function ClusterMetrics() {
     [isLoadingData, handleCallClusterData, handleClusterChartData, serverStatus]
   );
 
-  // Handle domain change from Layout component
-  const handleDomainChange = useCallback(
-    (hash: string) => {
-      console.log("Domain changed in ClusterMetrics:", hash);
-      setSelectedHash(hash);
-      // Immediately fetch data with the new domain hash
-      fetchAllData(timeRange, hash, true);
-    },
-    [timeRange, fetchAllData]
-  );
+  // Handle domain change from div component
+  // const handleDomainChange = useCallback(
+  //   (hash: string) => {
+  //     console.log("Domain changed in ClusterMetrics:", hash);
+  //     setSelectedHash(hash);
+  //     // Immediately fetch data with the new domain hash
+  //     fetchAllData(timeRange, hash, true);
+  //   },
+  //   [timeRange, fetchAllData]
+  // );
 
   // Handle time range changes - immediately fetch data with new time range
   const handleTimeRangeChange = useCallback(
@@ -730,10 +734,10 @@ export default function ClusterMetrics() {
   const efficiencyStats = getEfficiencyStats();
 
   return (
-    <Layout
-      title="Cluster Metrics"
-      subtitle="Comprehensive monitoring and resource analytics"
-      onDomainChange={handleDomainChange}
+    <div
+      // title="Cluster Metrics"
+      // subtitle="Comprehensive monitoring and resource analytics"
+      // onDomainChange={handleDomainChange}
     >
       {/* <ServerStatusBanner /> */}
       {/* Loading indicator */}
@@ -790,7 +794,7 @@ export default function ClusterMetrics() {
           ))}
         </div>
 
-        {/* Three Column Layout */}
+        {/* Three Column div */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Enhanced Cluster Overview */}
           <div className="lg:col-span-2 space-y-6">
@@ -1299,6 +1303,6 @@ export default function ClusterMetrics() {
           </div>
         </>
       )}
-    </Layout>
+    </div>
   );
 }

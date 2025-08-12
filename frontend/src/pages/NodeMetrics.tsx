@@ -15,12 +15,12 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Layout } from "@/components/layout/Layout";
 import ClusterService from "@/services/ClusterService";
 import { useSearchParams } from "react-router-dom";
 import { FilterBar } from "@/components/reusable/filterbar";
 import { toast } from "@/components/ui/use-toast";
 import DomainDropdown from "@/components/reusable/domainDropdown";
+import { useSelectedHash } from "@/hooks/selected-hash";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
@@ -32,13 +32,17 @@ const NodeMetricsDashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedHash, setSelectedHash] = useState<string>("");
+  // const [selectedHash, setSelectedHash] = useState<string>("");
+  const { selectedHash } = useSelectedHash();
 
-  const handleDomainSelect = (hash: string) => {
-    console.log("Selected Unique Hash:", hash);
-    setSelectedHash(hash);
-    refreshAllData(true);
-  };
+
+
+  // const handleDomainSelect = (hash: string) => {
+  //   console.log("Selected Unique Hash:", hash);
+  //   setSelectedHash(hash);
+    
+  //   refreshAllData(true);
+  // };
   // Configuration for thresholds
   const thresholds = {
     cpuCritical: 90,
@@ -219,6 +223,7 @@ const NodeMetricsDashboard = () => {
 
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
+    console.log(selectedHash, "selectedHash in NodeMetrics");
     setTimeRange(rangeFromUrl);
 
     const queryParams = {
@@ -398,12 +403,12 @@ const NodeMetricsDashboard = () => {
         : "hsl(var(--destructive))",
   }));
 
-    // Handle domain change from Layout component
+    // Handle domain change from div component
     
 
   // if (loading) {
   //   return (
-  //     <Layout
+  //     <div
   //       title="Node Metrics"
   //       subtitle="CPU, memory, disk, network, and node health monitoring"
   //     >
@@ -412,13 +417,13 @@ const NodeMetricsDashboard = () => {
   //           <div className="text-center text-muted-foreground">Loading...</div>
   //         </div>
   //       </div>
-  //     </Layout>
+  //     </div>
   //   );
   // }
 
   // if (error) {
   //   return (
-  //     <Layout
+  //     <div
   //       title="Node Metrics"
   //       subtitle="CPU, memory, disk, network, and node health monitoring"
   //     >
@@ -427,16 +432,12 @@ const NodeMetricsDashboard = () => {
   //           <div className="text-center text-destructive">{error}</div>
   //         </div>
   //       </div>
-  //     </Layout>
+  //     </div>
   //   );
   // }
 
   return (
-    <Layout
-      title="Node Metrics"
-      subtitle="CPU, memory, disk, network, and node health monitoring"
-      onDomainChange={handleDomainSelect}
-    >
+    <div>
       <div className="min-h-screen bg-background">
         {/* Filter Bar */}
         <FilterBar
@@ -457,7 +458,7 @@ const NodeMetricsDashboard = () => {
 
         <div className="mx-auto space-y-6">
           <div className="flex items-center gap-4">
-            <DomainDropdown onSelect={handleDomainSelect} />
+            {/* <DomainDropdown onSelect={handleDomainSelect} /> */}
             {/* {selectedHash && <p className="mt-3 text-green-600">Selected: {selectedHash}</p>} */}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -682,7 +683,7 @@ const NodeMetricsDashboard = () => {
           </Card>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 };
 

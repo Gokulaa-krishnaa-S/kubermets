@@ -24,7 +24,6 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { Layout } from "@/components/layout/Layout";
 import ClusterService from "@/services/ClusterService";
 import podService from "@/services/podService";
 import PodDetailsModal from "@/components/modals/podDetailMetrics";
@@ -32,6 +31,7 @@ import { Days, Refresh } from "@/components/reusable/filterbar";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import DomainDropdown from "@/components/reusable/domainDropdown";
+import { useSelectedHash } from "@/hooks/selected-hash";
 
 // Search Component
 interface SearchProps {
@@ -98,13 +98,14 @@ const KubecostDashboard = () => {
   const [refreshInterval, setRefreshInterval] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [selectedHash, setSelectedHash] = useState<string>("");
+  // const [selectedHash, setSelectedHash] = useState<string>("");
+  const { selectedHash } = useSelectedHash();
 
-  const handleDomainSelect = (hash: string) => {
-    console.log("Selected Unique Hash:", hash);
-    setSelectedHash(hash);
-    // fetchData(true);
-  };
+  // const handleDomainSelect = (hash: string) => {
+  //   console.log("Selected Unique Hash:", hash);
+  //   setSelectedHash(hash);
+  //   // fetchData(true);
+  // };
   const getWindowFromSelectedTimeRange = (range: string): string => {
     switch (range) {
       case "1h":
@@ -412,10 +413,7 @@ const KubecostDashboard = () => {
 
   if (loading && !data) {
     return (
-      // <Layout
-      //   title="Pods & Containers"
-      //   subtitle="CPU, memory, restarts, state, and health probe monitoring"
-      // >
+      <div>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="animate-pulse">
@@ -435,16 +433,13 @@ const KubecostDashboard = () => {
             </div>
           </div>
         </div>
-      // </Layout>
+      </div>
     );
   }
 
   if (error) {
     return (
-      // <Layout
-      //   title="Pods & Containers"
-      //   subtitle="CPU, memory, restarts, state, and health probe monitoring"
-      // >
+      <div>
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
           <div className="bg-white rounded-xl p-8 border border-red-200 max-w-md text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
@@ -454,17 +449,13 @@ const KubecostDashboard = () => {
             <p className="text-gray-600">{error}</p>
           </div>
         </div>
-      // </Layout>
+      </div>
     );
   }
 
   return (
     <>
-      <div
-        // title="Pods & Containers"
-        // subtitle="CPU, memory, restarts, state, and health probe monitoring"
-        // onDomainChange={handleDomainSelect}
-      >
+      <div>
         <div className="min-h-screen p-6">
           <div className="mx-auto">
             {/* Enhanced Filter Bar with Search */}
