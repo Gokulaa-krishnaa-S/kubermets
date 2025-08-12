@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Layout } from "@/components/layout/Layout";
-import { Plus, RefreshCcw } from "lucide-react";
+import { Settings as SettingsIcon, Plus, RefreshCcw } from "lucide-react";
 import InstanceForm from "./CreateInstance";
 import ClusterService from "@/services/ClusterService";
 
@@ -20,8 +19,7 @@ const KubernetesInstanceList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editingInstance, setEditingInstance] =
-    useState<KubernetesInstance | null>(null);
+  const [editingInstance, setEditingInstance] = useState<KubernetesInstance | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchInstances = async () => {
@@ -70,147 +68,122 @@ const KubernetesInstanceList: React.FC = () => {
 
   if (loading) {
     return (
-      // <Layout title="Instance List" subtitle="Complete Instance List">
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-500">Loading instances...</span>
-        </div>
-      // </Layout>
+      <div className="flex justify-center items-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-gray-500">Loading instances...</span>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Layout title="Instance List" subtitle="Complete Instance List">
-        <div className="text-center py-12">
-          <div className="text-red-500 mb-4">{error}</div>
-          <button
-            onClick={fetchInstances}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </Layout>
+      <div className="text-center py-12">
+        <div className="text-red-500 mb-4">{error}</div>
+        <button
+          onClick={fetchInstances}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          Try Again
+        </button>
+      </div>
     );
   }
 
   return (
-   
-      <div className="w-full ">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            {/* <h2 className="text-2xl font-semibold text-gray-800">
-              Kubernetes Instances
-            </h2>
-            <p className="text-gray-600 mt-1">
-              Manage your Kubernetes cluster instances
-            </p> */}
-          </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={fetchInstances}
-              disabled={refreshing}
-              className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
-              title="Refresh instances"
-            >
-              <RefreshCcw
-                className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
-              />
-              <span className="ml-2 hidden sm:block">Refresh</span>
-            </button>
-            <button
-              onClick={handleCreate}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="ml-2 hidden sm:block">Create Cluster</span>
-            </button>
-          </div>
+    <div className="w-full">
+      {/* Unified title + icon + buttons row */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-2">
+          <SettingsIcon className="w-5 h-5 text-gray-700" />
+          <span className="text-xl font-semibold">Manage clusters</span>
         </div>
-
-        {instances.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-xl">
-            <h3 className="text-lg font-medium text-gray-800 mb-2">
-              No instances found
-            </h3>
-            <p className="text-gray-500 mb-6">
-              Get started by creating your first Kubernetes instance
-            </p>
-            <button
-              onClick={handleCreate}
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Create Your First Instance
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {instances.map((instance) => (
-              <div
-                key={instance.id}
-                className="bg-white shadow-md rounded-xl p-6 border hover:shadow-lg transition-all duration-200"
-              >
-                <div className="mb-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-lg font-bold text-blue-600 truncate">
-                      {instance.name}
-                    </h3>
-                    <span
-                      className={`px-2 py-1 text-xs rounded-full font-medium ${
-                        instance.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {instance.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 break-all">
-                    {instance.api_url}
-                  </p>
-                </div>
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium text-gray-600 w-16">
-                      Client:
-                    </span>
-                    <span className="text-sm text-gray-800">
-                      {instance.client_name || "N/A"}
-                    </span>
-                  </div>
-                  {instance.description && (
-                    <div className="flex items-start">
-                      <span className="text-sm font-medium text-gray-600 w-16 flex-shrink-0">
-                        About:
-                      </span>
-                      <span className="text-sm text-gray-700 italic">
-                        {instance.description}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="pt-3 border-t border-gray-100 text-xs text-gray-500">
-                  Created: {new Date(instance.created_at).toLocaleDateString()}
-                </div>
-                <div className="mt-4 flex justify-end space-x-2">
-                  <button
-                    onClick={() => handleEdit(instance)}
-                    className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
-                  >
-                    Edit
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-8 text-center text-sm text-gray-500">
-          Total instances: {instances.length}
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={fetchInstances}
+            disabled={refreshing}
+            className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <RefreshCcw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            <span className="ml-2 hidden sm:block">Refresh</span>
+          </button>
+          <button
+            onClick={handleCreate}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="ml-2 hidden sm:block">Create Cluster</span>
+          </button>
         </div>
       </div>
+
+      {instances.length === 0 ? (
+        <div className="text-center py-12 bg-gray-50 rounded-xl">
+          <h3 className="text-lg font-medium text-gray-800 mb-2">No instances found</h3>
+          <p className="text-gray-500 mb-6">Get started by creating your first Kubernetes instance</p>
+          <button
+            onClick={handleCreate}
+            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Create Your First Instance
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {instances.map((instance) => (
+            <div
+              key={instance.id}
+              className="bg-white shadow-md rounded-xl p-6 border hover:shadow-lg transition-all duration-200"
+            >
+              <div className="mb-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="text-lg font-bold text-blue-600 truncate">{instance.name}</h3>
+                  <span
+                    className={`px-2 py-1 text-xs rounded-full font-medium ${
+                      instance.status === "active"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
+                    {instance.status}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 break-all">{instance.api_url}</p>
+              </div>
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center">
+                  <span className="text-sm font-medium text-gray-600 w-16">Client:</span>
+                  <span className="text-sm text-gray-800">{instance.client_name || "N/A"}</span>
+                </div>
+                {instance.description && (
+                  <div className="flex items-start">
+                    <span className="text-sm font-medium text-gray-600 w-16 flex-shrink-0">
+                      About:
+                    </span>
+                    <span className="text-sm text-gray-700 italic">{instance.description}</span>
+                  </div>
+                )}
+              </div>
+              <div className="pt-3 border-t border-gray-100 text-xs text-gray-500">
+                Created: {new Date(instance.created_at).toLocaleDateString()}
+              </div>
+              <div className="mt-4 flex justify-end space-x-2">
+                <button
+                  onClick={() => handleEdit(instance)}
+                  className="px-3 py-1 text-xs text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded"
+                >
+                  Edit
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-8 text-center text-sm text-gray-500">
+        Total instances: {instances.length}
+      </div>
+    </div>
   );
 };
 
