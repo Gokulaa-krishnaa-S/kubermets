@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Settings as SettingsIcon, Moon, Bell, Shield } from "lucide-react";
 import KubernetesInstanceList from "./kubernetesInstance";
-
+import TopBar from "@/components/header/header";
 
 export default function Settings() {
   return (
@@ -12,14 +12,19 @@ export default function Settings() {
       title="Settings"
       subtitle="Configure your Kubernetes monitoring dashboard"
     >
-      <div className="space-y-6">
-        {/* Top full-width slot - 60% screen height */}
-        <div className="w-full" >
+      <TopBar
+        title={"Settings"}
+        subtitle={"You can configure your Kubernetes monitoring dashboard here"}
+      />
+
+      <div className="space-y-8">
+        {/* Instances section */}
+        <div>
           <KubernetesInstanceList />
         </div>
 
-        {/* Existing settings cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Preferences & Notifications in responsive grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -91,40 +96,43 @@ export default function Settings() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="w-5 h-5" />
-              Security & Access
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">Two-Factor Authentication</p>
-                  <p className="text-sm text-muted-foreground">
-                    Add an extra layer of security
-                  </p>
+        {/* Security card */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Security & Access
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">Two-Factor Authentication</p>
+                    <p className="text-sm text-muted-foreground">
+                      Add an extra layer of security
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Configure
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm">
-                  Configure
-                </Button>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">API Access</p>
-                  <p className="text-sm text-muted-foreground">
-                    Manage API keys and permissions
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">API Access</p>
+                    <p className="text-sm text-muted-foreground">
+                      Manage API keys and permissions
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Manage
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm">
-                  Manage
-                </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </Layout>
   );
