@@ -21,6 +21,7 @@ import { FilterBar } from "@/components/reusable/filterbar";
 import { toast } from "@/components/ui/use-toast";
 import DomainDropdown from "@/components/reusable/domainDropdown";
 import { useSelectedHash } from "@/hooks/selected-hash";
+import { ResponsiveLoader } from "@/components/loader/loader";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
@@ -31,6 +32,7 @@ const NodeMetricsDashboard = () => {
   const [refreshInterval, setRefreshInterval] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   // const [selectedHash, setSelectedHash] = useState<string>("");
@@ -174,6 +176,7 @@ const NodeMetricsDashboard = () => {
       } finally {
         setLoading(false);
         setIsLoadingData(false);
+        setIsInitialLoading(false);
 
       }
     },
@@ -349,6 +352,8 @@ const NodeMetricsDashboard = () => {
 
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
+    setIsInitialLoading(true);
+
     console.log(selectedHash, "selectedHash in NodeMetrics");
     setTimeRange(rangeFromUrl);
 
@@ -531,8 +536,8 @@ const NodeMetricsDashboard = () => {
       status === "healthy"
         ? "hsl(var(--success))"
         : status === "warning"
-        ? "hsl(var(--warning))"
-        : "hsl(var(--destructive))",
+          ? "hsl(var(--warning))"
+          : "hsl(var(--destructive))",
   }));
 
   // Handle domain change from Layout component
@@ -576,6 +581,17 @@ const NodeMetricsDashboard = () => {
   //     </div>
   //   );
   // }
+
+  if (isInitialLoading) {
+    return (
+      <div className="p-4 lg:p-6">
+        <ResponsiveLoader
+          title="Node Metrics"
+          subtitle={`Loading comprehensive monitoring and resource analytics...`}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 lg:p-6">
@@ -805,13 +821,12 @@ const NodeMetricsDashboard = () => {
                         </td>
                         <td className="p-3">
                           <span
-                            className={`text-sm font-medium ${
-                              parseFloat(node["efficiency"]) > 5
+                            className={`text-sm font-medium ${parseFloat(node["efficiency"]) > 5
                                 ? "text-success"
                                 : parseFloat(node["efficiency"]) > 1
-                                ? "text-warning"
-                                : "text-destructive"
-                            }`}
+                                  ? "text-warning"
+                                  : "text-destructive"
+                              }`}
                           >
                             {node["efficiency"]}%
                           </span>

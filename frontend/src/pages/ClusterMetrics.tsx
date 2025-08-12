@@ -10,6 +10,7 @@ import { FilterBar } from "@/components/reusable/filterbar";
 import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { useSelectedHash } from "@/hooks/selected-hash";
+import { ResponsiveLoader } from "@/components/loader/loader";
 
 import {
   Server,
@@ -58,7 +59,7 @@ export default function ClusterMetrics() {
   // const [selectedHash, setSelectedHash] = useState<string>("");
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
-
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   // Add loading state to prevent multiple simultaneous calls
   const [isLoadingData, setIsLoadingData] = useState(false);
 
@@ -446,6 +447,7 @@ export default function ClusterMetrics() {
       } finally {
         setIsLoadingData(false);
         setIsRefreshing(false);
+         setIsInitialLoading(false);
       }
     },
     [isLoadingData, handleCallClusterData, handleClusterChartData, serverStatus]
@@ -778,7 +780,16 @@ export default function ClusterMetrics() {
       </div>
     </div>
   );
-
+  if (isInitialLoading) {
+    return (
+      <div className="p-4 lg:p-6">
+        <ResponsiveLoader 
+          title="Cluster Metrics" 
+          subtitle={`Loading comprehensive monitoring and resource analytics...`}
+        />
+      </div>
+    );
+  }
   const resourceMetrics = getResourceMetrics();
   const efficiencyStats = getEfficiencyStats();
 
