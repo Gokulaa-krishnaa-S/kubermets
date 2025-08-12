@@ -21,6 +21,7 @@ import { FilterBar } from "@/components/reusable/filterbar";
 import { toast } from "@/components/ui/use-toast";
 import DomainDropdown from "@/components/reusable/domainDropdown";
 import { useSelectedHash } from "@/hooks/selected-hash";
+import { NodeMetricsLoader } from "@/components/loader/nodeloader";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
@@ -31,6 +32,7 @@ const NodeMetricsDashboard = () => {
   const [refreshInterval, setRefreshInterval] = useState(10000);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   // const [selectedHash, setSelectedHash] = useState<string>("");
@@ -174,6 +176,7 @@ const NodeMetricsDashboard = () => {
       } finally {
         setLoading(false);
         setIsLoadingData(false);
+        setIsInitialLoading(false);
       }
     },
     [thresholds]
@@ -347,6 +350,9 @@ const NodeMetricsDashboard = () => {
   };
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
+    setIsInitialLoading(true);
+
+    console.log(selectedHash, "selectedHash in NodeMetrics");
     setTimeRange(rangeFromUrl);
 
     const queryParams = {
@@ -584,6 +590,15 @@ const NodeMetricsDashboard = () => {
   //     </div>
   //   );
   // }
+
+  if (isInitialLoading) {
+    return (
+      <NodeMetricsLoader
+        title="Node Metrics"
+        subtitle="Loading comprehensive monitoring and resource analytics..."
+      />
+    );
+  }
 
   return (
     <div className="p-4 lg:p-6">

@@ -23,6 +23,7 @@ import ClusterService from "@/services/ClusterService";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
 import TopBar from "@/components/header/header";
+import { ResponsiveLoader } from "@/components/loader/loader";
 
 const fetchDashboardSummary = async () => {
   try {
@@ -71,10 +72,18 @@ export default function Overview() {
 
   if (loading) {
     return (
-      <Layout title="Overview" subtitle="Loading Kubernetes cost metrics...">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-        </div>
+      <Layout 
+        title="Overview" 
+        subtitle="Loading Kubernetes cost metrics..."
+      >
+        <TopBar 
+          title="Overview" 
+          subtitle="Loading Kubernetes cost metrics..." 
+        />
+        <ResponsiveLoader 
+          title="Overview" 
+          subtitle={`Loading Kubernetes metrics across ${aggregated.clusterCount || 0} clusters...`}
+        />
       </Layout>
     );
   }

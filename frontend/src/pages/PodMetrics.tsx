@@ -32,6 +32,7 @@ import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import DomainDropdown from "@/components/reusable/domainDropdown";
 import { useSelectedHash } from "@/hooks/selected-hash";
+import { PodMetricsLoader  } from "@/components/loader/podloader";
 
 // Search Component
 interface SearchProps {
@@ -93,13 +94,14 @@ const KubecostDashboard = () => {
   const [showPodModal, setShowPodModal] = useState(false);
   const [selectedPod, setSelectedPod] = useState(null);
   const [podDetails, setPodDetails] = useState([]);
-
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   // Refresh states
   const [refreshInterval, setRefreshInterval] = useState(10000);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   // const [selectedHash, setSelectedHash] = useState<string>("");
   const { selectedHash } = useSelectedHash();
+
   // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
   // const [selectedHash, setSelectedHash] = useState<string>("");
 
@@ -196,6 +198,7 @@ const KubecostDashboard = () => {
     } finally {
       setLoading(false);
       setIsRefreshing(false);
+             setIsInitialLoading(false);
     }
   };
 
@@ -269,6 +272,8 @@ const KubecostDashboard = () => {
     if (selectedHash) {
       // only fetch if we have a domain selected
       setSearchParams({ window: selectedTimeRange });
+          setIsInitialLoading(true);
+
       fetchData();
     }
     if (refreshInterval && refreshInterval > 0) {
@@ -432,6 +437,14 @@ const KubecostDashboard = () => {
     if (sortField !== field) return "↕️";
     return sortDirection === "asc" ? "↑" : "↓";
   };
+if (isInitialLoading) {
+  return (
+    <PodMetricsLoader 
+      title="Pod Metrics" 
+      subtitle="Loading comprehensive monitoring and resource analytics..." 
+    />
+  );
+}
 
   if (loading && !data) {
     return (
@@ -458,6 +471,7 @@ const KubecostDashboard = () => {
       </div>
     );
   }
+  
 
   if (error) {
     return (
