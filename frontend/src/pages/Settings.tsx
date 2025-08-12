@@ -20,12 +20,17 @@ export default function Settings() {
 
       <div className="space-y-8 p-4 lg:p-6">
         {/* Instances section */}
-        <div>
+        <div><CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <SettingsIcon className="w-5 h-5" />
+                Manage clusters
+              </CardTitle>
+            </CardHeader>
           <KubernetesInstanceList />
         </div>
 
         {/* Preferences & Notifications in responsive grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -95,10 +100,10 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
 
         {/* Security card */}
-        <div>
+        {/* <div>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -133,7 +138,7 @@ export default function Settings() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
       </div>
     </Layout>
   );
