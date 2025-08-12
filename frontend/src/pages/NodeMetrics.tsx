@@ -28,7 +28,7 @@ const NodeMetricsDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState("24h");
-  const [refreshInterval, setRefreshInterval] = useState(null);
+  const [refreshInterval, setRefreshInterval] = useState(10000);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
@@ -174,7 +174,6 @@ const NodeMetricsDashboard = () => {
       } finally {
         setLoading(false);
         setIsLoadingData(false);
-
       }
     },
     [thresholds]
@@ -346,10 +345,8 @@ const NodeMetricsDashboard = () => {
       setIsRefreshing(false);
     }
   };
-
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
-    console.log(selectedHash, "selectedHash in NodeMetrics");
     setTimeRange(rangeFromUrl);
 
     const queryParams = {
@@ -375,9 +372,20 @@ const NodeMetricsDashboard = () => {
       force_refesh: false,
     };
 
+    // ✅ First load
     fetchNodeData(queryParams);
     setLastUpdated(new Date());
-  }, []);
+
+    // ✅ Set interval refresh
+    if (refreshInterval && refreshInterval > 0) {
+      const intervalId = setInterval(() => {
+        fetchNodeData(queryParams);
+        setLastUpdated(new Date());
+      }, refreshInterval * 1000); // assuming refreshInterval is in seconds
+
+      return () => clearInterval(intervalId); // cleanup
+    }
+  }, [searchParams, refreshInterval]);
 
   useEffect(() => {
     if (selectedHash) {
