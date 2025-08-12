@@ -601,6 +601,15 @@ export default function ClusterMetrics() {
     return null;
   };
 
+  const LoadingBanner = ({ message }: { message: string }) => (
+    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <span className="text-blue-800 text-sm">{message}</span>
+      </div>
+    </div>
+  );
+
   // Calculate resource metrics from clusters data
   const getResourceMetrics = () => {
     if (clusters.length === 0) return [];
@@ -782,34 +791,25 @@ export default function ClusterMetrics() {
     >
       {/* <ServerStatusBanner /> */}
       {/* Loading indicator */}
-      {isLoadingData && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-blue-800 text-sm">
-              Loading cluster data...
-            </span>
-          </div>
-        </div>
+      {isLoadingData ? (
+        <LoadingBanner message="Loading cluster data..." />
+      ) : (
+        <FilterBar
+          selectedTimeRange={timeRange}
+          onTimeRangeChange={handleTimeRangeChange}
+          timeRangeVariant="select"
+          timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
+          onFilterClick={handleFilterClick}
+          showFilter={false}
+          onRefresh={refreshAllData}
+          refreshInterval={refreshInterval}
+          onRefreshIntervalChange={handleRefreshIntervalChange}
+          isRefreshing={isRefreshing}
+          lastUpdated={lastUpdated}
+          showRefresh
+          className="mb-6"
+        />
       )}
-
-      {/* Filter Bar */}
-      <FilterBar
-        selectedTimeRange={timeRange}
-        onTimeRangeChange={handleTimeRangeChange}
-        timeRangeVariant="select"
-        timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
-        onFilterClick={handleFilterClick}
-        showFilter={false}
-        onRefresh={refreshAllData}
-        refreshInterval={refreshInterval}
-        onRefreshIntervalChange={handleRefreshIntervalChange}
-        isRefreshing={isRefreshing}
-        lastUpdated={lastUpdated}
-        showRefresh={true}
-        className="mb-6"
-        // Add these props if FilterBar supports them
-      />
 
       <div className="space-y-6">
         {/* Remove the DomainDropdown section completely */}
@@ -1023,8 +1023,33 @@ export default function ClusterMetrics() {
               </Card>
             )}
 
+            {/* Bottom Section - Cost Breakdown Donut Chart */}
+            {chartData.costBreakdown.length > 0 && (
+              <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+                <CardHeader>
+                  <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg">
+                      <DollarSign className="w-5 h-5 text-white" />
+                    </div>
+                    Cost Distribution Analysis
+                  </CardTitle>
+                  <p className="text-sm text-gray-600">
+                    Visual breakdown of cluster costs and idle resources
+                  </p>
+                </CardHeader>
+                <CardContent className="pb-14">
+                  <div className="flex justify-center">
+                    <DonutChart
+                      data={chartData.costBreakdown}
+                      title="Cost Breakdown by Cluster"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* CPU and Memory Charts */}
-            {(chartData.cpuData.length > 0 ||
+            {/* {(chartData.cpuData.length > 0 ||
               chartData.memoryData.length > 0) && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {chartData.cpuData.length > 0 && (
@@ -1044,24 +1069,24 @@ export default function ClusterMetrics() {
                   </Card>
                 )}
 
-                {chartData.memoryData.length > 0 && (
-                  <Card className="shadow-lg border-0">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-bold text-gray-900">
-                        Memory Usage
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <GroupedBarChart
-                        data={chartData.memoryData}
-                        title={undefined}
-                        yAxisLabel={undefined}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
+                  {chartData.memoryData.length > 0 && (
+                    <Card className="shadow-lg border-0">
+                      <CardHeader>
+                        <CardTitle className="text-lg font-bold text-gray-900">
+                          Memory Usage
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <GroupedBarChart
+                          data={chartData.memoryData}
+                          title={undefined}
+                          yAxisLabel={undefined}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )} */}
           </div>
 
           {/* Right Column - Enhanced Sidebar */}
@@ -1271,31 +1296,6 @@ export default function ClusterMetrics() {
             </Card>
           </div>
         </div>
-
-        {/* Bottom Section - Cost Breakdown Donut Chart */}
-        {chartData.costBreakdown.length > 0 && (
-          <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg">
-                  <DollarSign className="w-5 h-5 text-white" />
-                </div>
-                Cost Distribution Analysis
-              </CardTitle>
-              <p className="text-sm text-gray-600">
-                Visual breakdown of cluster costs and idle resources
-              </p>
-            </CardHeader>
-            <CardContent className="p-8">
-              <div className="flex justify-center">
-                <DonutChart
-                  data={chartData.costBreakdown}
-                  title="Cost Breakdown by Cluster"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Enhanced Modal */}

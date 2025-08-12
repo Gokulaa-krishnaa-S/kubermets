@@ -97,7 +97,7 @@ const KubernetesInstanceList: React.FC = () => {
 
   return (
    
-      <div className="max-w-6xl ">
+      <div className="w-full ">
         <div className="flex justify-between items-center mb-6">
           <div>
             {/* <h2 className="text-2xl font-semibold text-gray-800">
@@ -124,7 +124,7 @@ const KubernetesInstanceList: React.FC = () => {
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
-              <span className="ml-2 hidden sm:block">Create Instance</span>
+              <span className="ml-2 hidden sm:block">Create Cluster</span>
             </button>
           </div>
         </div>
