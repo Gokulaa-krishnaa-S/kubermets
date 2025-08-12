@@ -43,6 +43,7 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
     if (mode === "edit" && initialData) {
       const { name, description, api_url, client_name, username, password } =
         initialData;
+      console.log(client_name, "---------------");
       setFormData({
         name,
         description,
@@ -53,9 +54,11 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
       });
     }
   }, [mode, initialData]);
-
+  const providers = ["GCP", "AWS", "SIFY", "Cloudflare"];
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -151,168 +154,173 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
   }
 
   return (
-    
-      <div className="max-w-2xl mx-auto p-6">
-        <div className="bg-white shadow-lg rounded-xl p-6">
-          <div className="flex items-center mb-6">
-            <button
-              onClick={onBack}
-              type="button"
-              className="flex items-center text-gray-600 hover:text-gray-800 transition-colors mr-4"
-            >
-              <ArrowLeft className="w-5 h-5 mr-1" />
-            </button>
-            <h2 className="text-2xl font-bold text-gray-800">
-              {mode === "create" ? "Create New Instance" : "Edit Instance"}
-            </h2>
+    <div className="max-w-2xl mx-auto p-6">
+      <div className="bg-white shadow-lg rounded-xl p-6">
+        <div className="flex items-center mb-6">
+          <button
+            onClick={onBack}
+            type="button"
+            className="flex items-center text-gray-600 hover:text-gray-800 transition-colors mr-4"
+          >
+            <ArrowLeft className="w-5 h-5 mr-1" />
+          </button>
+          <h2 className="text-2xl font-bold text-gray-800">
+            {mode === "create" ? "Create New Instance" : "Edit Instance"}
+          </h2>
+        </div>
+
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
+            <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0" />
+            <span className="text-red-700">{error}</span>
           </div>
+        )}
 
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center">
-              <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0" />
-              <span className="text-red-700">{error}</span>
-            </div>
-          )}
-
-          {/* form fields */}
-          <div className="space-y-6">
-            {/* Instance name & client name */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Instance Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="client_name"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Client Name
-                </label>
-                <input
-                  type="text"
-                  id="client_name"
-                  name="client_name"
-                  value={formData.client_name}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* API URL */}
+        {/* form fields */}
+        <div className="space-y-6">
+          {/* Instance name & client name */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label
-                htmlFor="api_url"
+                htmlFor="name"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                API URL <span className="text-red-500">*</span>
+                customer name <span className="text-red-500">*</span>
               </label>
               <input
-                type="url"
-                id="api_url"
-                name="api_url"
-                value={formData.api_url}
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-
-            {/* Description */}
             <div>
               <label
-                htmlFor="description"
+                htmlFor="client_name"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Description
+                Provider Name
               </label>
-              <textarea
-                id="description"
-                name="description"
-                value={formData.description}
+              <select
+                id="client_name"
+                name="client_name"
+                value={formData.client_name}
                 onChange={handleInputChange}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select a provider</option>
+                {providers.map((client, index) => (
+                  <option key={index} value={client}>
+                    {client}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* API URL */}
+          <div>
+            <label
+              htmlFor="api_url"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              API URL <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="url"
+              id="api_url"
+              name="api_url"
+              value={formData.api_url}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label
+              htmlFor="description"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Description
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+          </div>
+
+          {/* Username & Password */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Username
+              </label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-
-            {/* Username & Password */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label
-                  htmlFor="username"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Username
-                </label>
-                <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700 mb-2"
-                >
-                  Password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex justify-end space-x-4 pt-6">
-              <button
-                type="button"
-                onClick={onBack}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                disabled={loading}
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
-              >
-                {loading ? (
-                  "Saving..."
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    {mode === "create" ? "Create" : "Update"} Instance
-                  </>
-                )}
-              </button>
+                Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end space-x-4 pt-6">
+            <button
+              type="button"
+              onClick={onBack}
+              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              disabled={loading}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+            >
+              {loading ? (
+                "Saving..."
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  {mode === "create" ? "Create" : "Update"} Instance
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
+    </div>
   );
 };
 

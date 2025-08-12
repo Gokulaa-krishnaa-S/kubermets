@@ -101,7 +101,7 @@ def dashboard_summary():
     """
     Dashboard summary: aggregated metrics for all instances with backend calculations
     """
-    window = request.args.get("window", "24d")
+    window = request.args.get("window", "7d")
     force_refresh = request.args.get("force_refresh", "false").lower() == "true"
     offset = request.args.get("offset", "0")
     limit = request.args.get("limit", "0")
