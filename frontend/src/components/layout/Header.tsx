@@ -1,8 +1,6 @@
-import { Bell, Plus, Search, Moon, Sun } from "lucide-react";
+import { Bell, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
 import { useTheme } from "next-themes";
 import { useCallback, useState } from "react";
 import DomainTypeAhead from "../reusable/domainTypeAhead";
@@ -13,7 +11,7 @@ interface HeaderProps {
   showAddButton?: boolean;
   addButtonText?: string;
   onAddClick?: () => void;
-  onDomainSelect?: (hash: string) => void; // Add this prop
+  onDomainSelect?: (hash: string) => void;
 }
 
 export function Header({
@@ -22,68 +20,61 @@ export function Header({
   showAddButton = false,
   addButtonText = "Add Item",
   onAddClick,
-  onDomainSelect, // Add this prop
+  onDomainSelect,
 }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const [selectedHash, setSelectedHash] = useState<string>("");
 
-  // Handle domain selection - pass to parent and update local state
   const handleDomainSelect = useCallback(
     (hash: string) => {
       console.log("Domain selected:", hash);
       setSelectedHash(hash);
-      // Call the parent callback if provided
-      if (onDomainSelect) {
-        onDomainSelect(hash);
-      }
+      onDomainSelect?.(hash);
     },
     [onDomainSelect]
   );
 
   return (
-    <header className="h-16 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
-      <div className="flex items-center justify-between h-full px-4 lg:px-6">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-2 sm:px-6">
+        
         {/* Left Section */}
-        <div className="flex items-center gap-4">
-          <SidebarTrigger className="lg:hidden" />
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+        <div className="flex items-center gap-3 min-w-0">
+          <SidebarTrigger className="lg:hidden shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold truncate">{title}</h1>
             {subtitle && (
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
+              <p className="text-sm text-muted-foreground truncate">
+                {subtitle}
+              </p>
             )}
           </div>
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center gap-3">
-          {/* Notifications */}
-          {/* <Button variant="ghost" size="icon" className="relative">
-            <Bell className="w-4 h-4" />
-            <Badge 
-              variant="destructive" 
-              className="absolute -top-1 -right-1 w-5 h-5 rounded-full p-0 flex items-center justify-center text-xs"
-            >
-              3
-            </Badge>
-            <span className="sr-only">Notifications</span>
-          </Button> */}
-
-          {/* <div className="flex items-center"> */}
-            {/* <DomainDropdown onSelect={handleDomainSelect} /> */}
+        <div className="flex items-center gap-3 flex-1 sm:flex-none justify-end min-w-0">
+          {/* Domain Selector */}
+          <div className="w-full sm:w-auto flex-1 sm:flex-none min-w-[160px]">
             <DomainTypeAhead onSelect={handleDomainSelect} />
-          {/* </div> */}
+          </div>
 
           {/* Theme Toggle */}
-          <Button
+          {/* <Button
             variant="ghost"
             size="icon"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="relative"
           >
             <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
-          </Button>
+          </Button> */}
+
+          {/* Optional Add Button */}
+          {showAddButton && (
+            <Button onClick={onAddClick} size="sm" className="whitespace-nowrap">
+              {addButtonText}
+            </Button>
+          )}
         </div>
       </div>
     </header>

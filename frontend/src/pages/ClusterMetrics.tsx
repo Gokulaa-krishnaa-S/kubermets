@@ -547,6 +547,12 @@ export default function ClusterMetrics() {
     };
   }, []);
 
+   useEffect(() => {
+    if (selectedHash) {
+      refreshAllData(false); // No toast, force refresh
+    }
+  }, [selectedHash]);
+
   const ServerStatusBanner = () => {
     if (serverStatus === "down" || isAutoRefreshPaused) {
       return (
@@ -767,7 +773,7 @@ export default function ClusterMetrics() {
   const efficiencyStats = getEfficiencyStats();
 
   return (
-    <div
+    <div className="p-4 lg:p-6"
       // title="Cluster Metrics"
       // subtitle="Comprehensive monitoring and resource analytics"
       // onDomainChange={handleDomainChange}

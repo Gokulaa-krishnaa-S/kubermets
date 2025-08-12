@@ -271,7 +271,7 @@ const KubecostDashboard = () => {
       setSearchParams({ window: selectedTimeRange });
       fetchData();
     }
-  }, [selectedTimeRange, selectedHash]); // now runs on dropdown change too
+  }, [selectedTimeRange, selectedHash]); 
 
   useEffect(() => {
     if (showPodModal && selectedPod) {
@@ -469,7 +469,7 @@ const KubecostDashboard = () => {
 
   return (
     <>
-      <div>
+      <div className="p-4 lg:p-6">
         <div className="min-h-screen p-6">
           <div className="mx-auto">
             {/* Enhanced Filter Bar with Search */}
