@@ -9,7 +9,7 @@ const PodDetailsModal = ({
   isLoading = false,
   formatCurrency,
   // Optional customization props
-  maxWidth = "max-w-6xl",
+  maxWidth = "w-full",
   backdropBlur = "backdrop-blur-sm",
   backdropOpacity = "bg-black/50",
   borderRadius = "rounded-xl",

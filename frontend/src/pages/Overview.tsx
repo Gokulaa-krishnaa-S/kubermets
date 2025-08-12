@@ -155,7 +155,7 @@ export default function Overview() {
       
      <TopBar title={"Overview"} subtitle={`Complete Kubernetes metrics visualization across
                   ${aggregated.clusterCount || 0} cluster`} />
-      <div className="space-y-6 ">
+      <div className="space-y-6 p-4 lg:p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
