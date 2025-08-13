@@ -11,13 +11,14 @@ import { AlertsAndCost } from "@/pages/AlertsAndCost";
 import { BillingAndCost } from "./pages/BillingAndCost";
 import KubernetesInstanceList from "./pages/kubernetesInstance";
 import MetricRoutes from "./pages/MetricRoutes";
+import { ClusterProvider } from "./components/context/ClusterContext";
 
 const queryClient = new QueryClient();
 
 const handleDomainSelect = (hash: string) => {
-    console.log("Selected Unique Hash:", hash);
-    // setSelectedHash(hash);
-    // refreshAllData(true);
+  console.log("Selected Unique Hash:", hash);
+  // setSelectedHash(hash);
+  // refreshAllData(true);
 };
 
 const App = () => (
@@ -25,26 +26,27 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-    
+
       <BrowserRouter>
-        <Routes>
-          {/* Direct routes */}
-          <Route path="/" element={<Overview />} />
-          <Route path="/overview" element={<Overview />} />
-          <Route path="/new" element={<K8sDashboard />} />
-          <Route path="/alerts-events" element={<AlertsAndCost />} />
-          <Route path="/billing-cost" element={<BillingAndCost />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/instance" element={<KubernetesInstanceList />} />
-          
-          {/* Nested metric routes */}
-          <Route path="/metric/*" element={<MetricRoutes />} />
-          
-          {/* Catch-all route - MUST be last */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <ClusterProvider>
+          <Routes>
+            {/* Direct routes */}
+            <Route path="/" element={<Overview />} />
+            <Route path="/overview" element={<Overview />} />
+            <Route path="/new" element={<K8sDashboard />} />
+            <Route path="/alerts-events" element={<AlertsAndCost />} />
+            <Route path="/billing-cost" element={<BillingAndCost />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/instance" element={<KubernetesInstanceList />} />
+
+            {/* Nested metric routes */}
+            <Route path="/metric/*" element={<MetricRoutes />} />
+
+            {/* Catch-all route - MUST be last */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </ClusterProvider>
       </BrowserRouter>
-      
     </TooltipProvider>
   </QueryClientProvider>
 );
