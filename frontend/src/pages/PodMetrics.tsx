@@ -287,7 +287,7 @@ const KubecostDashboard = () => {
   }, [selectedTimeRange, selectedHash, refreshInterval]);
 
   useEffect(() => {
-    if (showPodModal && selectedPod) {
+    if (showPodModal && selectedPod && selectedHash) {
       handlePodDetails(selectedPod).then(setPodDetails);
     }
   }, [showPodModal, selectedPod]);

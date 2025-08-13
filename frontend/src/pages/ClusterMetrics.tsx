@@ -506,7 +506,9 @@ export default function ClusterMetrics() {
     }
 
     // Load initial data
-    fetchAllData(rangeFromUrl, selectedHash);
+    if (selectedHash) {
+      fetchAllData(rangeFromUrl, selectedHash);
+    }
   }, []); // Empty dependency array for initial load only
 
   // Auto-refresh interval effect
@@ -1032,8 +1034,6 @@ export default function ClusterMetrics() {
               </Card>
             )}
 
-          
-
             {/* CPU and Memory Charts */}
             {/* {(chartData.cpuData.length > 0 ||
               chartData.memoryData.length > 0) && (
@@ -1233,7 +1233,7 @@ export default function ClusterMetrics() {
             </Card> */}
 
             {/* System Health */}
-              {/* Bottom Section - Cost Breakdown Donut Chart */}
+            {/* Bottom Section - Cost Breakdown Donut Chart */}
             {chartData.costBreakdown.length > 0 && (
               <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>

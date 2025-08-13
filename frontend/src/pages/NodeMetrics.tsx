@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Server, Cpu, Activity, DollarSign } from "lucide-react";
+import { Server, Cpu, Activity, DollarSign, Info, TrendingUp, Clock, Zap } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -25,7 +25,19 @@ import { NodeMetricsLoader } from "@/components/loader/nodeloader";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
-  const [summaryStats, setSummaryStats] = useState({});
+  type SummaryStats = {
+    totalNodes: number;
+    totalCost: number;
+    avgCpuUsage: number;
+    avgEfficiency: number;
+  };
+
+  const [summaryStats, setSummaryStats] = useState<SummaryStats>({
+    totalNodes: 0,
+    totalCost: 0,
+    avgCpuUsage: 0,
+    avgEfficiency: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState("24h");
@@ -33,19 +45,12 @@ const NodeMetricsDashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
+
   const [searchParams, setSearchParams] = useSearchParams();
-  // const [selectedHash, setSelectedHash] = useState<string>("");
+
   const { selectedHash } = useSelectedHash();
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // const handleDomainSelect = (hash: string) => {
-  //   console.log("Selected Unique Hash:", hash);
-  //   setSelectedHash(hash);
-
-  //   refreshAllData(true);
-  // };
-  // Configuration for thresholds
   const thresholds = {
     cpuCritical: 90,
     cpuWarning: 80,
@@ -58,18 +63,6 @@ const NodeMetricsDashboard = () => {
   const handleCallNodeData = async (params) => {
     try {
       const response = await ClusterService.getClusterAllocationSummary(params);
-      //  setLastUpdated(new Date());
-      // if (response.cached === true && response?.cache_timestamp) {
-      //   const cacheDate = new Date(response.cache_timestamp);
-      //   const formattedTime = cacheDate.toLocaleTimeString();
-      //   setLastUpdated(cacheDate); // Set the actual Date object
-      //   setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
-      // } else {
-      //   const currentDate = new Date();
-      //   const formattedTime = currentDate.toLocaleTimeString();
-      //   setLastUpdated(currentDate); // Set the actual Date object
-      //   setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
-      // }
       return response.data;
     } catch (error) {
       console.error("Failed to fetch cluster summary", error);
@@ -150,21 +143,20 @@ const NodeMetricsDashboard = () => {
             status = "warning";
           }
 
-          return {
-            name: node["name"],
-            status,
-            cpuCores: cpuRequest.toFixed(1),
-            cpuUsage: cpuUtilization.toFixed(1),
-            ramRequest: ramRequestGB.toFixed(2),
-            ramUsage: ramUtilizationGB.toFixed(2),
-            ramUtilization: ramUtilization.toFixed(1),
-            totalCost: (node["totalCost"] || 0).toFixed(2),
-            cpuCost: (node["cpuCost"] || 0).toFixed(2),
-            ramCost: (node["ramCost"] || 0).toFixed(2),
-            pvCost: (node["pvCost"] || 0).toFixed(2),
-            efficiency: (node["totalEfficiency"] || 0).toFixed(2),
-            uptime: calculateUptime(node["start"] || "", node["end"] || ""),
-          };
+        return {
+          name: node["name"],
+          status,
+          cpuCores: cpuRequest.toFixed(1),
+          cpuUsage: cpuUtilization.toFixed(1),
+          ramRequest: ramRequestGB.toFixed(2),
+          ramUsage: ramUtilizationGB.toFixed(2),
+          ramUtilization: ramUtilization.toFixed(1),
+          totalCost: (node["totalCost"] || 0).toFixed(2),
+          cpuCost: (node["cpuCost"] || 0).toFixed(2),
+          pvCost: (node["pvCost"] || 0).toFixed(2),
+          efficiency: (node["totalEfficiency"] || 0).toFixed(2),
+          uptime: calculateUptime(node["start"] || "", node["end"] || ""),
+        };
         });
 
         setNodeData(processedNodes);
@@ -172,7 +164,12 @@ const NodeMetricsDashboard = () => {
         console.error("Failed to fetch node data:", err);
         setError("Unable to fetch node data.");
         setNodeData([]);
-        setSummaryStats({});
+        setSummaryStats({
+          totalNodes: 0,
+          totalCost: 0,
+          avgCpuUsage: 0,
+          avgEfficiency: 0,
+        });
       } finally {
         setLoading(false);
         setIsLoadingData(false);
@@ -181,113 +178,6 @@ const NodeMetricsDashboard = () => {
     },
     [thresholds]
   );
-
-  // const fetchNodeData = async (queryParams) => {
-  //   try {
-  //     const response = await handleCallNodeData(queryParams);
-
-  //     if (response.code !== 200 || !response.data?.sets?.[0]?.allocations) {
-  //       throw new Error("Invalid response format");
-  //     }
-
-  //     const allocations = response.data.sets[0].allocations;
-  //     const activeNodes: any = Object.values(allocations).filter(
-  //       (node) =>
-  //         !node["name"].startsWith("__") &&
-  //         node["cpuCoreRequestAverage"] !== undefined
-  //     );
-
-  //     const totalNodes = activeNodes.length;
-  //     const totalCost = activeNodes.reduce(
-  //       (sum, node) => sum + (node["totalCost"] || 0),
-  //       0
-  //     );
-
-  //     const avgCpuUsage =
-  //       activeNodes.reduce((sum, node) => {
-  //         const usage =
-  //           (node["cpuCoreUsageAverage"] || 0) /
-  //           (node["cpuCoreRequestAverage"] || 1);
-  //         return sum + (isNaN(usage) ? 0 : usage);
-  //       }, 0) / totalNodes;
-
-  //     const avgEfficiency =
-  //       activeNodes.reduce(
-  //         (sum, node) => sum + (node["totalEfficiency"] || 0),
-  //         0
-  //       ) / totalNodes;
-
-  //     setSummaryStats({
-  //       totalNodes,
-  //       totalCost,
-  //       avgCpuUsage: avgCpuUsage * 100,
-  //       avgEfficiency,
-  //     });
-
-  //     const processedNodes = activeNodes.map((node) => {
-  //       const cpuRequest = node["cpuCoreRequestAverage"] || 0;
-  //       const cpuUsage = node["cpuCoreUsageAverage"] || 0;
-  //       const cpuUtilization =
-  //         cpuRequest > 0 ? (cpuUsage / cpuRequest) * 100 : 0;
-
-  //       const ramUsageBytes = node["ramByteUsageAverage"] || 0;
-  //       const ramRequestBytes = node["ramByteRequestAverage"] || 0;
-  //       const ramUtilizationGB = ramUsageBytes / 1024 ** 3;
-  //       const ramRequestGB = ramRequestBytes / 1024 ** 3;
-  //       const ramUtilization =
-  //         ramRequestBytes > 0
-  //           ? Math.min((ramUsageBytes / ramRequestBytes) * 100, 100)
-  //           : 0;
-
-  //       if (ramRequestBytes > 0 && ramUsageBytes / ramRequestBytes > 1) {
-  //         console.warn(
-  //           `High RAM utilization for ${node["name"]}: ${(
-  //             (ramUsageBytes / ramRequestBytes) *
-  //             100
-  //           ).toFixed(1)}%`
-  //         );
-  //       }
-
-  //       let status = "healthy";
-  //       if (
-  //         cpuUtilization > thresholds.cpuCritical ||
-  //         ramUtilization > thresholds.ramCritical
-  //       ) {
-  //         status = "critical";
-  //       } else if (
-  //         cpuUtilization > thresholds.cpuWarning ||
-  //         ramUtilization > thresholds.ramWarning
-  //       ) {
-  //         status = "warning";
-  //       }
-
-  //       return {
-  //         name: node["name"],
-  //         status,
-  //         cpuCores: cpuRequest.toFixed(1),
-  //         cpuUsage: cpuUtilization.toFixed(1),
-  //         ramRequest: ramRequestGB.toFixed(2),
-  //         ramUsage: ramUtilizationGB.toFixed(2),
-  //         ramUtilization: ramUtilization.toFixed(1),
-  //         totalCost: (node["totalCost"] || 0).toFixed(2),
-  //         cpuCost: (node["cpuCost"] || 0).toFixed(2),
-  //         ramCost: (node["ramCost"] || 0).toFixed(2),
-  //         pvCost: (node["pvCost"] || 0).toFixed(2),
-  //         efficiency: (node["totalEfficiency"] || 0).toFixed(2),
-  //         uptime: calculateUptime(node["start"] || "", node["end"] || ""),
-  //       };
-  //     });
-
-  //     setNodeData(processedNodes);
-  //   } catch (err) {
-  //     console.error("Failed to fetch node data:", err);
-  //     setError("Unable to fetch node data.");
-  //     setNodeData([]);
-  //     setSummaryStats({});
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
 
   const LoadingBanner = ({ message }: { message: string }) => (
     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -299,7 +189,7 @@ const NodeMetricsDashboard = () => {
   );
 
   // Function to refresh all data
-  const refreshAllData = async (showToast = true) => {
+  const refreshAllData = async (showToast = true, force_refresh = true) => {
     setIsRefreshing(true);
     try {
       const queryParams = {
@@ -321,7 +211,7 @@ const NodeMetricsDashboard = () => {
         window: timeRange,
         offset: 0,
         limit: 25,
-        force_refresh: true,
+        force_refresh: force_refresh,
         domain: selectedHash,
       };
 
@@ -348,6 +238,7 @@ const NodeMetricsDashboard = () => {
       setIsRefreshing(false);
     }
   };
+
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
     setIsInitialLoading(true);
@@ -378,24 +269,24 @@ const NodeMetricsDashboard = () => {
       force_refesh: false,
     };
 
-    // ✅ First load
-    fetchNodeData(queryParams);
-    setLastUpdated(new Date());
+    if (selectedHash) {
+      fetchNodeData(queryParams);
+      setLastUpdated(new Date());
+    }
 
-    // ✅ Set interval refresh
     if (refreshInterval && refreshInterval > 0) {
       const intervalId = setInterval(() => {
         fetchNodeData(queryParams);
         setLastUpdated(new Date());
-      }, refreshInterval * 1000); // assuming refreshInterval is in seconds
+      }, refreshInterval * 1000);
 
-      return () => clearInterval(intervalId); // cleanup
+      return () => clearInterval(intervalId);
     }
   }, [searchParams, refreshInterval]);
 
   useEffect(() => {
     if (selectedHash) {
-      refreshAllData(false); // No toast, force refresh
+      refreshAllData(false, false); // No toast, force refresh
     }
   }, [selectedHash]);
 
@@ -460,58 +351,97 @@ const NodeMetricsDashboard = () => {
     }
   };
 
+  // Custom Tooltip Component
+  const CustomTooltip = ({ active, payload, label, formatter }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-background border border-border rounded-lg shadow-lg p-3 backdrop-blur-sm">
+          <p className="font-medium text-foreground mb-2">{label}</p>
+          {payload.map((entry, index) => (
+            <div key={index} className="flex items-center gap-2 text-sm">
+              <div 
+                className="w-3 h-3 rounded-sm" 
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-muted-foreground">{entry.name}:</span>
+              <span className="font-medium text-foreground">
+                {formatter ? formatter(entry.value, entry.name) : entry.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   const StatusBadge = ({ status }) => {
     const statusConfig = {
       healthy: {
-        bg: "bg-success",
-        text: "text-success-foreground",
+        bg: "bg-emerald-100 dark:bg-emerald-900/30",
+        text: "text-emerald-700 dark:text-emerald-300",
+        border: "border-emerald-200 dark:border-emerald-700",
         label: "Healthy",
+        icon: "🟢"
       },
       warning: {
-        bg: "bg-warning",
-        text: "text-warning-foreground",
+        bg: "bg-amber-100 dark:bg-amber-900/30",
+        text: "text-amber-700 dark:text-amber-300",
+        border: "border-amber-200 dark:border-amber-700",
         label: "Warning",
+        icon: "🟡"
       },
       critical: {
-        bg: "bg-destructive",
-        text: "text-destructive-foreground",
+        bg: "bg-red-100 dark:bg-red-900/30",
+        text: "text-red-700 dark:text-red-300",
+        border: "border-red-200 dark:border-red-700",
         label: "Critical",
+        icon: "🔴"
       },
     };
 
     const config = statusConfig[status] || statusConfig.healthy;
 
     return (
-      <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
-      >
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}>
+        <span className="text-xs">{config.icon}</span>
         {config.label}
       </span>
     );
   };
 
-  const MetricCard = ({ title, value, subtitle, icon, status }) => {
+  const MetricCard = ({ title, value, subtitle, icon, status, trend }) => {
     const statusColors = {
-      healthy: "border-success bg-success/10",
-      warning: "border-warning bg-warning/10",
-      critical: "border-destructive bg-destructive/10",
-      info: "",
+      healthy: "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20",
+      warning: "border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20",
+      critical: "border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20",
+      info: "border-border bg-card",
     };
 
     return (
-      <Card className={`${statusColors[status] || statusColors.info}`}>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
+      <Card className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${statusColors[status] || statusColors.info}`}>
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              {icon}
-              <span className="text-sm font-medium text-muted-foreground">
-                {title}
-              </span>
+              <div className="p-2 rounded-lg bg-primary/10">
+                {icon}
+              </div>
+              <div className="hidden sm:block">
+                <span className="text-sm font-medium text-muted-foreground">{title}</span>
+              </div>
             </div>
+            {trend && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <TrendingUp className="w-3 h-3" />
+                <span>{trend}</span>
+              </div>
+            )}
           </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-foreground">{value}</div>
-            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+          
+          <div className="space-y-1">
+            <div className="sm:hidden text-xs font-medium text-muted-foreground mb-1">{title}</div>
+            <div className="text-xl sm:text-2xl font-bold text-foreground">{value}</div>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
         </CardContent>
       </Card>
@@ -519,77 +449,30 @@ const NodeMetricsDashboard = () => {
   };
 
   const costBreakdownData = nodeData.map((node) => ({
-    name: node["name"].replace("k8gwell", ""),
-    cpu: parseFloat(node["cpuCost"]),
-    ram: parseFloat(node["ramCost"]),
-    storage: parseFloat(node["pvCost"]),
-    total: parseFloat(node["totalCost"]),
+    name: node.name.replace("k8gwell", "").replace("worker-node-", "W").replace("master-node-", "M"),
+    cpu: parseFloat(node.cpuCost),
+    ram: parseFloat(node.ramCost),
+    storage: parseFloat(node.pvCost),
+    total: parseFloat(node.totalCost),
   }));
 
   const utilizationData = nodeData.map((node) => ({
-    name: node["name"].replace("k8gwell", ""),
-    cpuUsage: parseFloat(node["cpuUsage"]),
-    ramUsage: parseFloat(node["ramUtilization"]),
-    efficiency: parseFloat(node["efficiency"]),
+    name: node.name.replace("k8gwell", "").replace("worker-node-", "W").replace("master-node-", "M"),
+    cpuUsage: parseFloat(node.cpuUsage),
+    ramUsage: parseFloat(node.ramUtilization),
+    efficiency: parseFloat(node.efficiency),
   }));
 
   const statusDistribution = nodeData.reduce((acc, node) => {
-    acc[node["status"]] = (acc[node["status"]] || 0) + 1;
+    acc[node.status] = (acc[node.status] || 0) + 1;
     return acc;
   }, {});
 
   const pieData = Object.entries(statusDistribution).map(([status, count]) => ({
     name: status.charAt(0).toUpperCase() + status.slice(1),
     value: count,
-    color:
-      status === "healthy"
-        ? "hsl(var(--success))"
-        : status === "warning"
-        ? "hsl(var(--warning))"
-        : "hsl(var(--destructive))",
+    color: status === "healthy" ? "#10b981" : status === "warning" ? "#f59e0b" : "#ef4444",
   }));
-
-  // Handle domain change from Layout component
-  // const handleDomainChange = useCallback(
-  //   (hash: string) => {
-  //     console.log("Domain changed in ClusterMetrics:", hash);
-  //     setSelectedHash(hash);
-  //     // Immediately fetch data with the new domain hash
-  //     fetchAllData(timeRange, hash, true);
-  //   },
-  //   [timeRange, fetchAllData]
-  // );
-  // Handle domain change from div component
-
-  // if (loading) {
-  //   return (
-  //     <div
-  //       title="Node Metrics"
-  //       subtitle="CPU, memory, disk, network, and node health monitoring"
-  //     >
-  //       <div className="min-h-screen bg-background p-6">
-  //         <div className="max-w-7xl mx-auto">
-  //           <div className="text-center text-muted-foreground">Loading...</div>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
-  // if (error) {
-  //   return (
-  //     <div
-  //       title="Node Metrics"
-  //       subtitle="CPU, memory, disk, network, and node health monitoring"
-  //     >
-  //       <div className="min-h-screen bg-background p-6">
-  //         <div className="max-w-7xl mx-auto">
-  //           <div className="text-center text-destructive">{error}</div>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
 
   if (isInitialLoading) {
     return (
@@ -601,16 +484,16 @@ const NodeMetricsDashboard = () => {
   }
 
   return (
-    <div className="p-4 lg:p-6">
-      <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
         {/* Filter Bar */}
         {isLoadingData ? (
-          <LoadingBanner message="Loading cluster data..." />
+          <LoadingBanner message="Loading node data..." />
         ) : (
           <FilterBar
             selectedTimeRange={timeRange}
             onTimeRangeChange={handleTimeRangeChange}
-            timeRangeVariant="select" // ✅
+            timeRangeVariant="select"
             timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
             onFilterClick={handleFilterClick}
             showFilter={false}
@@ -624,232 +507,314 @@ const NodeMetricsDashboard = () => {
           />
         )}
 
-        <div className="mx-auto space-y-6">
-          <div className="flex items-center gap-4">
-            {/* <DomainDropdown onSelect={handleDomainSelect} /> */}
-            {/* {selectedHash && <p className="mt-3 text-green-600">Selected: {selectedHash}</p>} */}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <MetricCard
-              title="Active Nodes"
-              value={summaryStats["totalNodes"]?.toString() || "0"}
-              subtitle="All nodes operational"
-              icon={<Server className="w-5 h-5 text-primary" />}
-              status="info"
-            />
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Node Metrics Dashboard</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Monitor cluster performance and resource utilization</p>
+        </div>
 
-            <MetricCard
-              title="Total Cost"
-              value={`${summaryStats["totalCost"]?.toFixed(2) || "0.00"}`}
-              subtitle={`Last ${timeRange}`}
-              icon={<DollarSign className="w-5 h-5 text-success" />}
-              status="info"
-            />
-            <MetricCard
-              title="Avg CPU Usage"
-              value={`${summaryStats["avgCpuUsage"]?.toFixed(1) || "0.0"}%`}
-              subtitle="Across all nodes"
-              icon={<Cpu className="w-5 h-5 text-warning" />}
-              status={
-                summaryStats["avgCpuUsage"] > thresholds.cpuUsageWarning
-                  ? "warning"
-                  : "healthy"
-              }
-            />
-            <MetricCard
-              title="Avg Efficiency"
-              value={`${summaryStats["avgEfficiency"]?.toFixed(1) || "0.0"}%`}
-              subtitle="Resource utilization"
-              icon={<Activity className="w-5 h-5 text-primary" />}
-              status={
-                summaryStats["avgEfficiency"] < thresholds.efficiencyWarning
-                  ? "warning"
-                  : "healthy"
-              }
-            />
-          </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
+          <MetricCard
+            title="Active Nodes"
+            value={summaryStats.totalNodes?.toString() || "0"}
+            subtitle="All nodes operational"
+            icon={<Server className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
+            status="info" trend={undefined}          />
+          
+          <MetricCard
+            title="Total Cost"
+            value={`${summaryStats.totalCost?.toFixed(2) || "0.00"}`}
+            subtitle={`Last ${timeRange}`}
+            icon={<DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />}
+            status="info" trend={undefined}          />
+          
+          <MetricCard
+            title="Avg CPU Usage"
+            value={`${summaryStats.avgCpuUsage?.toFixed(1) || "0.0"}%`}
+            subtitle="Across all nodes"
+            icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />}
+            status={summaryStats.avgCpuUsage > thresholds.cpuUsageWarning ? "warning" : "healthy"} trend={undefined}          />
+          
+          <MetricCard
+            title="Avg Efficiency"
+            value={`${summaryStats.avgEfficiency?.toFixed(1) || "0.0"}%`}
+            subtitle="Resource utilization"
+            icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
+            status={summaryStats.avgEfficiency < thresholds.efficiencyWarning ? "warning" : "healthy"} trend={undefined}          />
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Node Status Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+          {/* Status Distribution */}
+          <Card className="h-fit">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <div className="p-1.5 rounded bg-primary/10">
+                  <Activity className="w-4 h-4 text-primary" />
+                </div>
+                Node Status Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="h-[250px] sm:h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={pieData}
                       cx="50%"
                       cy="50%"
-                      outerRadius={100}
+                      innerRadius={40}
+                      outerRadius={80}
+                      paddingAngle={5}
                       dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}`}
+                      label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
                     >
                       {pieData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip content={<CustomTooltip formatter={(value) => [`${value} nodes`]} active={undefined} payload={undefined} label={undefined} />} />
                   </PieChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Cost Breakdown by Node</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={costBreakdownData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`${value}`, ""]} />
-                    <Bar
-                      dataKey="cpu"
-                      stackId="cost"
-                      fill="hsl(var(--destructive))"
-                      name="CPU"
-                    />
-                    <Bar
-                      dataKey="ram"
-                      stackId="cost"
-                      fill="hsl(var(--primary))"
-                      name="RAM"
-                    />
-                    <Bar
-                      dataKey="storage"
-                      stackId="cost"
-                      fill="hsl(var(--success))"
-                      name="Storage"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Resource Utilization by Node</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={utilizationData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => [`${value}%`, ""]} />
-                  <Line
-                    type="monotone"
-                    dataKey="cpuUsage"
-                    stroke="hsl(var(--destructive))"
-                    strokeWidth={2}
-                    name="CPU Usage %"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="ramUsage"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    name="RAM Usage %"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="efficiency"
-                    stroke="hsl(var(--success))"
-                    strokeWidth={2}
-                    name="Efficiency %"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Node Details</CardTitle>
+          {/* Cost Breakdown */}
+          <Card className="h-fit">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <div className="p-1.5 rounded bg-emerald-100 dark:bg-emerald-900/30">
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                </div>
+                Cost Breakdown by Node
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b text-primary">
-                      <th className="text-left p-3 font-medium">Node</th>
-                      <th className="text-left p-3 font-medium">Status</th>
-                      <th className="text-left p-3 font-medium">CPU</th>
-                      <th className="text-left p-3 font-medium">Memory</th>
-                      <th className="text-left p-3 font-medium">Cost</th>
-                      <th className="text-left p-3 font-medium">Efficiency</th>
-                      <th className="text-left p-3 font-medium">Uptime</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {nodeData.map((node, index) => (
-                      <tr
-                        key={index}
-                        className="border-b hover:bg-muted/50 text-foreground"
-                      >
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <Server className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-medium">{node["name"]}</span>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <StatusBadge status={node["status"]} />
-                        </td>
-                        <td className="p-3">
-                          <div className="text-sm">
-                            <div>{node["cpuUsage"]}%</div>
-                            <div className="text-muted-foreground text-xs">
-                              {node["cpuCores"]} cores
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <div className="text-sm">
-                            <div>{node["ramUtilization"]}%</div>
-                            <div className="text-muted-foreground text-xs">
-                              {node["ramUsage"]}GB used
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <div className="text-sm">
-                            <div className="font-medium">
-                              ${node["totalCost"]}
-                            </div>
-                            <div className="text-muted-foreground text-xs">
-                              CPU: ${node["cpuCost"]} | RAM: ${node["ramCost"]}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <span
-                            className={`text-sm font-medium ${
-                              parseFloat(node["efficiency"]) > 5
-                                ? "text-success"
-                                : parseFloat(node["efficiency"]) > 1
-                                ? "text-warning"
-                                : "text-destructive"
-                            }`}
-                          >
-                            {node["efficiency"]}%
-                          </span>
-                        </td>
-                        <td className="p-3 text-sm text-muted-foreground">
-                          {node["uptime"]}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <CardContent className="pt-0">
+              <div className="h-[250px] sm:h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={costBreakdownData} margin={{ top: 20, right: 20, bottom: 5, left: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                    <XAxis 
+                      dataKey="name" 
+                      tick={{ fontSize: 12 }}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      stroke="hsl(var(--muted-foreground))"
+                    />
+                    <Tooltip content={<CustomTooltip formatter={(value) => [`$${value.toFixed(2)}`]} active={undefined} payload={undefined} label={undefined} />} />
+                    <Bar dataKey="cpu" stackId="cost" fill="#ef4444" name="CPU" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="ram" stackId="cost" fill="#3b82f6" name="RAM" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="storage" stackId="cost" fill="#10b981" name="Storage" radius={[2, 2, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Resource Utilization Chart */}
+        <Card className="mb-6">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <div className="p-1.5 rounded bg-blue-100 dark:bg-blue-900/30">
+                <TrendingUp className="w-4 h-4 text-blue-600" />
+              </div>
+              Resource Utilization Trends
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-[250px] sm:h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={utilizationData} margin={{ top: 20, right: 20, bottom: 5, left: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 12 }}
+                    stroke="hsl(var(--muted-foreground))"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    stroke="hsl(var(--muted-foreground))"
+                  />
+                  <Tooltip content={<CustomTooltip formatter={(value) => [`${value}%`]} active={undefined} payload={undefined} label={undefined} />} />
+                  <Line
+                    type="monotone"
+                    dataKey="cpuUsage"
+                    stroke="#ef4444"
+                    strokeWidth={3}
+                    name="CPU Usage"
+                    dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: "#ef4444", strokeWidth: 2 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="ramUsage"
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    name="RAM Usage"
+                    dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: "#3b82f6", strokeWidth: 2 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="efficiency"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                    name="Efficiency"
+                    dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: "#10b981", strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Node Details Table */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <div className="p-1.5 rounded bg-purple-100 dark:bg-purple-900/30">
+                <Server className="w-4 h-4 text-purple-600" />
+              </div>
+              Node Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {/* Mobile View */}
+            <div className="block lg:hidden space-y-4">
+              {nodeData.map((node, index) => (
+                <Card key={index} className="p-4 bg-muted/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Server className="w-4 h-4 text-muted-foreground" />
+                      <span className="font-medium text-sm">{node.name}</span>
+                    </div>
+                    <StatusBadge status={node.status} />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                        <Cpu className="w-3 h-3" />
+                        <span>CPU</span>
+                      </div>
+                      <div className="font-medium">{node.cpuUsage}%</div>
+                      <div className="text-muted-foreground">{node.cpuCores} cores</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                        <Activity className="w-3 h-3" />
+                        <span>Memory</span>
+                      </div>
+                      <div className="font-medium">{node.ramUtilization}%</div>
+                      <div className="text-muted-foreground">{node.ramUsage}GB used</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                        <DollarSign className="w-3 h-3" />
+                        <span>Cost</span>
+                      </div>
+                      <div className="font-medium">${node.totalCost}</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                        <Zap className="w-3 h-3" />
+                        <span>Efficiency</span>
+                      </div>
+                      <div className={`font-medium ${
+                        parseFloat(node.efficiency) > 50 ? "text-emerald-600" :
+                        parseFloat(node.efficiency) > 30 ? "text-amber-600" : "text-red-600"
+                      }`}>
+                        {node.efficiency}%
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-3">
+                    <Clock className="w-3 h-3" />
+                    <span>Uptime: {node.uptime}</span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b text-primary">
+                    <th className="text-left p-4 font-medium">Node</th>
+                    <th className="text-left p-4 font-medium">Status</th>
+                    <th className="text-left p-4 font-medium">CPU</th>
+                    <th className="text-left p-4 font-medium">Memory</th>
+                    <th className="text-left p-4 font-medium">Cost</th>
+                    <th className="text-left p-4 font-medium">Efficiency</th>
+                    <th className="text-left p-4 font-medium">Uptime</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nodeData.map((node, index) => (
+                    <tr key={index} className="border-b hover:bg-muted/50 transition-colors text-foreground">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <Server className="w-4 h-4 text-primary" />
+                          </div>
+                          <span className="font-medium">{node.name}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <StatusBadge status={node.status} />
+                      </td>
+                      <td className="p-4">
+                        <div className="space-y-1">
+                          <div className="font-medium">{node.cpuUsage}%</div>
+                          <div className="text-muted-foreground text-sm">{node.cpuCores} cores</div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="space-y-1">
+                          <div className="font-medium">{node.ramUtilization}%</div>
+                          <div className="text-muted-foreground text-sm">{node.ramUsage}GB used</div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="space-y-1">
+                          <div className="font-medium">${node.totalCost}</div>
+                          <div className="text-muted-foreground text-sm">
+                            CPU: ${node.cpuCost} | RAM: ${node.ramCost}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className={`font-medium ${
+                          parseFloat(node.efficiency) > 50 ? "text-emerald-600" :
+                          parseFloat(node.efficiency) > 30 ? "text-amber-600" : "text-red-600"
+                        }`}>
+                          {node.efficiency}%
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Clock className="w-4 h-4" />
+                          {node.uptime}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
