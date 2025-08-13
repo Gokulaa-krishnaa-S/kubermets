@@ -50,6 +50,10 @@ const NodeMetricsDashboard = () => {
 
   const { selectedHash } = useSelectedHash();
   const [isLoadingData, setIsLoadingData] = useState(false);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(3);
 
   const thresholds = {
     cpuCritical: 90,
@@ -143,20 +147,21 @@ const NodeMetricsDashboard = () => {
             status = "warning";
           }
 
-        return {
-          name: node["name"],
-          status,
-          cpuCores: cpuRequest.toFixed(1),
-          cpuUsage: cpuUtilization.toFixed(1),
-          ramRequest: ramRequestGB.toFixed(2),
-          ramUsage: ramUtilizationGB.toFixed(2),
-          ramUtilization: ramUtilization.toFixed(1),
-          totalCost: (node["totalCost"] || 0).toFixed(2),
-          cpuCost: (node["cpuCost"] || 0).toFixed(2),
-          pvCost: (node["pvCost"] || 0).toFixed(2),
-          efficiency: (node["totalEfficiency"] || 0).toFixed(2),
-          uptime: calculateUptime(node["start"] || "", node["end"] || ""),
-        };
+          return {
+            name: node["name"],
+            status,
+            cpuCores: cpuRequest.toFixed(1),
+            cpuUsage: cpuUtilization.toFixed(1),
+            ramRequest: ramRequestGB.toFixed(2),
+            ramUsage: ramUtilizationGB.toFixed(2),
+            ramUtilization: ramUtilization.toFixed(1),
+            totalCost: (node["totalCost"] || 0).toFixed(2),
+            cpuCost: (node["cpuCost"] || 0).toFixed(2),
+            ramCost: (node["ramCost"] || 0).toFixed(2),
+            pvCost: (node["pvCost"] || 0).toFixed(2),
+            efficiency: (node["totalEfficiency"] || 0).toFixed(2),
+            uptime: calculateUptime(node["start"] || "", node["end"] || ""),
+          };
         });
 
         setNodeData(processedNodes);
@@ -164,12 +169,7 @@ const NodeMetricsDashboard = () => {
         console.error("Failed to fetch node data:", err);
         setError("Unable to fetch node data.");
         setNodeData([]);
-        setSummaryStats({
-          totalNodes: 0,
-          totalCost: 0,
-          avgCpuUsage: 0,
-          avgEfficiency: 0,
-        });
+        // setSummaryStats({});
       } finally {
         setLoading(false);
         setIsLoadingData(false);
@@ -188,8 +188,7 @@ const NodeMetricsDashboard = () => {
     </div>
   );
 
-  // Function to refresh all data
-  const refreshAllData = async (showToast = true, force_refresh = true) => {
+  const refreshAllData = async (showToast = true) => {
     setIsRefreshing(true);
     try {
       const queryParams = {
@@ -211,7 +210,7 @@ const NodeMetricsDashboard = () => {
         window: timeRange,
         offset: 0,
         limit: 25,
-        force_refresh: force_refresh,
+        force_refresh: true,
         domain: selectedHash,
       };
 
@@ -269,10 +268,8 @@ const NodeMetricsDashboard = () => {
       force_refesh: false,
     };
 
-    if (selectedHash) {
-      fetchNodeData(queryParams);
-      setLastUpdated(new Date());
-    }
+    fetchNodeData(queryParams);
+    setLastUpdated(new Date());
 
     if (refreshInterval && refreshInterval > 0) {
       const intervalId = setInterval(() => {
@@ -286,7 +283,7 @@ const NodeMetricsDashboard = () => {
 
   useEffect(() => {
     if (selectedHash) {
-      refreshAllData(false, false); // No toast, force refresh
+      refreshAllData(false);
     }
   }, [selectedHash]);
 
@@ -474,6 +471,124 @@ const NodeMetricsDashboard = () => {
     color: status === "healthy" ? "#10b981" : status === "warning" ? "#f59e0b" : "#ef4444",
   }));
 
+  // Pagination logic
+  const totalItems = nodeData.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const currentNodes = nodeData.slice(startIndex, endIndex);
+
+  // Reset to first page when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [nodeData]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
+
+  // Pagination component
+  const Pagination = () => {
+    const getPageNumbers = () => {
+      const pages = [];
+      const maxVisiblePages = 3;
+      
+      if (totalPages <= maxVisiblePages) {
+        for (let i = 1; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        const start = Math.max(1, currentPage - 2);
+        const end = Math.min(totalPages, start + maxVisiblePages - 1);
+        
+        if (start > 1) {
+          pages.push(1);
+          if (start > 2) pages.push('...');
+        }
+        
+        for (let i = start; i <= end; i++) {
+          pages.push(i);
+        }
+        
+        if (end < totalPages) {
+          if (end < totalPages - 1) pages.push('...');
+          pages.push(totalPages);
+        }
+      }
+      
+      return pages;
+    };
+
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>
+            Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} entries
+          </span>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {/* Page Size Selector */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Show:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+              className="px-2 py-1 text-sm border border-border rounded bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value={3}>3</option>
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+          
+          {/* Page Navigation */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-2 py-1 text-sm border border-border rounded bg-background text-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            
+            {getPageNumbers().map((page, index) => (
+              <button
+                key={index}
+                onClick={() => typeof page === 'number' && handlePageChange(page)}
+                disabled={page === '...'}
+                className={`px-3 py-1 text-sm border rounded transition-colors ${
+                  page === currentPage
+                    ? 'bg-primary text-primary-foreground border-primary'
+                    : page === '...'
+                    ? 'border-transparent cursor-default'
+                    : 'border-border bg-background text-foreground hover:bg-muted'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-2 py-1 text-sm border border-border rounded bg-background text-foreground hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (isInitialLoading) {
     return (
       <NodeMetricsLoader
@@ -488,7 +603,7 @@ const NodeMetricsDashboard = () => {
       <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
         {/* Filter Bar */}
         {isLoadingData ? (
-          <LoadingBanner message="Loading node data..." />
+          <LoadingBanner message="Loading cluster data..." />
         ) : (
           <FilterBar
             selectedTimeRange={timeRange}
@@ -677,18 +792,23 @@ const NodeMetricsDashboard = () => {
         {/* Node Details Table */}
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <div className="p-1.5 rounded bg-purple-100 dark:bg-purple-900/30">
-                <Server className="w-4 h-4 text-purple-600" />
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-base sm:text-lg">
+                <div className="p-1.5 rounded bg-purple-100 dark:bg-purple-900/30">
+                  <Server className="w-4 h-4 text-purple-600" />
+                </div>
+                Node Details
               </div>
-              Node Details
+              <div className="text-sm text-muted-foreground">
+                {totalItems} nodes total
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             {/* Mobile View */}
             <div className="block lg:hidden space-y-4">
-              {nodeData.map((node, index) => (
-                <Card key={index} className="p-4 bg-muted/30">
+              {currentNodes.map((node, index) => (
+                <Card key={startIndex + index} className="p-4 bg-muted/30">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Server className="w-4 h-4 text-muted-foreground" />
@@ -744,6 +864,13 @@ const NodeMetricsDashboard = () => {
                   </div>
                 </Card>
               ))}
+              
+              {currentNodes.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Server className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No nodes found</p>
+                </div>
+              )}
             </div>
 
             {/* Desktop Table View */}
@@ -761,8 +888,8 @@ const NodeMetricsDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {nodeData.map((node, index) => (
-                    <tr key={index} className="border-b hover:bg-muted/50 transition-colors text-foreground">
+                  {currentNodes.map((node, index) => (
+                    <tr key={startIndex + index} className="border-b hover:bg-muted/50 transition-colors text-foreground">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="p-2 rounded-lg bg-primary/10">
@@ -812,7 +939,18 @@ const NodeMetricsDashboard = () => {
                   ))}
                 </tbody>
               </table>
+              
+              {currentNodes.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No nodes found</p>
+                  <p className="text-sm">Try adjusting your filters or refresh the data</p>
+                </div>
+              )}
             </div>
+            
+            {/* Pagination */}
+            {totalItems > 0 && <Pagination />}
           </CardContent>
         </Card>
       </div>
