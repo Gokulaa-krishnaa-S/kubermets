@@ -62,7 +62,7 @@ const KubernetesInstanceList: React.FC = () => {
   };
   if (isInitialLoading) {
     return <SettingsMetricsLoader
-      title="Cluster Metrics"
+      title="Settings"
       subtitle="Loading comprehensive monitoring and resource analytics..."
     />;
   }

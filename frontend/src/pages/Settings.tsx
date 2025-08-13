@@ -3,6 +3,7 @@ import KubernetesInstanceList from "./kubernetesInstance";
 import TopBar from "@/components/header/header";
 
 export default function Settings() {
+  
   return (
     <Layout
       title="Settings"

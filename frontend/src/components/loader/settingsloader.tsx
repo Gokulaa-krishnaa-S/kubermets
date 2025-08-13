@@ -118,7 +118,7 @@ export const SettingsMetricsLoader = ({
               <Activity className="w-5 h-5 text-blue-600 animate-pulse" />
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-600 rounded-full animate-ping"></div>
             </div>
-            <span className="text-sm font-medium text-gray-700">Loading metrics...</span>
+            <span className="text-sm font-medium text-gray-700">Loading settings...</span>
           </div>
         </div>
       </div>
