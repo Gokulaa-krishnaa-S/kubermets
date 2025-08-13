@@ -76,7 +76,7 @@ const SearchInput: React.FC<SearchProps> = ({
 
 const KubecostDashboard = () => {
   const { selectedInstance } = useCluster();
-  let selectedHash = selectedInstance.unique_hash;
+  let selectedHash = selectedInstance?.unique_hash;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -492,8 +492,8 @@ const KubecostDashboard = () => {
 
   return (
     <>
-      <div className="p-4 lg:p-6">
-        <div className="min-h-screen p-6">
+      <div className="mx-auto p-4 lg:p-6">
+        <div className="min-h-screen ">
           <div className="mx-auto">
             {/* Enhanced Filter Bar with Search */}
             <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-6">

@@ -49,7 +49,8 @@ const NodeMetricsDashboard = () => {
     avgEfficiency: 0,
   });
   const { selectedInstance } = useCluster();
-  let selectedHash = selectedInstance.unique_hash;
+  console.log(selectedInstance);
+  let selectedHash = selectedInstance?.unique_hash;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState("24h");
@@ -440,7 +441,7 @@ const NodeMetricsDashboard = () => {
         <CardContent className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-primary/10">{icon}</div>
+              <div className="pb-2 rounded-lg bg-primary/10">{icon}</div>
               <div className="hidden sm:block">
                 <span className="text-sm font-medium text-muted-foreground">
                   {title}
@@ -638,7 +639,7 @@ const NodeMetricsDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
+      <div className=" mx-auto p-4 lg:p-6">
         {/* Filter Bar */}
         {isLoadingData ? (
           <LoadingBanner message="Loading cluster data..." />
