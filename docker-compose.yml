@@ -13,9 +13,10 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   backend:
-    # build:
-    #   context: ./backend_inProgress
+    build:
+      context: ./backend_inProgress
     image: sanjaysify/backend:latest
+
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/kubermets
     depends_on:
@@ -24,8 +25,8 @@ services:
       - "8000:8000"
 
   frontend:
-    # build:
-    #   context: ./frontend
+    build:
+      context: ./frontend
     image: sanjaysify/vite-frontend:latest
     ports:
       - "4000:80"
