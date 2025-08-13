@@ -13,7 +13,12 @@ from controllers.cluster_controller import (
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from service.data_service import kubecost_service
+import os
+from werkzeug.utils import secure_filename
 
+UPLOAD_FOLDER = "uploads/providers"
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 clusters_bp = Blueprint("clusters", __name__, url_prefix="/v1")
 
 
@@ -464,3 +469,52 @@ def list_instances():
 
     except Exception as e:
         return {"error": str(e)}, 500
+
+
+@clusters_bp.route("/providers", methods=["GET"])
+def list_providers():
+    try:
+        providers = kubecost_service._list_Providers()
+        return jsonify({"providers": providers}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@clusters_bp.route("/provider/add", methods=["POST"])
+def create_provider():
+    """Create a new provider with image upload"""
+    try:
+        name = request.form.get("name")
+        logo_file = request.files.get("logo")
+
+        if not name or not name.strip():
+            return jsonify({"error": "Provider name is required"}), 400
+
+        if not logo_file or logo_file.filename == "":
+            return jsonify({"error": "Logo image is required"}), 400
+
+        if not allowed_file(logo_file.filename):
+            return jsonify({"error": "Invalid file type"}), 400
+
+        # Save the image
+        filename = secure_filename(logo_file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        logo_file.save(filepath)
+
+        # Create provider in DB
+        logo_url = f"/{UPLOAD_FOLDER}/{filename}"  # Or S3 URL if uploaded there
+        provider_data = {"name": name, "logo_url": logo_url}
+        provider = kubecost_service._create_Provider(provider_data)
+
+        return {
+            "message": "Provider created successfully",
+            "instance_id": provider.id,
+            "logo_url": logo_url,
+        }, 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

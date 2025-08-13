@@ -20,7 +20,8 @@ const KubernetesInstanceList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editingInstance, setEditingInstance] = useState<KubernetesInstance | null>(null);
+  const [editingInstance, setEditingInstance] =
+    useState<KubernetesInstance | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -42,7 +43,6 @@ const KubernetesInstanceList: React.FC = () => {
   useEffect(() => {
     setIsInitialLoading(true);
 
-
     fetchInstances();
   }, []);
 
@@ -61,10 +61,12 @@ const KubernetesInstanceList: React.FC = () => {
     setEditingInstance(null);
   };
   if (isInitialLoading) {
-    return <SettingsMetricsLoader
-      title="Settings"
-      subtitle="Loading comprehensive monitoring and resource analytics..."
-    />;
+    return (
+      <SettingsMetricsLoader
+        title="Settings"
+        subtitle="Loading comprehensive monitoring and resource analytics..."
+      />
+    );
   }
   if (showForm) {
     return (
@@ -106,7 +108,9 @@ const KubernetesInstanceList: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
           <SettingsIcon className="w-5 h-5 text-gray-700" />
-          <span className="text-xl font-semibold">Manage clusters</span>
+          <span className="text-xl font-semibold">
+            Manage clusters <b>({instances.length})</b>
+          </span>
         </div>
         <div className="flex items-center space-x-3">
           <button
@@ -114,7 +118,9 @@ const KubernetesInstanceList: React.FC = () => {
             disabled={refreshing}
             className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
           >
-            <RefreshCcw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+            <RefreshCcw
+              className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+            />
             <span className="ml-2 hidden sm:block">Refresh</span>
           </button>
           <button
@@ -122,15 +128,19 @@ const KubernetesInstanceList: React.FC = () => {
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             <Plus className="w-4 h-4" />
-            <span className="ml-2 hidden sm:block">Create Cluster</span>
+            <span className="ml-2 hidden sm:block">Add Cluster</span>
           </button>
         </div>
       </div>
 
       {instances.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-xl">
-          <h3 className="text-lg font-medium text-gray-800 mb-2">No instances found</h3>
-          <p className="text-gray-500 mb-6">Get started by creating your first Kubernetes instance</p>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">
+            No instances found
+          </h3>
+          <p className="text-gray-500 mb-6">
+            Get started by creating your first Kubernetes instance
+          </p>
           <button
             onClick={handleCreate}
             className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -148,29 +158,40 @@ const KubernetesInstanceList: React.FC = () => {
             >
               <div className="mb-4">
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-lg font-bold text-blue-600 truncate">{instance.name}</h3>
+                  <h3 className="text-lg font-bold text-blue-600 truncate">
+                    {instance.name}
+                  </h3>
                   <span
-                    className={`px-2 py-1 text-xs rounded-full font-medium ${instance.status === "active"
+                    className={`px-2 py-1 text-xs rounded-full font-medium ${
+                      instance.status === "active"
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"
-                      }`}
+                    }`}
                   >
                     {instance.status}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 break-all">{instance.api_url}</p>
+                <p className="text-sm text-gray-500 break-all">
+                  {instance.api_url}
+                </p>
               </div>
               <div className="space-y-2 mb-4">
                 <div className="flex items-center">
-                  <span className="text-sm font-medium text-gray-600 w-16">Client:</span>
-                  <span className="text-sm text-gray-800">{instance.client_name || "N/A"}</span>
+                  <span className="text-sm font-medium text-gray-600 w-16">
+                    Client:
+                  </span>
+                  <span className="text-sm text-gray-800">
+                    {instance.client_name || "N/A"}
+                  </span>
                 </div>
                 {instance.description && (
                   <div className="flex items-start">
                     <span className="text-sm font-medium text-gray-600 w-16 flex-shrink-0">
                       About:
                     </span>
-                    <span className="text-sm text-gray-700 italic">{instance.description}</span>
+                    <span className="text-sm text-gray-700 italic">
+                      {instance.description}
+                    </span>
                   </div>
                 )}
               </div>
@@ -189,10 +210,6 @@ const KubernetesInstanceList: React.FC = () => {
           ))}
         </div>
       )}
-
-      <div className="mt-8 text-center text-sm text-gray-500">
-        Total instances: {instances.length}
-      </div>
     </div>
   );
 };

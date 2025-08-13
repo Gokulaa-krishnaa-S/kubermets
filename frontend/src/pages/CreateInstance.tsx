@@ -2,7 +2,17 @@ import React, { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { ArrowLeft, Save, AlertCircle } from "lucide-react";
 import ClusterService from "@/services/ClusterService";
-
+import { Plus, Upload } from "lucide-react";
+import {
+  Cloud,
+  CloudCog,
+  CloudSun,
+  CloudLightning,
+  CloudRain,
+  CloudSnow,
+  Server,
+  Database,
+} from "lucide-react";
 interface InstanceFormData {
   name: string;
   description: string;
@@ -18,7 +28,10 @@ interface InstanceFormProps {
   onBack: () => void;
   onInstanceSaved: () => void;
 }
-
+interface ProviderForm {
+  name: string;
+  logo: string | File;
+}
 const InstanceForm: React.FC<InstanceFormProps> = ({
   mode,
   initialData,
@@ -37,7 +50,59 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const providers = [
+    {
+      value: "AWS",
+      label: "AWS",
+      icon: <CloudCog className="w-5 h-5 text-orange-500" />,
+    },
+    {
+      value: "Azure",
+      label: "Azure",
+      icon: <Cloud className="w-5 h-5 text-blue-500" />,
+    },
+    {
+      value: "GCP",
+      label: "Google Cloud Platform",
+      icon: <CloudSun className="w-5 h-5 text-yellow-500" />,
+    },
+    {
+      value: "Cloudflare",
+      label: "Cloudflare",
+      icon: <CloudLightning className="w-5 h-5 text-orange-400" />,
+    },
+    {
+      value: "IBM Cloud",
+      label: "IBM Cloud",
+      icon: <CloudRain className="w-5 h-5 text-blue-400" />,
+    },
+    {
+      value: "Oracle Cloud",
+      label: "Oracle Cloud",
+      icon: <Server className="w-5 h-5 text-red-500" />,
+    },
+    {
+      value: "DigitalOcean",
+      label: "DigitalOcean",
+      icon: <Cloud className="w-5 h-5 text-sky-500" />,
+    },
+    {
+      value: "Linode",
+      label: "Linode",
+      icon: <Database className="w-5 h-5 text-green-500" />,
+    },
+    {
+      value: "SIFY",
+      label: "SIFY",
+      icon: <CloudSnow className="w-5 h-5 text-blue-300" />,
+    },
+  ];
+  const [showProviderModal, setShowProviderModal] = useState(false);
 
+  const [newProvider, setNewProvider] = useState<ProviderForm>({
+    name: "",
+    logo: "",
+  });
   // Pre-fill for edit mode
   useEffect(() => {
     if (mode === "edit" && initialData) {
@@ -54,7 +119,24 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
       });
     }
   }, [mode, initialData]);
-  const providers = ["GCP", "AWS", "SIFY", "Cloudflare"];
+
+  // const handleAddProvider = async () => {
+  //   if (!newProvider.name.trim() || !newProvider.logo) return;
+
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("name", newProvider.name);
+  //     formData.append("logo", newProvider.logo); // This should be a File object
+
+  //     const created = await ClusterService.createProvider(formData);
+  //     setProviders((prev) => [...prev, created]);
+  //     setShowProviderModal(false);
+  //     setNewProvider({ name: "", logo: "" });
+  //   } catch (err) {
+  //     console.error("Failed to add provider", err);
+  //   }
+  // };
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLSelectElement | HTMLInputElement | HTMLTextAreaElement
@@ -111,7 +193,16 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
       setLoading(false);
     }
   };
+  const [open, setOpen] = useState(false);
 
+  const handleSelect = (value: string) => {
+    setFormData((prev: any) => ({ ...prev, client_name: value }));
+    setOpen(false);
+  };
+
+  const selectedProvider = providers.find(
+    (p) => p.value === formData.client_name
+  );
   if (success) {
     return (
       <Layout
@@ -165,7 +256,7 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
             <ArrowLeft className="w-5 h-5 mr-1" />
           </button>
           <h2 className="text-2xl font-bold text-gray-800">
-            {mode === "create" ? "Create New Cluster" : "Edit Cluster"}
+            {mode === "create" ? "Add New Cluster" : "Edit Cluster"}
           </h2>
         </div>
 
@@ -203,20 +294,38 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
               >
                 Provider Name
               </label>
-              <select
-                id="client_name"
-                name="client_name"
-                value={formData.client_name}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="">Select a provider</option>
-                {providers.map((client, index) => (
-                  <option key={index} value={client}>
-                    {client}
-                  </option>
-                ))}
-              </select>
+              <div className="relative w-full">
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onClick={() => setOpen((prev) => !prev)}
+                >
+                  {selectedProvider ? (
+                    <span className="flex items-center gap-2">
+                      {selectedProvider.icon}
+                      {selectedProvider.label}
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">Select a provider</span>
+                  )}
+                  <span className="ml-2 text-gray-500">▼</span>
+                </button>
+
+                {open && (
+                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg">
+                    {providers.map((provider) => (
+                      <div
+                        key={provider.value}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-blue-100 cursor-pointer"
+                        onClick={() => handleSelect(provider.value)}
+                      >
+                        {provider.icon}
+                        {provider.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -313,13 +422,63 @@ const InstanceForm: React.FC<InstanceFormProps> = ({
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  {mode === "create" ? "Create" : "Update"} 
+                  {mode === "create" ? "Add" : "Update"}
                 </>
               )}
             </button>
           </div>
         </div>
       </div>
+
+      {/* {showProviderModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 className="text-lg font-semibold mb-4">Add New Provider</h3>
+
+           
+            <input
+              type="text"
+              placeholder="Provider Name"
+              value={newProvider.name}
+              onChange={(e) =>
+                setNewProvider((prev) => ({ ...prev, name: e.target.value }))
+              }
+              className="w-full mb-4 px-3 py-2 border border-gray-300 rounded-lg"
+            />
+
+    
+            <div className="mb-4">
+              <label className="block text-sm mb-2">Logo Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setNewProvider((prev) => ({ ...prev, logo: file }));
+                  }
+                }}
+              />
+            </div>
+
+          
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => setShowProviderModal(false)}
+                className="px-4 py-2 border rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddProvider}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      )} */}
     </div>
   );
 };
