@@ -9,8 +9,9 @@ import { toast } from "@/components/ui/use-toast";
 import { FilterBar } from "@/components/reusable/filterbar";
 import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
-import { useSelectedHash } from "@/hooks/selected-hash";
+
 import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
+import { useCluster } from "../../src/components/context/ClusterContext";
 
 import {
   Server,
@@ -33,6 +34,8 @@ import {
 } from "lucide-react";
 
 export default function ClusterMetrics() {
+  const { selectedInstance } = useCluster();
+  let selectedHash = selectedInstance.unique_hash;
   const [clusterStats, setClusterStats] = useState([]);
   const [clusters, setClusters] = useState([]);
   const [chartData, setChartData] = useState({
@@ -58,8 +61,6 @@ export default function ClusterMetrics() {
 
   // Helper function to convert bytes to GB
   const bytesToGB = (bytes) => (bytes / 1024 ** 3).toFixed(2);
-
-  const { selectedHash } = useSelectedHash();
 
   const getServerStatusDisplay = (status: "live" | "down") => {
     return {

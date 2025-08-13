@@ -31,9 +31,9 @@ import { Days, Refresh } from "@/components/reusable/filterbar";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import DomainDropdown from "@/components/reusable/domainDropdown";
-import { useSelectedHash } from "@/hooks/selected-hash";
-import { PodMetricsLoader } from "@/components/loader/podloader";
 
+import { PodMetricsLoader } from "@/components/loader/podloader";
+import { useCluster } from "../../src/components/context/ClusterContext";
 // Search Component
 interface SearchProps {
   searchTerm: string;
@@ -75,6 +75,8 @@ const SearchInput: React.FC<SearchProps> = ({
 };
 
 const KubecostDashboard = () => {
+  const { selectedInstance } = useCluster();
+  let selectedHash = selectedInstance.unique_hash;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -100,7 +102,6 @@ const KubecostDashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   // const [selectedHash, setSelectedHash] = useState<string>("");
-  const { selectedHash } = useSelectedHash();
 
   // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
   // const [selectedHash, setSelectedHash] = useState<string>("");
@@ -203,6 +204,7 @@ const KubecostDashboard = () => {
   };
 
   useEffect(() => {
+    console.log("[[[[first]]]]");
     setSearchParams({ window: selectedTimeRange });
     // fetchData();
   }, [selectedTimeRange]);
@@ -563,8 +565,7 @@ const KubecostDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
-                    <DollarSign className="w-6 h-10 text-blue-600" />
-
+                      <DollarSign className="w-6 h-10 text-blue-600" />
                       {searchTerm ? "Filtered" : "Total"} Cost
                     </p>
                     <p className="text-2xl font-bold text">
@@ -589,8 +590,7 @@ const KubecostDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
-                    <Server className="w-6 h-10 text-green-600" />
-
+                      <Server className="w-6 h-10 text-green-600" />
                       {searchTerm ? "Matching" : "Active"} Pods
                     </p>
                     <p className="text-2xl font-bold text">
@@ -608,8 +608,7 @@ const KubecostDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
-                    <Clock className="w-6 h-10 text-orange-600" />
-
+                      <Clock className="w-6 h-10 text-orange-600" />
                       Idle Cost
                     </p>
                     <p className="text-2xl font-bold text">
@@ -627,8 +626,7 @@ const KubecostDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
-                    <Activity className="w-6 h-10 text-purple-600" />
-
+                      <Activity className="w-6 h-10 text-purple-600" />
                       Avg Efficiency
                     </p>
                     <p className="text-2xl font-bold text">
