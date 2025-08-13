@@ -25,18 +25,11 @@ import {
   BarChart3,
   Zap,
   Database,
-  Network,
-  Shield,
-  Settings,
-  Eye,
   RefreshCw,
-  Filter,
-  Calendar,
   DollarSign,
   Gauge,
-  Monitor,
-  Cloud,
   ChevronRight,
+  Coins,
 } from "lucide-react";
 
 export default function ClusterMetrics() {
@@ -1132,7 +1125,7 @@ export default function ClusterMetrics() {
                 <CardHeader>
                   <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
                     <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
-                      <DollarSign className="w-4 h-4 text-white" />
+                      <Coins className="w-4 h-4 text-white" />
                     </div>
                     Cost Breakdown
                   </CardTitle>

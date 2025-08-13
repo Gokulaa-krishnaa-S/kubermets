@@ -88,6 +88,34 @@ class ClusterService {
       throw error;
     }
   }
+
+  async createProvider(data: FormData) {
+    try {
+      const response: AxiosResponse = await this.api.post(
+        `provider/add`,
+        data,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error adding provider:", error);
+      throw error;
+    }
+  }
+
+  async getProviders() {
+    try {
+      const response: AxiosResponse = await this.api.get(`providers`);
+      return response.data;
+    } catch (error) {
+      console.error("Error updating instance:", error);
+      throw error;
+    }
+  }
 }
 
 export default new ClusterService();

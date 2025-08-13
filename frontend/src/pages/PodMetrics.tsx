@@ -563,6 +563,8 @@ const KubecostDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
+                    <DollarSign className="w-6 h-10 text-blue-600" />
+
                       {searchTerm ? "Filtered" : "Total"} Cost
                     </p>
                     <p className="text-2xl font-bold text">
@@ -577,9 +579,9 @@ const KubecostDashboard = () => {
                       Selected period
                     </p>
                   </div>
-                  <div className="p-3 bg-blue-100 rounded-lg">
+                  {/* <div className="p-3 bg-blue-100 rounded-lg">
                     <DollarSign className="w-6 h-6 text-blue-600" />
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
@@ -587,6 +589,8 @@ const KubecostDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
+                    <Server className="w-6 h-10 text-green-600" />
+
                       {searchTerm ? "Matching" : "Active"} Pods
                     </p>
                     <p className="text-2xl font-bold text">
@@ -594,9 +598,9 @@ const KubecostDashboard = () => {
                     </p>
                     <p className="text-xs text-green-600 mt-1">Running</p>
                   </div>
-                  <div className="p-3 bg-green-100 rounded-lg">
+                  {/* <div className="p-3 bg-green-100 rounded-lg">
                     <Server className="w-6 h-6 text-green-600" />
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
@@ -604,6 +608,8 @@ const KubecostDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
+                    <Clock className="w-6 h-10 text-orange-600" />
+
                       Idle Cost
                     </p>
                     <p className="text-2xl font-bold text">
@@ -611,9 +617,9 @@ const KubecostDashboard = () => {
                     </p>
                     <p className="text-xs text-orange-600 mt-1">Unallocated</p>
                   </div>
-                  <div className="p-3 bg-orange-100 rounded-lg">
+                  {/* <div className="p-3 bg-orange-100 rounded-lg">
                     <Clock className="w-6 h-6 text-orange-600" />
-                  </div>
+                  </div> */}
                 </div>
               </div>
 
@@ -621,6 +627,8 @@ const KubecostDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
+                    <Activity className="w-6 h-10 text-purple-600" />
+
                       Avg Efficiency
                     </p>
                     <p className="text-2xl font-bold text">
@@ -640,9 +648,9 @@ const KubecostDashboard = () => {
                       Resource usage
                     </p>
                   </div>
-                  <div className="p-3 bg-purple-100 rounded-lg">
+                  {/* <div className="p-3 bg-purple-100 rounded-lg">
                     <Activity className="w-6 h-6 text-purple-600" />
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>

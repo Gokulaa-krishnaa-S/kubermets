@@ -15,12 +15,14 @@ from models.model import (
     NodeMetric,
     PodMetric,
     KubernetesInstance,
+    Provider,
 )
 import logging
 from threading import Thread
 import hashlib
 import base64
 import threading
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -155,7 +157,7 @@ class KubecostDataService:
     #             query_params["limit"] = limit
 
     #         # Create argument hash for caching
-           
+
     #         argument_hash = hashlib.md5(
     #             str(sorted(query_params.items())).encode()
     #         ).hexdigest()
@@ -261,8 +263,6 @@ class KubecostDataService:
     #     finally:
     #         session.close()
 
-
-
     def get_cluster_data(
         self,
         window: str = "7d",
@@ -297,13 +297,22 @@ class KubecostDataService:
                 )
 
                 if cached_record and self._is_cache_valid(cached_record.timestamp):
-                    logger.info(f"Returning cached cluster data for argument hash: {argument_hash}")
+                    logger.info(
+                        f"Returning cached cluster data for argument hash: {argument_hash}"
+                    )
 
                     # Trigger background refresh without blocking
                     threading.Thread(
                         target=self._refresh_cluster_data_background,
-                        args=(argument_hash, query_params, window, offset, limit, domain),
-                        daemon=True
+                        args=(
+                            argument_hash,
+                            query_params,
+                            window,
+                            offset,
+                            limit,
+                            domain,
+                        ),
+                        daemon=True,
                     ).start()
 
                     return {
@@ -325,8 +334,9 @@ class KubecostDataService:
         finally:
             session.close()
 
-
-    def _refresh_cluster_data_background(self, argument_hash, query_params, window, offset, limit, domain):
+    def _refresh_cluster_data_background(
+        self, argument_hash, query_params, window, offset, limit, domain
+    ):
         """Fetch latest data from API and update DB in background"""
         try:
             params = {
@@ -348,7 +358,9 @@ class KubecostDataService:
                 params["offset"] = offset
                 params["limit"] = limit
 
-            logger.info(f"[Background Refresh] Fetching fresh cluster data for {query_params}")
+            logger.info(
+                f"[Background Refresh] Fetching fresh cluster data for {query_params}"
+            )
             api_data = self._make_kubecost_request(
                 "/model/allocation/summary", params, domain=domain
             )
@@ -364,8 +376,9 @@ class KubecostDataService:
         except Exception as e:
             logger.warning(f"[Background Refresh] Failed to update cluster data: {e}")
 
-
-    def _fetch_and_store_cluster_data(self, session, query_params, argument_hash, window, offset, limit, domain):
+    def _fetch_and_store_cluster_data(
+        self, session, query_params, argument_hash, window, offset, limit, domain
+    ):
         """Helper to fetch fresh data and store it"""
         try:
             logger.info(f"Fetching fresh cluster data for arguments: {query_params}")
@@ -383,9 +396,9 @@ class KubecostDataService:
                 "shareNamespaces": "",
                 "shareSplit": "weighted",
                 "filter": "",
-                "offset":offset
+                "offset": offset,
             }
-            if not ( limit == "0"):
+            if not (limit == "0"):
                 params["offset"] = offset
                 params["limit"] = limit
 
@@ -422,7 +435,6 @@ class KubecostDataService:
                     "status": "failed",
                     "error": f"API unavailable and no cached cluster data found: {str(api_error)}",
                 }
-
 
     def _store_cluster_argument_based_data(
         self,
@@ -546,8 +558,6 @@ class KubecostDataService:
             logger.error(f"Error getting cluster fallback cache data: {str(e)}")
             return None
 
-   
-
     def get_pod_data(
         self,
         window: str = "7d",
@@ -585,13 +595,24 @@ class KubecostDataService:
                 )
 
                 if cached_record and self._is_cache_valid(cached_record.timestamp):
-                    logger.info(f"Returning cached pod data for argument hash: {argument_hash}")
+                    logger.info(
+                        f"Returning cached pod data for argument hash: {argument_hash}"
+                    )
 
                     # Trigger background refresh
                     threading.Thread(
                         target=self._refresh_pod_data_background,
-                        args=(argument_hash, query_params, window, aggregate, filter_pods, offset, limit, domain),
-                        daemon=True
+                        args=(
+                            argument_hash,
+                            query_params,
+                            window,
+                            aggregate,
+                            filter_pods,
+                            offset,
+                            limit,
+                            domain,
+                        ),
+                        daemon=True,
                     ).start()
 
                     return {
@@ -604,7 +625,15 @@ class KubecostDataService:
 
             # No cache or force refresh → fetch directly
             return self._fetch_and_store_pod_data(
-                session, query_params, argument_hash, window, aggregate, filter_pods, offset, limit, domain
+                session,
+                query_params,
+                argument_hash,
+                window,
+                aggregate,
+                filter_pods,
+                offset,
+                limit,
+                domain,
             )
 
         except Exception as e:
@@ -613,8 +642,17 @@ class KubecostDataService:
         finally:
             session.close()
 
-
-    def _refresh_pod_data_background(self, argument_hash, query_params, window, aggregate, filter_pods, offset, limit, domain):
+    def _refresh_pod_data_background(
+        self,
+        argument_hash,
+        query_params,
+        window,
+        aggregate,
+        filter_pods,
+        offset,
+        limit,
+        domain,
+    ):
         """Fetch latest pod data and update DB in background"""
         try:
             params = {
@@ -642,7 +680,9 @@ class KubecostDataService:
 
             endpoint = "model/allocation" if filter_pods else "model/allocation/summary"
 
-            logger.info(f"[Background Refresh] Fetching fresh pod data for {query_params}")
+            logger.info(
+                f"[Background Refresh] Fetching fresh pod data for {query_params}"
+            )
             api_data = self._make_kubecost_request(endpoint, params, domain)
 
             session = db_manager.get_session()
@@ -656,8 +696,18 @@ class KubecostDataService:
         except Exception as e:
             logger.warning(f"[Background Refresh] Failed to update pod data: {e}")
 
-
-    def _fetch_and_store_pod_data(self, session, query_params, argument_hash, window, aggregate, filter_pods, offset, limit, domain):
+    def _fetch_and_store_pod_data(
+        self,
+        session,
+        query_params,
+        argument_hash,
+        window,
+        aggregate,
+        filter_pods,
+        offset,
+        limit,
+        domain,
+    ):
         """Fetch fresh pod data and store in DB"""
         try:
             params = {
@@ -702,7 +752,9 @@ class KubecostDataService:
 
         except Exception as api_error:
             logger.warning(f"Pod API request failed: {str(api_error)}")
-            fallback_data = self._get_fallback_cache_data(session, aggregate, filter_pods, query_params)
+            fallback_data = self._get_fallback_cache_data(
+                session, aggregate, filter_pods, query_params
+            )
 
             if fallback_data:
                 return {
@@ -948,8 +1000,6 @@ class KubecostDataService:
             logger.error(f"Error processing cluster data: {str(e)}")
             raise
 
-  
-
     def get_node_data(
         self,
         window: str = "24h",
@@ -984,13 +1034,22 @@ class KubecostDataService:
                 )
 
                 if cached_record and self._is_cache_valid(cached_record.timestamp):
-                    logger.info(f"Returning cached node data for argument hash: {argument_hash}")
+                    logger.info(
+                        f"Returning cached node data for argument hash: {argument_hash}"
+                    )
 
                     # Background refresh
                     threading.Thread(
                         target=self._refresh_node_data_background,
-                        args=(argument_hash, query_params, window, offset, limit, domain),
-                        daemon=True
+                        args=(
+                            argument_hash,
+                            query_params,
+                            window,
+                            offset,
+                            limit,
+                            domain,
+                        ),
+                        daemon=True,
                     ).start()
 
                     return {
@@ -1012,8 +1071,9 @@ class KubecostDataService:
         finally:
             session.close()
 
-
-    def _refresh_node_data_background(self, argument_hash, query_params, window, offset, limit, domain):
+    def _refresh_node_data_background(
+        self, argument_hash, query_params, window, offset, limit, domain
+    ):
         """Fetch latest node data and update DB in background"""
         try:
             params = {
@@ -1038,7 +1098,9 @@ class KubecostDataService:
             if not (limit == "0"):
                 params["limit"] = limit
 
-            logger.info(f"[Background Refresh] Fetching fresh node data for {query_params}")
+            logger.info(
+                f"[Background Refresh] Fetching fresh node data for {query_params}"
+            )
             api_data = self._make_kubecost_request(
                 "/model/allocation/summary", params, domain=domain
             )
@@ -1054,8 +1116,9 @@ class KubecostDataService:
         except Exception as e:
             logger.warning(f"[Background Refresh] Failed to update node data: {e}")
 
-
-    def _fetch_and_store_node_data(self, session, query_params, argument_hash, window, offset, limit, domain):
+    def _fetch_and_store_node_data(
+        self, session, query_params, argument_hash, window, offset, limit, domain
+    ):
         """Fetch fresh node data and store in DB"""
         try:
             params = {
@@ -1116,7 +1179,6 @@ class KubecostDataService:
                     "status": "failed",
                     "error": f"API unavailable and no cached node data found: {str(api_error)}",
                 }
-
 
     def _store_node_argument_based_data(
         self,
@@ -1436,6 +1498,40 @@ class KubecostDataService:
                 .first()
             )
             return instance
+        finally:
+            session.close()
+
+    def _list_Providers(self):
+        session = db_manager.get_session()
+        try:
+            providers = (
+                session.query(Provider).order_by(Provider.created_at.desc()).all()
+            )
+            return [provider.to_dict() for provider in providers]
+        finally:
+            session.close()
+
+    def _create_Provider(self, data):
+        session = db_manager.get_session()
+        try:
+
+            name = data.get("name")
+            logo_url = data.get("logo_url")
+
+            new_provider = Provider(
+                name=name.strip(), logo_url=logo_url.strip() if logo_url else None
+            )
+
+            session.add(new_provider)
+            session.commit()
+
+            return new_provider
+
+        except Exception as e:
+            print(e, "--------------")
+            session.rollback()
+            raise Exception("Instance with this name or hash already exists.")
+
         finally:
             session.close()
 
