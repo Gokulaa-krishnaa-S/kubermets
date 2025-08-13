@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Server, Cpu, Activity, DollarSign, Info, TrendingUp, Clock, Zap } from "lucide-react";
+import {
+  Server,
+  Cpu,
+  Activity,
+  DollarSign,
+  Info,
+  TrendingUp,
+  Clock,
+  Zap,
+} from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -20,8 +29,9 @@ import { useSearchParams } from "react-router-dom";
 import { FilterBar } from "@/components/reusable/filterbar";
 import { toast } from "@/components/ui/use-toast";
 import DomainDropdown from "@/components/reusable/domainDropdown";
-import { useSelectedHash } from "@/hooks/selected-hash";
+
 import { NodeMetricsLoader } from "@/components/loader/nodeloader";
+import { useCluster } from "../../src/components/context/ClusterContext";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
@@ -38,6 +48,8 @@ const NodeMetricsDashboard = () => {
     avgCpuUsage: 0,
     avgEfficiency: 0,
   });
+  const { selectedInstance } = useCluster();
+  let selectedHash = selectedInstance.unique_hash;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState("24h");
@@ -48,9 +60,8 @@ const NodeMetricsDashboard = () => {
 
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { selectedHash } = useSelectedHash();
   const [isLoadingData, setIsLoadingData] = useState(false);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(3);
@@ -356,8 +367,8 @@ const NodeMetricsDashboard = () => {
           <p className="font-medium text-foreground mb-2">{label}</p>
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center gap-2 text-sm">
-              <div 
-                className="w-3 h-3 rounded-sm" 
+              <div
+                className="w-3 h-3 rounded-sm"
                 style={{ backgroundColor: entry.color }}
               />
               <span className="text-muted-foreground">{entry.name}:</span>
@@ -379,28 +390,30 @@ const NodeMetricsDashboard = () => {
         text: "text-emerald-700 dark:text-emerald-300",
         border: "border-emerald-200 dark:border-emerald-700",
         label: "Healthy",
-        icon: "🟢"
+        icon: "🟢",
       },
       warning: {
         bg: "bg-amber-100 dark:bg-amber-900/30",
         text: "text-amber-700 dark:text-amber-300",
         border: "border-amber-200 dark:border-amber-700",
         label: "Warning",
-        icon: "🟡"
+        icon: "🟡",
       },
       critical: {
         bg: "bg-red-100 dark:bg-red-900/30",
         text: "text-red-700 dark:text-red-300",
         border: "border-red-200 dark:border-red-700",
         label: "Critical",
-        icon: "🔴"
+        icon: "🔴",
       },
     };
 
     const config = statusConfig[status] || statusConfig.healthy;
 
     return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}>
+      <span
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}
+      >
         <span className="text-xs">{config.icon}</span>
         {config.label}
       </span>
@@ -409,22 +422,29 @@ const NodeMetricsDashboard = () => {
 
   const MetricCard = ({ title, value, subtitle, icon, status, trend }) => {
     const statusColors = {
-      healthy: "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20",
-      warning: "border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20",
-      critical: "border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20",
+      healthy:
+        "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20",
+      warning:
+        "border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20",
+      critical:
+        "border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20",
       info: "border-border bg-card",
     };
 
     return (
-      <Card className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${statusColors[status] || statusColors.info}`}>
+      <Card
+        className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${
+          statusColors[status] || statusColors.info
+        }`}
+      >
         <CardContent className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-primary/10">
-                {icon}
-              </div>
+              <div className="p-2 rounded-lg bg-primary/10">{icon}</div>
               <div className="hidden sm:block">
-                <span className="text-sm font-medium text-muted-foreground">{title}</span>
+                <span className="text-sm font-medium text-muted-foreground">
+                  {title}
+                </span>
               </div>
             </div>
             {trend && (
@@ -434,10 +454,14 @@ const NodeMetricsDashboard = () => {
               </div>
             )}
           </div>
-          
+
           <div className="space-y-1">
-            <div className="sm:hidden text-xs font-medium text-muted-foreground mb-1">{title}</div>
-            <div className="text-xl sm:text-2xl font-bold text-foreground">{value}</div>
+            <div className="sm:hidden text-xs font-medium text-muted-foreground mb-1">
+              {title}
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-foreground">
+              {value}
+            </div>
             <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
         </CardContent>
@@ -446,7 +470,10 @@ const NodeMetricsDashboard = () => {
   };
 
   const costBreakdownData = nodeData.map((node) => ({
-    name: node.name.replace("k8gwell", "").replace("worker-node-", "W").replace("master-node-", "M"),
+    name: node.name
+      .replace("k8gwell", "")
+      .replace("worker-node-", "W")
+      .replace("master-node-", "M"),
     cpu: parseFloat(node.cpuCost),
     ram: parseFloat(node.ramCost),
     storage: parseFloat(node.pvCost),
@@ -454,7 +481,10 @@ const NodeMetricsDashboard = () => {
   }));
 
   const utilizationData = nodeData.map((node) => ({
-    name: node.name.replace("k8gwell", "").replace("worker-node-", "W").replace("master-node-", "M"),
+    name: node.name
+      .replace("k8gwell", "")
+      .replace("worker-node-", "W")
+      .replace("master-node-", "M"),
     cpuUsage: parseFloat(node.cpuUsage),
     ramUsage: parseFloat(node.ramUtilization),
     efficiency: parseFloat(node.efficiency),
@@ -468,7 +498,12 @@ const NodeMetricsDashboard = () => {
   const pieData = Object.entries(statusDistribution).map(([status, count]) => ({
     name: status.charAt(0).toUpperCase() + status.slice(1),
     value: count,
-    color: status === "healthy" ? "#10b981" : status === "warning" ? "#f59e0b" : "#ef4444",
+    color:
+      status === "healthy"
+        ? "#10b981"
+        : status === "warning"
+        ? "#f59e0b"
+        : "#ef4444",
   }));
 
   // Pagination logic
@@ -497,7 +532,7 @@ const NodeMetricsDashboard = () => {
     const getPageNumbers = () => {
       const pages = [];
       const maxVisiblePages = 3;
-      
+
       if (totalPages <= maxVisiblePages) {
         for (let i = 1; i <= totalPages; i++) {
           pages.push(i);
@@ -505,22 +540,22 @@ const NodeMetricsDashboard = () => {
       } else {
         const start = Math.max(1, currentPage - 2);
         const end = Math.min(totalPages, start + maxVisiblePages - 1);
-        
+
         if (start > 1) {
           pages.push(1);
-          if (start > 2) pages.push('...');
+          if (start > 2) pages.push("...");
         }
-        
+
         for (let i = start; i <= end; i++) {
           pages.push(i);
         }
-        
+
         if (end < totalPages) {
-          if (end < totalPages - 1) pages.push('...');
+          if (end < totalPages - 1) pages.push("...");
           pages.push(totalPages);
         }
       }
-      
+
       return pages;
     };
 
@@ -528,10 +563,11 @@ const NodeMetricsDashboard = () => {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>
-            Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of {totalItems} entries
+            Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
+            {totalItems} entries
           </span>
         </div>
-        
+
         <div className="flex items-center gap-4">
           {/* Page Size Selector */}
           <div className="flex items-center gap-2">
@@ -548,7 +584,7 @@ const NodeMetricsDashboard = () => {
               <option value={50}>50</option>
             </select>
           </div>
-          
+
           {/* Page Navigation */}
           <div className="flex items-center gap-1">
             <button
@@ -558,24 +594,26 @@ const NodeMetricsDashboard = () => {
             >
               Previous
             </button>
-            
+
             {getPageNumbers().map((page, index) => (
               <button
                 key={index}
-                onClick={() => typeof page === 'number' && handlePageChange(page)}
-                disabled={page === '...'}
+                onClick={() =>
+                  typeof page === "number" && handlePageChange(page)
+                }
+                disabled={page === "..."}
                 className={`px-3 py-1 text-sm border rounded transition-colors ${
                   page === currentPage
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : page === '...'
-                    ? 'border-transparent cursor-default'
-                    : 'border-border bg-background text-foreground hover:bg-muted'
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : page === "..."
+                    ? "border-transparent cursor-default"
+                    : "border-border bg-background text-foreground hover:bg-muted"
                 }`}
               >
                 {page}
               </button>
             ))}
-            
+
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
@@ -624,8 +662,12 @@ const NodeMetricsDashboard = () => {
 
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Node Metrics Dashboard</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Monitor cluster performance and resource utilization</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+            Node Metrics Dashboard
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Monitor cluster performance and resource utilization
+          </p>
         </div>
 
         {/* Summary Cards */}
@@ -635,28 +677,46 @@ const NodeMetricsDashboard = () => {
             value={summaryStats.totalNodes?.toString() || "0"}
             subtitle="All nodes operational"
             icon={<Server className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
-            status="info" trend={undefined}          />
-          
+            status="info"
+            trend={undefined}
+          />
+
           <MetricCard
             title="Total Cost"
             value={`${summaryStats.totalCost?.toFixed(2) || "0.00"}`}
             subtitle={`Last ${timeRange}`}
-            icon={<DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />}
-            status="info" trend={undefined}          />
-          
+            icon={
+              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+            }
+            status="info"
+            trend={undefined}
+          />
+
           <MetricCard
             title="Avg CPU Usage"
             value={`${summaryStats.avgCpuUsage?.toFixed(1) || "0.0"}%`}
             subtitle="Across all nodes"
             icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />}
-            status={summaryStats.avgCpuUsage > thresholds.cpuUsageWarning ? "warning" : "healthy"} trend={undefined}          />
-          
+            status={
+              summaryStats.avgCpuUsage > thresholds.cpuUsageWarning
+                ? "warning"
+                : "healthy"
+            }
+            trend={undefined}
+          />
+
           <MetricCard
             title="Avg Efficiency"
             value={`${summaryStats.avgEfficiency?.toFixed(1) || "0.0"}%`}
             subtitle="Resource utilization"
             icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
-            status={summaryStats.avgEfficiency < thresholds.efficiencyWarning ? "warning" : "healthy"} trend={undefined}          />
+            status={
+              summaryStats.avgEfficiency < thresholds.efficiencyWarning
+                ? "warning"
+                : "healthy"
+            }
+            trend={undefined}
+          />
         </div>
 
         {/* Charts Grid */}
@@ -683,13 +743,24 @@ const NodeMetricsDashboard = () => {
                       outerRadius={80}
                       paddingAngle={5}
                       dataKey="value"
-                      label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                      label={({ name, value, percent }) =>
+                        `${name}: ${value} (${(percent * 100).toFixed(0)}%)`
+                      }
                     >
                       {pieData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip content={<CustomTooltip formatter={(value) => [`${value} nodes`]} active={undefined} payload={undefined} label={undefined} />} />
+                    <Tooltip
+                      content={
+                        <CustomTooltip
+                          formatter={(value) => [`${value} nodes`]}
+                          active={undefined}
+                          payload={undefined}
+                          label={undefined}
+                        />
+                      }
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
@@ -709,21 +780,55 @@ const NodeMetricsDashboard = () => {
             <CardContent className="pt-0">
               <div className="h-[250px] sm:h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={costBreakdownData} margin={{ top: 20, right: 20, bottom: 5, left: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                    <XAxis 
-                      dataKey="name" 
+                  <BarChart
+                    data={costBreakdownData}
+                    margin={{ top: 20, right: 20, bottom: 5, left: 5 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="hsl(var(--border))"
+                      opacity={0.3}
+                    />
+                    <XAxis
+                      dataKey="name"
                       tick={{ fontSize: 12 }}
                       stroke="hsl(var(--muted-foreground))"
                     />
-                    <YAxis 
+                    <YAxis
                       tick={{ fontSize: 12 }}
                       stroke="hsl(var(--muted-foreground))"
                     />
-                    <Tooltip content={<CustomTooltip formatter={(value) => [`$${value.toFixed(2)}`]} active={undefined} payload={undefined} label={undefined} />} />
-                    <Bar dataKey="cpu" stackId="cost" fill="#ef4444" name="CPU" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="ram" stackId="cost" fill="#3b82f6" name="RAM" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="storage" stackId="cost" fill="#10b981" name="Storage" radius={[2, 2, 0, 0]} />
+                    <Tooltip
+                      content={
+                        <CustomTooltip
+                          formatter={(value) => [`$${value.toFixed(2)}`]}
+                          active={undefined}
+                          payload={undefined}
+                          label={undefined}
+                        />
+                      }
+                    />
+                    <Bar
+                      dataKey="cpu"
+                      stackId="cost"
+                      fill="#ef4444"
+                      name="CPU"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="ram"
+                      stackId="cost"
+                      fill="#3b82f6"
+                      name="RAM"
+                      radius={[0, 0, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="storage"
+                      stackId="cost"
+                      fill="#10b981"
+                      name="Storage"
+                      radius={[2, 2, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -744,18 +849,34 @@ const NodeMetricsDashboard = () => {
           <CardContent className="pt-0">
             <div className="h-[250px] sm:h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={utilizationData} margin={{ top: 20, right: 20, bottom: 5, left: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis 
-                    dataKey="name" 
+                <LineChart
+                  data={utilizationData}
+                  margin={{ top: 20, right: 20, bottom: 5, left: 5 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="hsl(var(--border))"
+                    opacity={0.3}
+                  />
+                  <XAxis
+                    dataKey="name"
                     tick={{ fontSize: 12 }}
                     stroke="hsl(var(--muted-foreground))"
                   />
-                  <YAxis 
+                  <YAxis
                     tick={{ fontSize: 12 }}
                     stroke="hsl(var(--muted-foreground))"
                   />
-                  <Tooltip content={<CustomTooltip formatter={(value) => [`${value}%`]} active={undefined} payload={undefined} label={undefined} />} />
+                  <Tooltip
+                    content={
+                      <CustomTooltip
+                        formatter={(value) => [`${value}%`]}
+                        active={undefined}
+                        payload={undefined}
+                        label={undefined}
+                      />
+                    }
+                  />
                   <Line
                     type="monotone"
                     dataKey="cpuUsage"
@@ -816,7 +937,7 @@ const NodeMetricsDashboard = () => {
                     </div>
                     <StatusBadge status={node.status} />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
                       <div className="flex items-center gap-1 text-muted-foreground mb-1">
@@ -824,18 +945,22 @@ const NodeMetricsDashboard = () => {
                         <span>CPU</span>
                       </div>
                       <div className="font-medium">{node.cpuUsage}%</div>
-                      <div className="text-muted-foreground">{node.cpuCores} cores</div>
+                      <div className="text-muted-foreground">
+                        {node.cpuCores} cores
+                      </div>
                     </div>
-                    
+
                     <div>
                       <div className="flex items-center gap-1 text-muted-foreground mb-1">
                         <Activity className="w-3 h-3" />
                         <span>Memory</span>
                       </div>
                       <div className="font-medium">{node.ramUtilization}%</div>
-                      <div className="text-muted-foreground">{node.ramUsage}GB used</div>
+                      <div className="text-muted-foreground">
+                        {node.ramUsage}GB used
+                      </div>
                     </div>
-                    
+
                     <div>
                       <div className="flex items-center gap-1 text-muted-foreground mb-1">
                         <DollarSign className="w-3 h-3" />
@@ -843,28 +968,33 @@ const NodeMetricsDashboard = () => {
                       </div>
                       <div className="font-medium">${node.totalCost}</div>
                     </div>
-                    
+
                     <div>
                       <div className="flex items-center gap-1 text-muted-foreground mb-1">
                         <Zap className="w-3 h-3" />
                         <span>Efficiency</span>
                       </div>
-                      <div className={`font-medium ${
-                        parseFloat(node.efficiency) > 50 ? "text-emerald-600" :
-                        parseFloat(node.efficiency) > 30 ? "text-amber-600" : "text-red-600"
-                      }`}>
+                      <div
+                        className={`font-medium ${
+                          parseFloat(node.efficiency) > 50
+                            ? "text-emerald-600"
+                            : parseFloat(node.efficiency) > 30
+                            ? "text-amber-600"
+                            : "text-red-600"
+                        }`}
+                      >
                         {node.efficiency}%
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-3">
                     <Clock className="w-3 h-3" />
                     <span>Uptime: {node.uptime}</span>
                   </div>
                 </Card>
               ))}
-              
+
               {currentNodes.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Server className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -889,7 +1019,10 @@ const NodeMetricsDashboard = () => {
                 </thead>
                 <tbody>
                   {currentNodes.map((node, index) => (
-                    <tr key={startIndex + index} className="border-b hover:bg-muted/50 transition-colors text-foreground">
+                    <tr
+                      key={startIndex + index}
+                      className="border-b hover:bg-muted/50 transition-colors text-foreground"
+                    >
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="p-2 rounded-lg bg-primary/10">
@@ -904,13 +1037,19 @@ const NodeMetricsDashboard = () => {
                       <td className="p-4">
                         <div className="space-y-1">
                           <div className="font-medium">{node.cpuUsage}%</div>
-                          <div className="text-muted-foreground text-sm">{node.cpuCores} cores</div>
+                          <div className="text-muted-foreground text-sm">
+                            {node.cpuCores} cores
+                          </div>
                         </div>
                       </td>
                       <td className="p-4">
                         <div className="space-y-1">
-                          <div className="font-medium">{node.ramUtilization}%</div>
-                          <div className="text-muted-foreground text-sm">{node.ramUsage}GB used</div>
+                          <div className="font-medium">
+                            {node.ramUtilization}%
+                          </div>
+                          <div className="text-muted-foreground text-sm">
+                            {node.ramUsage}GB used
+                          </div>
                         </div>
                       </td>
                       <td className="p-4">
@@ -922,10 +1061,15 @@ const NodeMetricsDashboard = () => {
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className={`font-medium ${
-                          parseFloat(node.efficiency) > 50 ? "text-emerald-600" :
-                          parseFloat(node.efficiency) > 30 ? "text-amber-600" : "text-red-600"
-                        }`}>
+                        <span
+                          className={`font-medium ${
+                            parseFloat(node.efficiency) > 50
+                              ? "text-emerald-600"
+                              : parseFloat(node.efficiency) > 30
+                              ? "text-amber-600"
+                              : "text-red-600"
+                          }`}
+                        >
                           {node.efficiency}%
                         </span>
                       </td>
@@ -939,16 +1083,18 @@ const NodeMetricsDashboard = () => {
                   ))}
                 </tbody>
               </table>
-              
+
               {currentNodes.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                   <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
                   <p className="text-lg font-medium mb-2">No nodes found</p>
-                  <p className="text-sm">Try adjusting your filters or refresh the data</p>
+                  <p className="text-sm">
+                    Try adjusting your filters or refresh the data
+                  </p>
                 </div>
               )}
             </div>
-            
+
             {/* Pagination */}
             {totalItems > 0 && <Pagination />}
           </CardContent>
