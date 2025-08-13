@@ -8,7 +8,7 @@
   :root {
     /* Core */
     --background: 0 0% 100%;
-    --foreground:   0 0% 0%;
+    --foreground: 0 0% 0%;
 
     --card: 0 0% 100%;
     --card-foreground: 215 25% 95%;
@@ -48,10 +48,16 @@
     --radius: 0.75rem;
 
     /* Gradients & Shadows */
-    --gradient-primary: linear-gradient(135deg, hsl(213 100% 21%), hsl(210 100% 36%));
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(213 100% 21%),
+      hsl(210 100% 36%)
+    );
     --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(215 33% 95%));
-    --shadow-card: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
-    --shadow-hover: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
+    --shadow-card: 0 4px 6px -1px hsl(0 0% 0% / 0.1),
+      0 2px 4px -2px hsl(0 0% 0% / 0.1);
+    --shadow-hover: 0 10px 15px -3px hsl(0 0% 0% / 0.1),
+      0 4px 6px -4px hsl(0 0% 0% / 0.1);
 
     /* Sidebar */
     --sidebar-background: 220 20% 98%;
@@ -65,6 +71,28 @@
 
     /* h3 */
     --h3-text: 0 0% 0%;
+
+    /* Chart Gradients */
+    --gradient-blue: linear-gradient(
+      135deg,
+      hsl(213 100% 36%),
+      hsl(210 100% 50%)
+    );
+    --gradient-green: linear-gradient(
+      135deg,
+      hsl(142 71% 45%),
+      hsl(142 71% 60%)
+    );
+    --gradient-yellow: linear-gradient(
+      135deg,
+      hsl(39 100% 56%),
+      hsl(39 100% 70%)
+    );
+    --gradient-purple-pink: linear-gradient(
+      135deg,
+      hsl(272 72% 47%),
+      hsl(340 82% 52%)
+    );
   }
 
   .dark {
@@ -103,10 +131,20 @@
     --input: 222 25% 25%;
     --ring: 213 100% 48%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(213 100% 48%), hsl(210 100% 36%));
-    --gradient-card: linear-gradient(145deg, hsl(222 47% 15%), hsl(215 33% 25%));
-    --shadow-card: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
-    --shadow-hover: 0 10px 15px -3px hsl(0 0% 0% / 0.3), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(213 100% 48%),
+      hsl(210 100% 36%)
+    );
+    --gradient-card: linear-gradient(
+      145deg,
+      hsl(222 47% 15%),
+      hsl(215 33% 25%)
+    );
+    --shadow-card: 0 4px 6px -1px hsl(0 0% 0% / 0.3),
+      0 2px 4px -2px hsl(0 0% 0% / 0.3);
+    --shadow-hover: 0 10px 15px -3px hsl(0 0% 0% / 0.3),
+      0 4px 6px -4px hsl(0 0% 0% / 0.3);
 
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 215 33% 95%;
@@ -116,6 +154,28 @@
     --sidebar-accent-foreground: 215 33% 95%;
     --sidebar-border: 222 25% 25%;
     --sidebar-ring: 213 100% 48%;
+
+    /* Dark chart Grads */
+    --gradient-blue: linear-gradient(
+      135deg,
+      hsl(213 100% 48%),
+      hsl(210 100% 60%)
+    );
+    --gradient-green: linear-gradient(
+      135deg,
+      hsl(142 71% 45%),
+      hsl(142 71% 58%)
+    );
+    --gradient-yellow: linear-gradient(
+      135deg,
+      hsl(39 100% 56%),
+      hsl(39 100% 65%)
+    );
+    --gradient-purple-pink: linear-gradient(
+      135deg,
+      hsl(272 72% 55%),
+      hsl(340 82% 60%)
+    );
   }
 
   * {
