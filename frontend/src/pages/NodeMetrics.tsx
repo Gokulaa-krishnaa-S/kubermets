@@ -488,7 +488,7 @@ const NodeMetricsDashboard = () => {
       <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
         {/* Filter Bar */}
         {isLoadingData ? (
-          <LoadingBanner message="Loading cluster data..." />
+          <LoadingBanner message="Loading node data..." />
         ) : (
           <FilterBar
             selectedTimeRange={timeRange}
