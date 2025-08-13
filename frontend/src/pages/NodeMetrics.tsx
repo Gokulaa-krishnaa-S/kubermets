@@ -299,7 +299,7 @@ const NodeMetricsDashboard = () => {
   );
 
   // Function to refresh all data
-  const refreshAllData = async (showToast = true) => {
+  const refreshAllData = async (showToast = true, force_refresh = true) => {
     setIsRefreshing(true);
     try {
       const queryParams = {
@@ -321,7 +321,7 @@ const NodeMetricsDashboard = () => {
         window: timeRange,
         offset: 0,
         limit: 25,
-        force_refresh: true,
+        force_refresh: force_refresh,
         domain: selectedHash,
       };
 
@@ -378,9 +378,10 @@ const NodeMetricsDashboard = () => {
       force_refesh: false,
     };
 
-    // ✅ First load
-    fetchNodeData(queryParams);
-    setLastUpdated(new Date());
+    if (selectedHash) {
+      fetchNodeData(queryParams);
+      setLastUpdated(new Date());
+    }
 
     // ✅ Set interval refresh
     if (refreshInterval && refreshInterval > 0) {
@@ -395,7 +396,7 @@ const NodeMetricsDashboard = () => {
 
   useEffect(() => {
     if (selectedHash) {
-      refreshAllData(false); // No toast, force refresh
+      refreshAllData(false, false); // No toast, force refresh
     }
   }, [selectedHash]);
 
