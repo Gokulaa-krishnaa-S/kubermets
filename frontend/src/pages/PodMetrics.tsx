@@ -490,12 +490,12 @@ const KubecostDashboard = () => {
 
   return (
     <>
-      <div className="p-4 lg:p-6">
-        <div className="min-h-screen p-6">
-          <div className="mx-auto">
+      <div className="p-2 sm:p-4 md:p-6">
+        <div className="min-h-screen p-2 sm:p-4 md:p-6">
+          <div className="mx-auto max-w-full">
             {/* Enhanced Filter Bar with Search */}
-            <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm mb-6">
-              <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            <div className="bg-white rounded-xl p-4 sm:p-6 border border-slate-200 shadow-sm mb-6">
+              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
                 {/* Left side - Time Range */}
                 <div className="flex items-center gap-4">
                   <Days
@@ -558,7 +558,7 @@ const KubecostDashboard = () => {
             </div>
 
             {/* Summary Cards - Updated to reflect filtered data */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
               <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
                   <div>
@@ -648,10 +648,10 @@ const KubecostDashboard = () => {
             </div>
 
             {/* Charts Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
               {/* Cost Over Time Chart */}
-              <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 pb-4 border-b border-slate-100">
+              <div className="md:col-span-2 bg-white rounded-2xl p-4 sm:p-6 border border-slate-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 sm:mb-8 pb-4 border-b border-slate-100 gap-4">
                   <div className="flex items-center gap-3 mb-4 sm:mb-0">
                     <div className="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
                       <TrendingUp className="w-5 h-5 text-blue-600" />
@@ -685,7 +685,7 @@ const KubecostDashboard = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-6 mb-6 p-4 bg-slate-50 rounded-xl">
+                <div className="flex flex-wrap gap-3 sm:gap-6 mb-4 sm:mb-6 p-2 sm:p-4 bg-slate-50 rounded-xl">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-full bg-blue-500 shadow-sm"></div>
                     <span className="text-sm font-medium text-slate-700">
@@ -731,17 +731,17 @@ const KubecostDashboard = () => {
                 </div>
 
                 <div className="relative">
-                  <div className="overflow-x-auto overflow-y-hidden">
+                  <div className="overflow-x-auto overflow-y-hidden w-full">
                     <div
                       style={{
                         minWidth: `${Math.max(
-                          800,
+                          400,
                           (chartData?.length || 0) * 60
                         )}px`,
                         width: "100%",
                       }}
                     >
-                      <ResponsiveContainer width="100%" height={400}>
+                      <ResponsiveContainer width="100%" height={320}>
                         <BarChart
                           data={chartData}
                           margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
@@ -878,8 +878,8 @@ const KubecostDashboard = () => {
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-100">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="mt-4 sm:mt-6 pt-4 border-t border-slate-100">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
                     <div className="text-center p-3 bg-slate-50 rounded-lg">
                       <div className="text-lg font-bold text-slate-900">
                         {chartData?.length || 0}
@@ -914,52 +914,102 @@ const KubecostDashboard = () => {
               </div>
 
               {/* Cost Distribution Pie Chart */}
-              <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
-                <h2 className="text-xl font-semibold text mb-6">
-                  Cost Distribution
-                </h2>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={costBreakdownData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={120}
-                      dataKey="value"
-                    >
-                      {costBreakdownData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(value)} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="mt-4 space-y-2">
-                  {costBreakdownData.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        ></div>
-                        <span className="text-gray-600">{item.name}</span>
+              <div className="w-full">
+                <div className="bg-white rounded-xl p-4 sm:p-6 border border-slate-200 shadow-sm">
+                  <h2 className="text-xl font-semibold text mb-6">
+                    Cost Distribution
+                  </h2>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={costBreakdownData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={120}
+                        dataKey="value"
+                      >
+                        {costBreakdownData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="mt-2 sm:mt-4 space-y-2">
+                    {costBreakdownData.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between text-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: item.color }}
+                          ></div>
+                          <span className="text-gray-600">{item.name}</span>
+                        </div>
+                        <span className="font-medium">
+                          {formatCurrency(item.value)}
+                        </span>
                       </div>
-                      <span className="font-medium">
-                        {formatCurrency(item.value)}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+
+                {/* Idle Resources Section */}
+                {processedData.idle && (
+                  <div className="mt-6 sm:mt-8 bg-orange-50 rounded-xl p-4 sm:p-6 border border-orange-200">
+                    <div className="flex items-center gap-3 mb-4">
+                      <AlertCircle className="w-6 h-6 text-orange-600" />
+                      <h2 className="text-xl font-semibold text-orange-900">
+                        Idle Resources
+                      </h2>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+  <div className="bg-white rounded-lg p-4 border border-orange-200">
+    <p className="text-sm font-medium text-gray-600">
+      CPU Cost
+    </p>
+    <p className="text-lg font-bold text-orange-900">
+      <div className="flex items-center gap-2">
+        {formatCurrency(processedData.idle.cpuCost)}
+      </div>
+    </p>
+  </div>
+  <div className="bg-white rounded-lg p-4 border border-orange-200">
+    <p className="text-sm font-medium text-gray-600">
+      Memory Cost
+    </p>
+    <p className="text-lg font-bold text-orange-900">
+      <div className="flex items-center gap-2">
+        {formatCurrency(processedData.idle.ramCost)}
+      </div>
+    </p>
+  </div>
+  <div className="bg-white rounded-lg p-4 border border-orange-200">
+    <p className="text-sm font-medium text-gray-600">
+      Total Idle Cost
+    </p>
+    <p className="text-lg font-bold text-orange-900">
+      <div className="flex items-center gap-2">
+        {formatCurrency(processedData.idle.totalCost)}
+      </div>
+    </p>
+  </div>
+</div>
+                    <p className="text-sm text-orange-700 mt-4">
+                      These costs represent unallocated cluster resources that
+                      could be optimized to reduce overall spending.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Pod Details Table */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+              <div className="p-4 sm:p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text">
                     Pod Cost Allocation Details
@@ -970,9 +1020,9 @@ const KubecostDashboard = () => {
                 </div>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
+              <div className="overflow-x-auto w-full">
+                <table className="min-w-[600px] w-full">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
                       <th
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
@@ -1078,8 +1128,8 @@ const KubecostDashboard = () => {
               </div>
 
               {/* Enhanced Pagination Controls */}
-              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 sm:gap-4 w-full">
                   {/* Rows per page selector */}
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-gray-700">Rows per page</span>
@@ -1174,48 +1224,6 @@ const KubecostDashboard = () => {
                 </div>
               </div>
             </div>
-
-            {/* Idle Resources Section */}
-            {processedData.idle && (
-              <div className="mt-8 bg-orange-50 rounded-xl p-6 border border-orange-200">
-                <div className="flex items-center gap-3 mb-4">
-                  <AlertCircle className="w-6 h-6 text-orange-600" />
-                  <h2 className="text-xl font-semibold text-orange-900">
-                    Idle Resources
-                  </h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-white rounded-lg p-4 border border-orange-200">
-                    <p className="text-sm font-medium text-gray-600">
-                      CPU Cost
-                    </p>
-                    <p className="text-lg font-bold text-orange-900">
-                      {formatCurrency(processedData.idle.cpuCost)}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-lg p-4 border border-orange-200">
-                    <p className="text-sm font-medium text-gray-600">
-                      Memory Cost
-                    </p>
-                    <p className="text-lg font-bold text-orange-900">
-                      {formatCurrency(processedData.idle.ramCost)}
-                    </p>
-                  </div>
-                  <div className="bg-white rounded-lg p-4 border border-orange-200">
-                    <p className="text-sm font-medium text-gray-600">
-                      Total Idle Cost
-                    </p>
-                    <p className="text-lg font-bold text-orange-900">
-                      {formatCurrency(processedData.idle.totalCost)}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-sm text-orange-700 mt-4">
-                  These costs represent unallocated cluster resources that could
-                  be optimized to reduce overall spending.
-                </p>
-              </div>
-            )}
           </div>
         </div>
       </div>
