@@ -443,7 +443,7 @@ interface NodeMetric {
   - Shared components
   - Breadcrumb navigation
 
-### 4.4 Alerts & Events Section (`AlertsAndCost.tsx`)
+### 4.4 Alerts & Events Section (`AlertsAndCost.tsx`) (future Enhancements)
 
 - **Purpose**: Monitoring alerts and system events
 - **Features**:
@@ -453,7 +453,7 @@ interface NodeMetric {
   - Notification settings
   - Cost impact analysis
 
-### 4.5 Billing & Cost Section (`BillingAndCost.tsx`)
+### 4.5 Billing & Cost Section (`BillingAndCost.tsx`) (future Enhancements)
 
 - **Purpose**: Cost analysis and billing management
 - **Features**:
@@ -532,7 +532,6 @@ interface NodeMetric {
 
 - **Instance Isolation**: Hash-based separation
 - **Credential Management**: Secure storage
-- **Access Control**: Role-based permissions
 - **Session Management**: Secure session handling
 
 ### 7.3 Data Protection
