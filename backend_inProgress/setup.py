@@ -11,8 +11,9 @@ from sqlalchemy import text
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-# alembic revision --autogenerate -m "Updates of instance table" 
+# alembic revision --autogenerate -m "Updates of instance table"
 # alembic upgrade head
+
 
 class DatabaseSetup:
     def __init__(self):
@@ -117,7 +118,6 @@ class DatabaseSetup:
             session.close()
 
 
-
 def main():
     """Main setup function"""
     setup = DatabaseSetup()
@@ -171,7 +171,10 @@ def main():
         elif command == "update":
             logger.info("Generating new migration...")
             import subprocess
-            subprocess.run(["alembic", "revision", "--autogenerate", "-m", "Auto migration"])
+
+            subprocess.run(
+                ["alembic", "revision", "--autogenerate", "-m", "Auto migration"]
+            )
             logger.info("Applying database migrations...")
             subprocess.run(["alembic", "upgrade", "head"])
             logger.info("Database updated successfully!")

@@ -790,6 +790,9 @@ export default function ClusterMetrics() {
   return (
     <div
       className="p-4 lg:p-6"
+      // title="Cluster Metrics"
+      // subtitle="Comprehensive monitoring and resource analytics"
+      // onDomainChange={handleDomainChange}
     >
       {/* <ServerStatusBanner /> */}
       {/* Loading indicator */}
