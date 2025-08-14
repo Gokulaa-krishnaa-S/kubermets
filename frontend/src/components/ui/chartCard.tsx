@@ -13,7 +13,7 @@ const ChartCard = ({ loading, children, details }) => {
         animate={{ rotateY: flipped ? 180 : 0 }}
         transition={{ duration: 0.6 }}
         whileHover={{
-          scale: 1.02,
+          scale: 1.001,
           background:
             "linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(255,255,255,0.8) 100%)",
           borderRadius: "1rem",
@@ -26,7 +26,7 @@ const ChartCard = ({ loading, children, details }) => {
               e.stopPropagation();
               setFlipped(true);
             }}
-            className="absolute top-3 right-3 p-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors z-10"
+            className="absolute top-3 right-3 p-2 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-blue-100 dark:hover:bg-blue-100 transition-colors z-10"
           >
             <Info className="w-4 h-4 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400" />
           </button>
@@ -48,14 +48,17 @@ const ChartCard = ({ loading, children, details }) => {
                 e.stopPropagation();
                 setFlipped(false);
               }}
-              className="p-2 rounded-full bg-blue-200 dark:bg-blue-800 hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+              className="p-2 rounded-full  hover:bg-blue-100 dark:hover:bg-blue-200 transition-colors"
             >
               <ArrowLeft className="w-4 h-4 text-blue-700 dark:text-blue-300" />
             </button>
           </div>
 
           {/* Scrollable Info Section */}
-          <div className="space-y-4 text-sm text-blue-800 dark:text-blue-200 overflow-y-auto scrollbar-hide flex-1">
+          <div
+            id="chart-desc"
+            className="space-y-4 text-sm text-grey dark:text-blue-200 overflow-y-auto flex-1"
+          >
             <div>
               <h4 className="font-medium mb-2">Description:</h4>
               <p className="leading-relaxed">{details.description}</p>
@@ -66,7 +69,7 @@ const ChartCard = ({ loading, children, details }) => {
               <ul className="space-y-1">
                 {details.metrics.map((metric, index) => (
                   <li key={index} className="flex items-center">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                    <div className="w-2 h-2 bg-black rounded-full mr-2"></div>
                     {metric}
                   </li>
                 ))}
@@ -75,7 +78,7 @@ const ChartCard = ({ loading, children, details }) => {
 
             <div>
               <h4 className="font-medium mb-2">Insights:</h4>
-              <p className="leading-relaxed text-blue-700 dark:text-blue-300 italic">
+              <p className="leading-relaxed text-grey dark:text-blue-300 italic">
                 {details.insights}
               </p>
             </div>

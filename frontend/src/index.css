@@ -186,3 +186,13 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+#chart-desc::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+#chart-desc {
+  -ms-overflow-style: none;  /* IE/Edge */
+  scrollbar-width: none;     /* Firefox */
+}
