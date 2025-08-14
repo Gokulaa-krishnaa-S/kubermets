@@ -604,7 +604,7 @@ CREATE TABLE cluster_metrics_y2024m02 PARTITION OF cluster_metrics
     FOR VALUES FROM ('2024-02-01') TO ('2024-03-01');
 ```
 
-### 5.3 Data Retention Policies
+### 5.3 Data Retention Policies (not enabled)
 
 ```sql
 -- Cleanup old metrics data
@@ -616,88 +616,6 @@ WHERE timestamp < NOW() - INTERVAL '90 days';
 
 DELETE FROM pod_metrics
 WHERE timestamp < NOW() - INTERVAL '90 days';
-```
-
-## 6. Data Validation and Quality
-
-### 6.1 Data Quality Checks
-
-```sql
--- Check for orphaned records
-SELECT 'orphaned cluster_metrics' as issue, cm.id
-FROM cluster_metrics cm
-LEFT JOIN clusters c ON cm.cluster_id = c.id
-WHERE c.id IS NULL;
-
--- Check for data consistency
-SELECT 'inconsistent costs' as issue, cm.id
-FROM cluster_metrics cm
-WHERE ABS(cm.total_cost - (cm.cpu_cost + cm.memory_cost + cm.storage_cost + cm.network_cost)) > 0.01;
-
--- Check for missing data
-SELECT 'missing recent metrics' as issue, c.name
-FROM clusters c
-LEFT JOIN cluster_metrics cm ON c.id = cm.cluster_id AND cm.timestamp > NOW() - INTERVAL '1 hour'
-WHERE cm.id IS NULL;
-```
-
-### 6.2 Data Backup and Recovery
-
-```sql
--- Automated backup script example
-pg_dump -h localhost -U postgres -d kubermets -f backup_$(date +%Y%m%d_%H%M%S).sql
-
--- Point-in-time recovery
-pg_restore -h localhost -U postgres -d kubermets --clean backup_file.sql
-```
-
-## 7. Monitoring and Alerting
-
-### 7.1 Database Health Metrics
-
-```sql
--- Table sizes
-SELECT
-    schemaname,
-    tablename,
-    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
-FROM pg_tables
-WHERE schemaname = 'public'
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
-
--- Index usage statistics
-SELECT
-    schemaname,
-    tablename,
-    indexname,
-    idx_scan,
-    idx_tup_read,
-    idx_tup_fetch
-FROM pg_stat_user_indexes
-ORDER BY idx_scan DESC;
-```
-
-### 7.2 Data Freshness Monitoring
-
-```sql
--- Check last update times
-SELECT
-    'cluster_metrics' as table_name,
-    MAX(timestamp) as last_update,
-    NOW() - MAX(timestamp) as age
-FROM cluster_metrics
-UNION ALL
-SELECT
-    'node_metrics' as table_name,
-    MAX(timestamp) as last_update,
-    NOW() - MAX(timestamp) as age
-FROM node_metrics
-UNION ALL
-SELECT
-    'pod_metrics' as table_name,
-    MAX(timestamp) as last_update,
-    NOW() - MAX(timestamp) as age
-FROM pod_metrics;
 ```
 
 This comprehensive data model provides the foundation for a robust, scalable, and performant Kubernetes monitoring system with proper data relationships, constraints, and optimization strategies.
