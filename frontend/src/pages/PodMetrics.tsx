@@ -31,6 +31,7 @@ import { Days, Refresh } from "@/components/reusable/filterbar";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import DomainDropdown from "@/components/reusable/domainDropdown";
+import { toast } from "@/components/ui/use-toast";
 
 import { PodMetricsLoader } from "@/components/loader/podloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
@@ -84,7 +85,7 @@ const KubecostDashboard = () => {
   const [sortDirection, setSortDirection] = useState("desc");
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
-    return searchParams.get("window") || "7d";
+    return searchParams.get("window") || "24h";
   });
 
   // Search state
@@ -192,6 +193,10 @@ const KubecostDashboard = () => {
 
       if (showToast) {
         console.log("Data refreshed successfully");
+        toast({
+          title: "Data Refreshed" ,
+          description:"Metrics have been updated successfully."
+        });
       }
     } catch (err) {
       console.error(err);
@@ -973,37 +978,37 @@ const KubecostDashboard = () => {
                       </h2>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-  <div className="bg-white rounded-lg p-4 border border-orange-200">
-    <p className="text-sm font-medium text-gray-600">
-      CPU Cost
-    </p>
-    <p className="text-lg font-bold text-orange-900">
-      <div className="flex items-center gap-2">
-        {formatCurrency(processedData.idle.cpuCost)}
-      </div>
-    </p>
-  </div>
-  <div className="bg-white rounded-lg p-4 border border-orange-200">
-    <p className="text-sm font-medium text-gray-600">
-      Memory Cost
-    </p>
-    <p className="text-lg font-bold text-orange-900">
-      <div className="flex items-center gap-2">
-        {formatCurrency(processedData.idle.ramCost)}
-      </div>
-    </p>
-  </div>
-  <div className="bg-white rounded-lg p-4 border border-orange-200">
-    <p className="text-sm font-medium text-gray-600">
-      Total Idle Cost
-    </p>
-    <p className="text-lg font-bold text-orange-900">
-      <div className="flex items-center gap-2">
-        {formatCurrency(processedData.idle.totalCost)}
-      </div>
-    </p>
-  </div>
-</div>
+                      <div className="bg-white rounded-lg p-4 border border-orange-200">
+                        <p className="text-sm font-medium text-gray-600">
+                          CPU Cost
+                        </p>
+                        <p className="text-lg font-bold text-orange-900">
+                          <div className="flex items-center gap-2">
+                            {formatCurrency(processedData.idle.cpuCost)}
+                          </div>
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 border border-orange-200">
+                        <p className="text-sm font-medium text-gray-600">
+                          Memory Cost
+                        </p>
+                        <p className="text-lg font-bold text-orange-900">
+                          <div className="flex items-center gap-2">
+                            {formatCurrency(processedData.idle.ramCost)}
+                          </div>
+                        </p>
+                      </div>
+                      <div className="bg-white rounded-lg p-4 border border-orange-200">
+                        <p className="text-sm font-medium text-gray-600">
+                          Total Idle Cost
+                        </p>
+                        <p className="text-lg font-bold text-orange-900">
+                          <div className="flex items-center gap-2">
+                            {formatCurrency(processedData.idle.totalCost)}
+                          </div>
+                        </p>
+                      </div>
+                    </div>
                     <p className="text-sm text-orange-700 mt-4">
                       These costs represent unallocated cluster resources that
                       could be optimized to reduce overall spending.
