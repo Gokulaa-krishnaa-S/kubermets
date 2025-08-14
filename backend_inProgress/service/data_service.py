@@ -135,133 +135,6 @@ class KubecostDataService:
             session.commit()
         return pod
 
-    # def get_cluster_data(
-    #     self,
-    #     window: str = "7d",
-    #     force_refresh: bool = False,
-    #     offset: str = "0",
-    #     limit: str = "0",
-    #     domain: str = "",
-    # ) -> Dict[str, Any]:
-    #     """Get cluster data from cache or fetch from API"""
-    #     session = db_manager.get_session()
-    #     try:
-    #         query_params = {
-    #             "window": window,
-    #             "aggregate": "cluster",
-    #         }
-
-    #         # Only add offset/limit if not both zero
-    #         if not (offset == "0" and limit == "0"):
-    #             query_params["offset"] = offset
-    #             query_params["limit"] = limit
-
-    #         # Create argument hash for caching
-
-    #         argument_hash = hashlib.md5(
-    #             str(sorted(query_params.items())).encode()
-    #         ).hexdigest()
-
-    #         # Check cache if force_refresh is False
-    #         if not force_refresh:
-    #             cached_record = (
-    #                 session.query(ClusterMetric)
-    #                 .filter(ClusterMetric.argument_hash == argument_hash)
-    #                 .order_by(desc(ClusterMetric.timestamp))
-    #                 .first()
-    #             )
-
-    #             if cached_record and self._is_cache_valid(cached_record.timestamp):
-    #                 logger.info(
-    #                     f"Returning cached cluster data for argument hash: {argument_hash}"
-    #                 )
-    #                 return {
-    #                     "status": "success",
-    #                     "data": cached_record.raw_data,
-    #                     "cached": True,
-    #                     "cache_timestamp": cached_record.timestamp.isoformat(),
-    #                     "query_params": cached_record.query_params,
-    #                 }
-
-    #         # Try to fetch fresh data from Kubecost API
-    #         try:
-    #             logger.info(
-    #                 f"Fetching fresh cluster data for arguments: {query_params}"
-    #             )
-    #             params = {
-    #                 "window": window,
-    #                 "aggregate": "cluster",
-    #                 "accumulate": "true",
-    #                 "external": "false",
-    #                 "shareCost": "0",
-    #                 "shareTenancyCosts": "true",
-    #                 "idle": "true",
-    #                 "shareIdle": "true",
-    #                 "idleByNode": "true",
-    #                 "shareLabels": "",
-    #                 "shareNamespaces": "",
-    #                 "shareSplit": "weighted",
-    #                 "filter": "",
-    #                 # "offset": offset,
-    #                 # "limit": limit,
-    #             }
-    #             if not (offset == "0" and limit == "0"):
-    #                 params["offset"] = offset
-    #                 params["limit"] = limit
-    #             api_data = self._make_kubecost_request(
-    #                 "/model/allocation/summary", params, domain=domain
-    #             )
-    #             print(api_data, "----------CLUSTER API DATA")
-
-    #             # Store the response with argument hash
-    #             self._store_cluster_argument_based_data(
-    #                 session, api_data, argument_hash, query_params, window, domain
-    #             )
-
-    #             return {
-    #                 "status": "success",
-    #                 "data": api_data,
-    #                 "cached": False,
-    #                 "fetch_timestamp": datetime.utcnow().isoformat(),
-    #                 "query_params": query_params,
-    #             }
-
-    #         except Exception as api_error:
-    #             logger.warning(f"Cluster API request failed: {str(api_error)}")
-
-    #             # API failed, try to get fallback data from cache
-    #             fallback_data = self._get_cluster_fallback_cache_data(
-    #                 session, query_params
-    #             )
-
-    #             if fallback_data:
-    #                 logger.info(
-    #                     "Returning fallback cached cluster data due to API failure"
-    #                 )
-    #                 return {
-    #                     "status": "success",
-    #                     "data": fallback_data["data"],
-    #                     "cached": True,
-    #                     "api_failed": True,
-    #                     "requested_params": query_params,
-    #                     "returned_params": fallback_data["query_params"],
-    #                     "cache_timestamp": fallback_data["timestamp"],
-    #                 }
-    #             else:
-    #                 # No fallback data available
-    #                 logger.error(
-    #                     f"No fallback cluster data available and API failed: {str(api_error)}"
-    #                 )
-    #                 return {
-    #                     "status": "failed",
-    #                     "error": f"API unavailable and no cached cluster data found: {str(api_error)}",
-    #                 }
-
-    #     except Exception as e:
-    #         logger.error(f"Error getting cluster data: {str(e)}")
-    #         return {"status": "failed", "error": str(e)}
-    #     finally:
-    #         session.close()
 
     def get_cluster_data(
         self,
@@ -291,7 +164,7 @@ class KubecostDataService:
             if not force_refresh:
                 cached_record = (
                     session.query(ClusterMetric)
-                    .filter(ClusterMetric.argument_hash == argument_hash)
+                    .filter(ClusterMetric.argument_hash == argument_hash, ClusterMetric.domain == domain)
                     .order_by(desc(ClusterMetric.timestamp))
                     .first()
                 )
@@ -447,6 +320,7 @@ class KubecostDataService:
     ):
         """Store cluster API response with argument hash for caching"""
         try:
+            print("-----STORING CLUSTER METRIC---------------")
             # Create a new record for argument-based caching
             cache_record = ClusterMetric(
                 cluster_id=None,  # No specific cluster for argument-based cache
@@ -455,7 +329,7 @@ class KubecostDataService:
                 raw_data=api_data,
                 argument_hash=argument_hash,
                 query_params=query_params,
-                # domain=domain
+                domain=domain
             )
             session.add(cache_record)
             session.commit()
@@ -589,7 +463,7 @@ class KubecostDataService:
             if not force_refresh:
                 cached_record = (
                     session.query(PodMetric)
-                    .filter(PodMetric.argument_hash == argument_hash)
+                    .filter(PodMetric.argument_hash == argument_hash , PodMetric.domain == domain)
                     .order_by(desc(PodMetric.timestamp))
                     .first()
                 )
@@ -739,7 +613,7 @@ class KubecostDataService:
             api_data = self._make_kubecost_request(endpoint, params, domain)
 
             self._store_argument_based_data(
-                session, api_data, argument_hash, query_params, window
+                session, api_data, argument_hash, query_params, window , domain
             )
 
             return {
@@ -887,6 +761,7 @@ class KubecostDataService:
         argument_hash: str,
         query_params: Dict,
         window: str,
+        domain = ''
     ):
         """Store API response with argument hash for caching"""
         try:
@@ -898,6 +773,7 @@ class KubecostDataService:
                 raw_data=api_data,
                 argument_hash=argument_hash,
                 query_params=query_params,
+                domain = domain
             )
             session.add(cache_record)
             session.commit()
@@ -1028,7 +904,7 @@ class KubecostDataService:
             if not force_refresh:
                 cached_record = (
                     session.query(NodeMetric)
-                    .filter(NodeMetric.argument_hash == argument_hash)
+                    .filter(NodeMetric.argument_hash == argument_hash , NodeMetric.domain == domain)
                     .order_by(desc(NodeMetric.timestamp))
                     .first()
                 )
@@ -1107,7 +983,7 @@ class KubecostDataService:
 
             session = db_manager.get_session()
             self._store_node_argument_based_data(
-                session, api_data, argument_hash, query_params, window
+                session, api_data, argument_hash, query_params, window , domain
             )
             session.close()
 
@@ -1149,7 +1025,7 @@ class KubecostDataService:
             )
 
             self._store_node_argument_based_data(
-                session, api_data, argument_hash, query_params, window
+                session, api_data, argument_hash, query_params, window , domain
             )
 
             return {
@@ -1187,6 +1063,7 @@ class KubecostDataService:
         argument_hash: str,
         query_params: Dict,
         window: str,
+        domain
     ):
         """Store node API response with argument hash for caching"""
         try:
@@ -1198,6 +1075,7 @@ class KubecostDataService:
                 raw_data=api_data,
                 argument_hash=argument_hash,
                 query_params=query_params,
+                domain = domain
             )
             session.add(cache_record)
             session.commit()

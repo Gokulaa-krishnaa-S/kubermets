@@ -76,7 +76,7 @@ const SearchInput: React.FC<SearchProps> = ({
 
 const KubecostDashboard = () => {
   const { selectedInstance } = useCluster();
-  let selectedHash = selectedInstance.unique_hash;
+  let selectedHash = selectedInstance?.unique_hash;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -165,7 +165,7 @@ const KubecostDashboard = () => {
       shareSplit: "weighted",
       filter: "",
       offset: 0,
-      limit: 2000,
+      limit: 20000000000,
       includeSharedCostBreakdown: true,
       chartType: "costovertime",
       costUnit: "cumulative",

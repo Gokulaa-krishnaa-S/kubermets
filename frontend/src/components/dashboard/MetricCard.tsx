@@ -37,7 +37,6 @@ const statusConfig = {
     card: "hover:border-primary/30",
   },
 };
-
 export function MetricCard({
   title,
   value,
@@ -56,66 +55,63 @@ export function MetricCard({
   return (
     <Card
       className={cn(
-        "relative overflow-hidden transition-all duration-200 hover:shadow-hover cursor-pointer group",
+        "relative overflow-hidden transition-all duration-200 hover:shadow-hover cursor-pointer group h-full flex flex-col",
         config.card,
         className
       )}
       onClick={onClick}
     >
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <CardHeader className="pb-3 flex-shrink-0">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className={cn(
-              "p-2 rounded-lg transition-colors",
+              "p-2 rounded-lg transition-colors flex-shrink-0",
               config.badge
             )}>
               {icon}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-sm text-muted-foreground truncate">
+              <h3 className="font-medium text-sm text-muted-foreground truncate leading-tight">
                 {title}
               </h3>
             </div>
           </div>
+          {trend && (
+            <div className="flex items-center gap-1 text-xs flex-shrink-0 ml-2">
+              <TrendIcon className={cn(
+                "w-3 h-3",
+                trend.direction === "up" && "text-success",
+                trend.direction === "down" && "text-destructive",
+                trend.direction === "neutral" && "text-muted-foreground"
+              )} />
+              <span className={cn(
+                "font-medium",
+                trend.direction === "up" && "text-success",
+                trend.direction === "down" && "text-destructive",
+                trend.direction === "neutral" && "text-muted-foreground"
+              )}>
+                {trend.value}
+              </span>
+            </div>
+          )}
         </div>
       </CardHeader>
       
-      <CardContent className="pt-0">
-        <div className="space-y-3">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-3xl font-bold text-foreground group-hover:text-primary transition-colors">
-                {value}
+      <CardContent className="pt-0 flex-1 flex flex-col justify-between">
+        <div className="space-y-2">
+          <div>
+            <p className="text-2xl lg:text-3xl font-bold text-foreground group-hover:text-primary transition-colors leading-none">
+              {value}
+            </p>
+            {subtitle && (
+              <p className="text-sm text-muted-foreground mt-1 leading-tight">
+                {subtitle}
               </p>
-              {subtitle && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  {subtitle}
-                </p>
-              )}
-            </div>
-            
-            {trend && (
-              <div className="flex items-center gap-1 text-xs">
-                <TrendIcon className={cn(
-                  "w-3 h-3",
-                  trend.direction === "up" && "text-success",
-                  trend.direction === "down" && "text-destructive",
-                  trend.direction === "neutral" && "text-muted-foreground"
-                )} />
-                <span className={cn(
-                  "font-medium",
-                  trend.direction === "up" && "text-success",
-                  trend.direction === "down" && "text-destructive",
-                  trend.direction === "neutral" && "text-muted-foreground"
-                )}>
-                  {trend.value}
-                </span>
-              </div>
             )}
           </div>
           
           {trend?.label && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground leading-tight">
               {trend.label}
             </p>
           )}
@@ -127,3 +123,92 @@ export function MetricCard({
     </Card>
   );
 }
+// export function MetricCard({
+//   title,
+//   value,
+//   subtitle,
+//   icon,
+//   trend,
+//   status = "info",
+//   className,
+//   onClick,
+// }: MetricCardProps) {
+//   const config = statusConfig[status];
+  
+//   const TrendIcon = trend?.direction === "up" ? TrendingUp : 
+//                     trend?.direction === "down" ? TrendingDown : Minus;
+
+//   return (
+//     <Card
+//       className={cn(
+//         "relative overflow-hidden transition-all duration-200 hover:shadow-hover cursor-pointer group",
+//         config.card,
+//         className
+//       )}
+//       onClick={onClick}
+//     >
+//       <CardHeader className="pb-3">
+//         <div className="flex items-center justify-between">
+//           <div className="flex items-center gap-3">
+//             <div className={cn(
+//               "p-2 rounded-lg transition-colors",
+//               config.badge
+//             )}>
+//               {icon}
+//             </div>
+//             <div className="flex-1 min-w-0">
+//               <h3 className="font-medium text-sm text-muted-foreground truncate">
+//                 {title}
+//               </h3>
+//             </div>
+//           </div>
+//         </div>
+//       </CardHeader>
+      
+//       <CardContent className="pt-0">
+//         <div className="space-y-3">
+//           <div className="flex items-end justify-between">
+//             <div>
+//               <p className="text-3xl font-bold text-foreground group-hover:text-primary transition-colors">
+//                 {value}
+//               </p>
+//               {subtitle && (
+//                 <p className="text-sm text-muted-foreground mt-1">
+//                   {subtitle}
+//                 </p>
+//               )}
+//             </div>
+            
+//             {trend && (
+//               <div className="flex items-center gap-1 text-xs">
+//                 <TrendIcon className={cn(
+//                   "w-3 h-3",
+//                   trend.direction === "up" && "text-success",
+//                   trend.direction === "down" && "text-destructive",
+//                   trend.direction === "neutral" && "text-muted-foreground"
+//                 )} />
+//                 <span className={cn(
+//                   "font-medium",
+//                   trend.direction === "up" && "text-success",
+//                   trend.direction === "down" && "text-destructive",
+//                   trend.direction === "neutral" && "text-muted-foreground"
+//                 )}>
+//                   {trend.value}
+//                 </span>
+//               </div>
+//             )}
+//           </div>
+          
+//           {trend?.label && (
+//             <p className="text-xs text-muted-foreground">
+//               {trend.label}
+//             </p>
+//           )}
+//         </div>
+//       </CardContent>
+      
+//       {/* Hover gradient overlay */}
+//       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+//     </Card>
+//   );
+// }
