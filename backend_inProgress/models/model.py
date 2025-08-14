@@ -101,6 +101,7 @@ class ClusterMetric(Base):
     # Additional metadata
     raw_data = Column(JSON)  # Store full API response for debugging
     argument_hash = Column(String(255), nullable=True)
+    domain = Column(String(255), nullable=False)
     query_params = Column(JSON, nullable=True)
     # Relationships
     cluster = relationship("Cluster", back_populates="cluster_metrics")
@@ -137,6 +138,7 @@ class NodeMetric(Base):
     # Additional metadata
     raw_data = Column(JSON)
     argument_hash = Column(String(255), nullable=True)
+    domain = Column(String(255), nullable=False)
     query_params = Column(JSON, nullable=True)
 
     # Relationships
@@ -171,6 +173,7 @@ class PodMetric(Base):
     cpu_efficiency = Column(Float, default=0.0)
     memory_efficiency = Column(Float, default=0.0)
     argument_hash = Column(String(255), nullable=True)
+    domain = Column(String(255), nullable=False)
     query_params = Column(JSON, nullable=True)
     # Additional metadata
     raw_data = Column(JSON)

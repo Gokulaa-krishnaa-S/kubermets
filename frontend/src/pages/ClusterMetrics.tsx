@@ -35,7 +35,7 @@ import {
 
 export default function ClusterMetrics() {
   const { selectedInstance } = useCluster();
-  let selectedHash = selectedInstance.unique_hash;
+  let selectedHash = selectedInstance?.unique_hash;
   const [clusterStats, setClusterStats] = useState([]);
   const [clusters, setClusters] = useState([]);
   const [chartData, setChartData] = useState({
@@ -790,9 +790,6 @@ export default function ClusterMetrics() {
   return (
     <div
       className="p-4 lg:p-6"
-      // title="Cluster Metrics"
-      // subtitle="Comprehensive monitoring and resource analytics"
-      // onDomainChange={handleDomainChange}
     >
       {/* <ServerStatusBanner /> */}
       {/* Loading indicator */}
