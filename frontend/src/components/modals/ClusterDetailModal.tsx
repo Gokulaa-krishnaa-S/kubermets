@@ -298,7 +298,6 @@
 //     </Dialog>
 //   );
 // }
-import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import {
   Dialog,
@@ -306,10 +305,62 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import ClusterService from "@/services/ClusterService";
 import { useSelectedHash } from "@/hooks/selected-hash";
+import ChartCard from "../ui/chartCard";
+
+
+const chartDetails = {
+  cpu: {
+    title: "CPU Usage per Node",
+    description:
+      "This chart displays the CPU core utilization across cluster nodes, comparing actual usage against requested resources.",
+    metrics: ["Used Cores", "Requested Cores"],
+    insights:
+      "Monitor for over-allocation or under-utilization patterns to optimize resource planning.",
+  },
+  memory: {
+    title: "Memory Usage per Node",
+    description:
+      "Memory consumption in gigabytes showing actual RAM usage versus requested memory allocations.",
+    metrics: ["Used Memory (GB)", "Requested Memory (GB)"],
+    insights:
+      "Track memory efficiency and identify nodes that may need scaling adjustments.",
+  },
+  gpu: {
+    title: "GPU Usage per Node",
+    description:
+      "GPU resource utilization showing the number of GPUs being used versus those requested.",
+    metrics: ["Used GPUs", "Requested GPUs"],
+    insights:
+      "Essential for ML workloads - monitor GPU allocation efficiency and availability.",
+  },
+  gpuMemory: {
+    title: "GPU Memory Usage per Node",
+    description:
+      "GPU memory consumption in gigabytes for graphics processing workloads.",
+    metrics: ["Used GPU Memory (GB)", "Requested GPU Memory (GB)"],
+    insights:
+      "Critical for deep learning tasks requiring high memory bandwidth.",
+  },
+  pods: {
+    title: "Active vs Idle Pods",
+    description:
+      "Real-time comparison of active pods performing work versus idle pods consuming resources.",
+    metrics: ["Active Pods", "Idle Pods"],
+    insights:
+      "High idle pod counts may indicate over-provisioning or scheduling inefficiencies.",
+  },
+  volume: {
+    title: "Volume Cost per Node",
+    description:
+      "Storage costs associated with persistent volumes across cluster nodes.",
+    metrics: ["Volume Cost ($)"],
+    insights:
+      "Track storage expenses and identify opportunities for cost optimization.",
+  },
+};
 
 export default function ClusterDetailModal({ clusterName, onClose }) {
   const [cpuData, setCpuData] = useState([]);
@@ -327,12 +378,6 @@ export default function ClusterDetailModal({ clusterName, onClose }) {
   const [loadingPods, setLoadingPods] = useState(true);
 
   const { selectedHash } = useSelectedHash();
-
-  const ChartCard = ({ loading, children }) => (
-    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-md p-4 flex flex-col">
-      {loading ? <Skeleton className="h-full w-full rounded-lg" /> : children}
-    </div>
-  );
 
   const fetchClusterStats = async () => {
     try {
@@ -486,69 +531,76 @@ export default function ClusterDetailModal({ clusterName, onClose }) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="overflow-y-auto overflow-x-hidden mt-4 flex-1 pr-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <motion.div whileHover={{ scale: 1.12 }}>
-              <ChartCard loading={loadingCpu}>
-                <GroupedBarChart
-                  data={cpuData}
-                  title="CPU Usage per Node"
-                  yAxisLabel="Cores"
-                  colors={["#3b82f6", "#10b981"]}
-                />
-              </ChartCard>
-            </motion.div>
+        <style>{`
+          .perspective-1000 {
+            perspective: 1000px;
+          }
+          .preserve-3d {
+            transform-style: preserve-3d;
+          }
+          .backface-hidden {
+            backface-visibility: hidden;
+          }
+          .rotate-y-180 {
+            transform: rotateY(180deg);
+          }
+        `}</style>
 
-            <motion.div whileHover={{ scale: 1.12 }}>
-              <ChartCard loading={loadingPods}>
-                <GroupedBarChart
-                  data={podCountData}
-                  title="Active vs Idle Pods"
-                  yAxisLabel="Pod Count"
-                  colors={["#10b981", "#ef4444"]}
-                />
-              </ChartCard>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.12 }}>
-              <ChartCard loading={loadingMemory}>
-                <GroupedBarChart
-                  data={memoryData}
-                  title="Memory Usage per Node"
-                  yAxisLabel="GB"
-                  colors={["#f59e0b", "#84cc16"]}
-                />
-              </ChartCard>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.12 }}>
-              <ChartCard loading={loadingGpu}>
-                <GroupedBarChart
-                  data={gpuData}
-                  title="GPU Usage per Node"
-                  yAxisLabel="GPUs"
-                  colors={["#8b5cf6", "#ec4899"]}
-                />
-              </ChartCard>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.12 }}>
-              <ChartCard loading={loadingGpuMem}>
-                <GroupedBarChart
-                  data={gpuMemoryData}
-                  title="GPU Memory Usage per Node"
-                  yAxisLabel="GB"
-                  colors={["#06b6d4", "#f43f5e"]}
-                />
-              </ChartCard>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.12 }}>
-              <ChartCard loading={loadingVolume}>
-                <GroupedBarChart
-                  data={volumeData}
-                  title="Volume Cost per Node ($)"
-                  yAxisLabel="$"
-                  colors={["#3b82f6"]}
-                />
-              </ChartCard>
-            </motion.div>
+        <div className="overflow-y-auto overflow-x-hidden scrollbar-hide mt-4 flex-1 pr-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ChartCard loading={loadingCpu} details={chartDetails.cpu}>
+              <GroupedBarChart
+                data={cpuData}
+                title="CPU Usage per Node"
+                yAxisLabel="Cores"
+                colors={["#3b82f6", "#10b981"]}
+              />
+            </ChartCard>
+
+            <ChartCard loading={loadingPods} details={chartDetails.pods}>
+              <GroupedBarChart
+                data={podCountData}
+                title="Active vs Idle Pods"
+                yAxisLabel="Pod Count"
+                colors={["#10b981", "#ef4444"]}
+              />
+            </ChartCard>
+
+            <ChartCard loading={loadingMemory} details={chartDetails.memory}>
+              <GroupedBarChart
+                data={memoryData}
+                title="Memory Usage per Node"
+                yAxisLabel="GB"
+                colors={["#f59e0b", "#84cc16"]}
+              />
+            </ChartCard>
+
+            <ChartCard loading={loadingGpu} details={chartDetails.gpu}>
+              <GroupedBarChart
+                data={gpuData}
+                title="GPU Usage per Node"
+                yAxisLabel="GPUs"
+                colors={["#8b5cf6", "#ec4899"]}
+              />
+            </ChartCard>
+
+            <ChartCard loading={loadingGpuMem} details={chartDetails.gpuMemory}>
+              <GroupedBarChart
+                data={gpuMemoryData}
+                title="GPU Memory Usage per Node"
+                yAxisLabel="GB"
+                colors={["#06b6d4", "#f43f5e"]}
+              />
+            </ChartCard>
+
+            <ChartCard loading={loadingVolume} details={chartDetails.volume}>
+              <GroupedBarChart
+                data={volumeData}
+                title="Volume Cost per Node ($)"
+                yAxisLabel="$"
+                colors={["#3b82f6"]}
+              />
+            </ChartCard>
           </div>
         </div>
       </DialogContent>

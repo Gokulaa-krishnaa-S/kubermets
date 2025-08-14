@@ -796,9 +796,9 @@ export default function ClusterMetrics() {
     >
       {/* <ServerStatusBanner /> */}
       {/* Loading indicator */}
-      {isLoadingData ? (
+      {/* {isLoadingData ? (
         <LoadingBanner message="Loading cluster data..." />
-      ) : (
+      ) : ( */}
         <FilterBar
           selectedTimeRange={timeRange}
           onTimeRangeChange={handleTimeRangeChange}
@@ -814,7 +814,7 @@ export default function ClusterMetrics() {
           showRefresh
           className="mb-6"
         />
-      )}
+      {/* )} */}
 
       <div className="space-y-6">
         {/* Remove the DomainDropdown section completely */}

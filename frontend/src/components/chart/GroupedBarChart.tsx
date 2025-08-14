@@ -103,7 +103,7 @@ const AnimatedBar = ({ x, y, width, height, barColor }) => {
     <motion.rect
       x={x}
       y={y}
-      width='1vw'
+      width={width}
       height={height}
       rx="6"
       fill={barColor}
@@ -115,7 +115,6 @@ const AnimatedBar = ({ x, y, width, height, barColor }) => {
         // borderTopRightRadius: "0.5rem",
         // borderTopLeftRadius: "0.5rem"
       }}
-      whileHover={{ scale: 1.15 }}
     />
   );
 };

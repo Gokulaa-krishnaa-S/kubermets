@@ -640,9 +640,9 @@ const NodeMetricsDashboard = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4 lg:p-6 max-w-7xl">
         {/* Filter Bar */}
-        {isLoadingData ? (
+        {/* {isLoadingData ? (
           <LoadingBanner message="Loading cluster data..." />
-        ) : (
+        ) : ( */}
           <FilterBar
             selectedTimeRange={timeRange}
             onTimeRangeChange={handleTimeRangeChange}
@@ -658,7 +658,7 @@ const NodeMetricsDashboard = () => {
             showRefresh={true}
             className="mb-6"
           />
-        )}
+        {/* )} */}
 
         {/* Header */}
         <div className="mb-6">
