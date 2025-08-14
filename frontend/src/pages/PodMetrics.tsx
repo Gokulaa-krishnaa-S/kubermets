@@ -165,7 +165,7 @@ const KubecostDashboard = () => {
       shareSplit: "weighted",
       filter: "",
       offset: 0,
-      limit: 2000,
+      limit: 20000000000,
       includeSharedCostBreakdown: true,
       chartType: "costovertime",
       costUnit: "cumulative",

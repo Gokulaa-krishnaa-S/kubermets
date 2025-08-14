@@ -221,7 +221,7 @@ const NodeMetricsDashboard = () => {
         shareTenancyCosts: true,
         window: timeRange,
         offset: 0,
-        limit: 25,
+        limit: 2000000000000000000005,
         force_refresh: true,
         domain: selectedHash,
       };
@@ -275,7 +275,7 @@ const NodeMetricsDashboard = () => {
       shareTenancyCosts: true,
       window: rangeFromUrl,
       offset: 0,
-      limit: 25,
+      limit: 2000000000000000000005,
       domain: selectedHash,
       force_refesh: false,
     };
@@ -322,7 +322,7 @@ const NodeMetricsDashboard = () => {
         shareTenancyCosts: true,
         window: range,
         offset: 0,
-        limit: 25,
+        limit: 2000000000000000000005,
         domain: selectedHash,
       };
 
