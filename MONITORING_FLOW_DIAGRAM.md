@@ -55,7 +55,7 @@ sequenceDiagram
     end
 ```
 
-## 3. Background Data Refresh Flow
+## 3. Background Data Refresh Flow (not enabled)
 
 ```mermaid
 graph TD
@@ -82,32 +82,7 @@ graph TD
     style J fill:#fff3e0
 ```
 
-## 4. User Authentication Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Frontend
-    participant Backend
-    participant KubecostAPI
-
-    User->>Frontend: Select Instance
-    Frontend->>Backend: Get Instance Credentials
-    Backend->>Database: Query Instance Config
-    Database-->>Backend: Return Credentials
-
-    alt Has Credentials
-        Backend->>KubecostAPI: Authenticated Request
-        KubecostAPI-->>Backend: Return Data
-        Backend-->>Frontend: Return Data
-        Frontend-->>User: Display Data
-    else No Credentials
-        Backend-->>Frontend: Error Response
-        Frontend-->>User: Show Error Message
-    end
-```
-
-## 5. Dashboard Data Aggregation Flow
+## 4. Dashboard Data Aggregation Flow
 
 ```mermaid
 graph TD
@@ -153,7 +128,7 @@ graph TD
     style T fill:#e8f5e8
 ```
 
-## 6. Cache Management Flow
+## 5. Cache Management Flow
 
 ```mermaid
 graph TD
@@ -167,9 +142,6 @@ graph TD
     E --> F[Store in Database]
     F --> G[Return Fresh Data]
 
-    H[Background Cleanup] --> I[Remove Expired Cache]
-    I --> J[Update Cache Statistics]
-
     K[Manual Refresh] --> L[Force Data Fetch]
     L --> D
 
@@ -179,7 +151,7 @@ graph TD
     style H fill:#fff3e0
 ```
 
-## 7. Error Handling Flow
+## 6. Error Handling Flow
 
 ```mermaid
 graph TD
@@ -205,7 +177,7 @@ graph TD
     style H fill:#ffcdd2
 ```
 
-## 8. Real-time Monitoring Flow
+## 7. Real-time Monitoring Flow
 
 ```mermaid
 graph TD
@@ -233,44 +205,7 @@ graph TD
     style I fill:#fff3e0
 ```
 
-## 9. Health Check Flow
-
-```mermaid
-graph TD
-    A[Health Check Request] --> B[Check Database Connection]
-
-    B -->|Success| C[Database: Healthy]
-    B -->|Failure| D[Database: Unhealthy]
-
-    A --> E[Check Kubecost API]
-
-    E -->|Success| F[Kubecost: Healthy]
-    E -->|Failure| G[Kubecost: Unhealthy]
-
-    A --> H[Check Background Tasks]
-
-    H -->|Running| I[Tasks: Healthy]
-    H -->|Stopped| J[Tasks: Unhealthy]
-
-    C --> K[Aggregate Health Status]
-    D --> K
-    F --> K
-    G --> K
-    I --> K
-    J --> K
-
-    K --> L[Return Health Response]
-
-    style A fill:#e8f5e8
-    style C fill:#c8e6c9
-    style D fill:#ffcdd2
-    style F fill:#c8e6c9
-    style G fill:#ffcdd2
-    style I fill:#c8e6c9
-    style J fill:#ffcdd2
-```
-
-## 10. Data Processing Pipeline
+## 8. Data Processing Pipeline
 
 ```mermaid
 graph LR
@@ -288,7 +223,7 @@ graph LR
     style H fill:#c8e6c9
 ```
 
-## 11. Component Interaction Flow
+## 9. Component Interaction Flow
 
 ```mermaid
 graph TD
@@ -320,7 +255,7 @@ graph TD
 
 ## Key Flow Characteristics
 
-### 1. **Asynchronous Processing**
+### 1. **Asynchronous Processing** (not enabled)
 
 - Background data refresh with configurable intervals
 - Parallel processing of multiple instances
@@ -329,7 +264,6 @@ graph TD
 ### 2. **Caching Strategy**
 
 - Multi-level caching (Database + Application)
-- TTL-based cache invalidation
 - Hash-based cache key generation
 
 ### 3. **Error Resilience**
@@ -348,11 +282,3 @@ graph TD
 
 - Stateless backend services
 - Database connection pooling
-- Horizontal scaling capabilities
-
-### 6. **Security Measures**
-
-- Input validation and sanitization
-- Secure file upload handling
-- Authentication for external APIs
-- CORS configuration
