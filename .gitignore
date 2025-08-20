@@ -43,3 +43,6 @@ backend_inProgress/migrations
 #python venv
 backend/venv/
 backend_inProgress/venv/
+
+
+*.zip
