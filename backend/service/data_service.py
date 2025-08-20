@@ -8,14 +8,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_
 from models.model import (
     db_manager,
-    Cluster,
-    Node,
-    Pod,
-    ClusterMetric,
-    NodeMetric,
-    PodMetric,
-    KubernetesInstance,
-    Provider,
+    # Cluster,
+    # Node,
+    # Pod,
+    ClusterMetrics,
+    NodeMetrics,
+    PodMetrics,
+    # KubernetesInstance,
+    # Provider,
 )
 import logging
 from threading import Thread
@@ -77,63 +77,63 @@ class KubecostDataService:
             minutes=self.cache_duration_minutes
         )
 
-    def _upsert_cluster(self, session: Session, cluster_name: str) -> Cluster:
-        """Create or update cluster record"""
-        cluster = session.query(Cluster).filter(Cluster.name == cluster_name).first()
-        if not cluster:
-            cluster = Cluster(name=cluster_name, status="active")
-            session.add(cluster)
-            session.commit()
-        return cluster
+    # def _upsert_cluster(self, session: Session, cluster_name: str) -> Cluster:
+    #     """Create or update cluster record"""
+    #     cluster = session.query(Cluster).filter(Cluster.name == cluster_name).first()
+    #     if not cluster:
+    #         cluster = Cluster(name=cluster_name, status="active")
+    #         session.add(cluster)
+    #         session.commit()
+    #     return cluster
 
-    def _upsert_node(self, session: Session, cluster: Cluster, node_name: str) -> Node:
-        """Create or update node record"""
-        node = (
-            session.query(Node)
-            .filter(and_(Node.name == node_name, Node.cluster_id == cluster.id))
-            .first()
-        )
-        if not node:
-            node = Node(name=node_name, cluster_id=cluster.id, status="active")
-            session.add(node)
-            session.commit()
-        return node
+    # def _upsert_node(self, session: Session, cluster: Cluster, node_name: str) -> Node:
+    #     """Create or update node record"""
+    #     node = (
+    #         session.query(Node)
+    #         .filter(and_(Node.name == node_name, Node.cluster_id == cluster.id))
+    #         .first()
+    #     )
+    #     if not node:
+    #         node = Node(name=node_name, cluster_id=cluster.id, status="active")
+    #         session.add(node)
+    #         session.commit()
+    #     return node
 
-    def _upsert_pod(
-        self,
-        session: Session,
-        pod_name: str,
-        namespace: str,
-        controller_name: str = None,
-        controller_kind: str = None,
-        node: Node = None,
-    ) -> Pod:
-        """Create or update pod record"""
-        pod = (
-            session.query(Pod)
-            .filter(and_(Pod.name == pod_name, Pod.namespace == namespace))
-            .first()
-        )
-        if not pod:
-            pod = Pod(
-                name=pod_name,
-                namespace=namespace,
-                node_id=node.id if node else None,
-                controller_name=controller_name,
-                controller_kind=controller_kind,
-                status="active",
-            )
-            session.add(pod)
-            session.commit()
-        else:
-            # Update existing pod
-            if node and pod.node_id != node.id:
-                pod.node_id = node.id
-            if controller_name and pod.controller_name != controller_name:
-                pod.controller_name = controller_name
-            pod.updated_at = datetime.utcnow()
-            session.commit()
-        return pod
+    # def _upsert_pod(
+    #     self,
+    #     session: Session,
+    #     pod_name: str,
+    #     namespace: str,
+    #     controller_name: str = None,
+    #     controller_kind: str = None,
+    #     node: Node = None,
+    # ) -> Pod:
+    #     """Create or update pod record"""
+    #     pod = (
+    #         session.query(Pod)
+    #         .filter(and_(Pod.name == pod_name, Pod.namespace == namespace))
+    #         .first()
+    #     )
+    #     if not pod:
+    #         pod = Pod(
+    #             name=pod_name,
+    #             namespace=namespace,
+    #             node_id=node.id if node else None,
+    #             controller_name=controller_name,
+    #             controller_kind=controller_kind,
+    #             status="active",
+    #         )
+    #         session.add(pod)
+    #         session.commit()
+    #     else:
+    #         # Update existing pod
+    #         if node and pod.node_id != node.id:
+    #             pod.node_id = node.id
+    #         if controller_name and pod.controller_name != controller_name:
+    #             pod.controller_name = controller_name
+    #         pod.updated_at = datetime.utcnow()
+    #         session.commit()
+    #     return pod
 
 
     def get_cluster_data(
@@ -163,9 +163,9 @@ class KubecostDataService:
             # Check cache
             if not force_refresh:
                 cached_record = (
-                    session.query(ClusterMetric)
-                    .filter(ClusterMetric.argument_hash == argument_hash, ClusterMetric.domain == domain)
-                    .order_by(desc(ClusterMetric.timestamp))
+                    session.query(ClusterMetrics)
+                    .filter(ClusterMetrics.argument_hash == argument_hash, ClusterMetrics.domain == domain)
+                    .order_by(desc(ClusterMetrics.timestamp))
                     .first()
                 )
 
@@ -322,7 +322,7 @@ class KubecostDataService:
         try:
             print("-----STORING CLUSTER METRIC---------------")
             # Create a new record for argument-based caching
-            cache_record = ClusterMetric(
+            cache_record = ClusterMetrics(
                 cluster_id=None,  # No specific cluster for argument-based cache
                 timestamp=datetime.utcnow(),
                 window=window,
@@ -349,11 +349,11 @@ class KubecostDataService:
         try:
             # Get all cached cluster records
             cached_records = (
-                session.query(ClusterMetric)
+                session.query(ClusterMetrics)
                 .filter(
-                    ClusterMetric.argument_hash.isnot(None),
-                    ClusterMetric.raw_data.isnot(None),
-                    ClusterMetric.query_params.isnot(None),
+                    ClusterMetrics.argument_hash.isnot(None),
+                    ClusterMetrics.raw_data.isnot(None),
+                    ClusterMetrics.query_params.isnot(None),
                 )
                 .all()
             )
@@ -462,9 +462,9 @@ class KubecostDataService:
             # Serve from cache if available
             if not force_refresh:
                 cached_record = (
-                    session.query(PodMetric)
-                    .filter(PodMetric.argument_hash == argument_hash , PodMetric.domain == domain)
-                    .order_by(desc(PodMetric.timestamp))
+                    session.query(PodMetrics)
+                    .filter(PodMetrics.argument_hash == argument_hash , PodMetrics.domain == domain)
+                    .order_by(desc(PodMetrics.timestamp))
                     .first()
                 )
 
@@ -657,11 +657,11 @@ class KubecostDataService:
         try:
             # Get all cached records
             cached_records = (
-                session.query(PodMetric)
+                session.query(PodMetrics)
                 .filter(
-                    PodMetric.argument_hash.isnot(None),
-                    PodMetric.raw_data.isnot(None),
-                    PodMetric.query_params.isnot(None),
+                    PodMetrics.argument_hash.isnot(None),
+                    PodMetrics.raw_data.isnot(None),
+                    PodMetrics.query_params.isnot(None),
                 )
                 .all()
             )
@@ -766,7 +766,7 @@ class KubecostDataService:
         """Store API response with argument hash for caching"""
         try:
             # Create a new record for argument-based caching
-            cache_record = PodMetric(
+            cache_record = PodMetrics(
                 pod_id=None,  # No specific pod for argument-based cache
                 timestamp=datetime.utcnow(),
                 window=window,
@@ -853,7 +853,7 @@ class KubecostDataService:
                     print("**************************************************")
 
                     # Create cluster metric record
-                    cluster_metric = ClusterMetric(
+                    cluster_metric = ClusterMetrics(
                         cluster_id=cluster.id,
                         timestamp=datetime.utcnow(),
                         window=window,
@@ -903,9 +903,9 @@ class KubecostDataService:
             # Serve cached data if available
             if not force_refresh:
                 cached_record = (
-                    session.query(NodeMetric)
-                    .filter(NodeMetric.argument_hash == argument_hash , NodeMetric.domain == domain)
-                    .order_by(desc(NodeMetric.timestamp))
+                    session.query(NodeMetrics)
+                    .filter(NodeMetrics.argument_hash == argument_hash , NodeMetrics.domain == domain)
+                    .order_by(desc(NodeMetrics.timestamp))
                     .first()
                 )
 
@@ -1068,7 +1068,7 @@ class KubecostDataService:
         """Store node API response with argument hash for caching"""
         try:
             # Create a new record for argument-based caching
-            cache_record = NodeMetric(
+            cache_record = NodeMetrics(
                 node_id=None,  # No specific node for argument-based cache
                 timestamp=datetime.utcnow(),
                 window=window,
@@ -1093,11 +1093,11 @@ class KubecostDataService:
         try:
             # Get all cached node records
             cached_records = (
-                session.query(NodeMetric)
+                session.query(NodeMetrics)
                 .filter(
-                    NodeMetric.argument_hash.isnot(None),
-                    NodeMetric.raw_data.isnot(None),
-                    NodeMetric.query_params.isnot(None),
+                    NodeMetrics.argument_hash.isnot(None),
+                    NodeMetrics.raw_data.isnot(None),
+                    NodeMetrics.query_params.isnot(None),
                 )
                 .all()
             )
@@ -1230,7 +1230,7 @@ class KubecostDataService:
                     )
 
                     # Create pod metric record
-                    pod_metric = PodMetric(
+                    pod_metric = PodMetrics(
                         pod_id=pod.id,
                         timestamp=datetime.utcnow(),
                         window=window,
@@ -1253,7 +1253,7 @@ class KubecostDataService:
             raise
 
     def _aggregate_node_cache_data(
-        self, cached_metrics: List[NodeMetric]
+        self, cached_metrics: List[NodeMetrics]
     ) -> Dict[str, Any]:
         """Aggregate cached node metrics for API response format"""
         # This is a simplified aggregation - you might want to enhance this
@@ -1272,7 +1272,7 @@ class KubecostDataService:
         }
 
     def _aggregate_pod_cache_data(
-        self, cached_metrics: List[PodMetric]
+        self, cached_metrics: List[PodMetrics]
     ) -> Dict[str, Any]:
         """Aggregate cached pod metrics for API response format"""
         total_cost = sum(metric.total_cost for metric in cached_metrics)

@@ -1,6 +1,8 @@
 # clusters/routes.py - Updated with new endpoints
 
 from flask import Blueprint, jsonify, Response, request
+from models.model import ClusterMetrics, NodeMetrics, PodMetrics
+from models.model import db_manager
 from controllers.cluster_controller import (
     get_cluster_status,
     get_node_info,
@@ -58,6 +60,63 @@ def summary():
 
 @clusters_bp.route("/get_pod_details", methods=["GET"])
 def getPodDetail():
+    # ...existing code...
+    pass
+
+
+# ================================
+# Bulk Metrics Ingestion Endpoint
+# ================================
+@clusters_bp.route("/fetchMetrics", methods=["POST"])
+def fetch_metrics():
+    """
+    Bulk insert metrics for clusters, nodes, and pods.
+    Expects JSON with keys: cluster_metrics, node_metrics, pod_metrics (each a list of dicts).
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    results = {"cluster_metrics": 0, "node_metrics": 0, "pod_metrics": 0, "errors": []}
+    session = db_manager.get_session()
+    try:
+        # ClusterMetrics
+        cluster_metrics = data.get("cluster_metrics", [])
+        for entry in cluster_metrics:
+            try:
+                obj = ClusterMetrics(**entry)
+                session.add(obj)
+                results["cluster_metrics"] += 1
+            except Exception as e:
+                results["errors"].append(f"ClusterMetrics: {str(e)}")
+
+        # NodeMetrics
+        node_metrics = data.get("node_metrics", [])
+        for entry in node_metrics:
+            try:
+                obj = NodeMetrics(**entry)
+                session.add(obj)
+                results["node_metrics"] += 1
+            except Exception as e:
+                results["errors"].append(f"NodeMetrics: {str(e)}")
+
+        # PodMetrics
+        pod_metrics = data.get("pod_metrics", [])
+        for entry in pod_metrics:
+            try:
+                obj = PodMetrics(**entry)
+                session.add(obj)
+                results["pod_metrics"] += 1
+            except Exception as e:
+                results["errors"].append(f"PodMetrics: {str(e)}")
+
+        session.commit()
+        return jsonify({"message": "Metrics ingested", **results}), 201
+    except Exception as e:
+        session.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        session.close()
     """
     Get specific pod details
     Query parameters:
