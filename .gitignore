@@ -44,5 +44,5 @@ backend_inProgress/migrations
 backend/venv/
 backend_inProgress/venv/
 
-
+.ven
 *.zip

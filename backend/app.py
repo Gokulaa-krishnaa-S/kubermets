@@ -1,13 +1,11 @@
 # app.py - Updated with database integration
 import os
-from flask import Flask, Response, jsonify, request
+from flask import Flask, jsonify
 from flasgger import Swagger
 from flask_cors import CORS
 from dotenv import load_dotenv
 import logging
 from datetime import datetime
-import atexit
-from apscheduler.schedulers.background import BackgroundScheduler
 from sqlalchemy import text
 
 # Load environment variables
@@ -16,7 +14,6 @@ load_dotenv()
 # Import your modules
 from routes.cluster import clusters_bp
 from models.model import db_manager
-from service.data_service import kubecost_service
 
 # Configure logging
 logging.basicConfig(
@@ -55,86 +52,7 @@ def create_app():
             "Please ensure PostgreSQL is running and DATABASE_URL is correctly configured"
         )
 
-    # Setup background tasks if enabled
-    enable_background = (
-        os.getenv("ENABLE_BACKGROUND_REFRESH", "false").lower() == "true"
-    )
-    if enable_background:
-        setup_background_tasks(app)
-
     return app
-
-
-def setup_background_tasks(app):
-    """Setup background tasks for periodic data refresh"""
-    try:
-        scheduler = BackgroundScheduler()
-        refresh_interval = float(os.getenv("REFRESH_INTERVAL_MINUTES", "10"))
-
-        # Schedule periodic data refresh
-        scheduler.add_job(
-            func=background_data_refresh,
-            trigger="interval",
-            minutes=refresh_interval,
-            id="data_refresh_job",
-            name="Refresh Kubecost data",
-            replace_existing=True,
-        )
-
-        # Schedule daily cleanup
-        # scheduler.add_job(
-        #     func=background_cleanup,
-        #     trigger="cron",
-        #     hour=2,  # Run at 2 AM
-        #     minute=0,
-        #     id='cleanup_job',
-        #     name='Cleanup old data',
-        #     replace_existing=True
-        # )
-
-        scheduler.start()
-        logger.info(
-            f"Background scheduler started with {refresh_interval} minute refresh interval"
-        )
-
-        # Shut down scheduler when app exits
-        atexit.register(lambda: scheduler.shutdown())
-
-        # Store scheduler in app context for potential access
-        app.scheduler = scheduler
-
-    except Exception as e:
-        logger.error(f"Failed to setup background tasks: {str(e)}")
-
-
-def background_data_refresh():
-    """Background job to refresh data from Kubecost API"""
-    try:
-        logger.info("Starting background data refresh...")
-
-        # Refresh data for common time windows
-        windows = ["1h", "24h", "7d"]
-
-        for window in windows:
-            try:
-                # Refresh cluster data
-                kubecost_service.get_cluster_data(window=window, force_refresh=True)
-
-                # Refresh node data
-                kubecost_service.get_node_data(window=window, force_refresh=True)
-
-                # Refresh pod data
-                kubecost_service.get_pod_data(window=window, force_refresh=True)
-
-                logger.info(f"Refreshed data for window: {window}")
-
-            except Exception as e:
-                logger.error(f"Error refreshing data for window {window}: {str(e)}")
-
-        logger.info("Background data refresh completed")
-
-    except Exception as e:
-        logger.error(f"Background data refresh failed: {str(e)}")
 
 
 app = create_app()
@@ -153,31 +71,10 @@ def health_check():
     except Exception as e:
         db_status = f"unhealthy: {str(e)}"
 
-    # Check Kubecost API connection
-    try:
-        import requests
-
-        kubecost_domain = os.getenv("domain")
-        if kubecost_domain:
-            response = requests.get(f"{kubecost_domain}/model/allocation", timeout=5)
-            kubecost_status = (
-                "healthy"
-                if response.status_code == 200
-                else f"unhealthy: {response.status_code}"
-            )
-        else:
-            kubecost_status = "not configured"
-    except Exception as e:
-        kubecost_status = f"unhealthy: {str(e)}"
-
     health_data = {
-        "status": (
-            "healthy"
-            if db_status == "healthy" and "healthy" in kubecost_status
-            else "unhealthy"
-        ),
+       
         "timestamp": datetime.utcnow().isoformat(),
-        "services": {"database": db_status, "kubecost_api": kubecost_status},
+        "services": {"database": db_status},
         "background_tasks": {
             "enabled": os.getenv("ENABLE_BACKGROUND_REFRESH", "false").lower()
             == "true",
