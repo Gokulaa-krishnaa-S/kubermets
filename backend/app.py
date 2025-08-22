@@ -72,7 +72,6 @@ def health_check():
         db_status = f"unhealthy: {str(e)}"
 
     health_data = {
-       
         "timestamp": datetime.utcnow().isoformat(),
         "services": {"database": db_status},
         "background_tasks": {

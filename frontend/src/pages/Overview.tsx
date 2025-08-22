@@ -48,6 +48,7 @@ export default function Overview() {
     const loadData = async () => {
       try {
         const data = await fetchDashboardSummary();
+        console.log(data, "----------------------------");
         setDashboardData(data);
       } catch (error) {
         console.error("Error loading dashboard summary:", error);
@@ -72,17 +73,16 @@ export default function Overview() {
 
   if (loading) {
     return (
-      <Layout 
-        title="Overview" 
-        subtitle="Loading Kubernetes cost metrics..."
-      >
-        <TopBar 
-          title="Overview" 
-          subtitle="Loading Kubernetes cost metrics..." 
+      <Layout title="Overview" subtitle="Loading Kubernetes cost metrics...">
+        <TopBar
+          title="Overview"
+          subtitle="Loading Kubernetes cost metrics..."
         />
-        <ResponsiveLoader 
-          title="Overview" 
-          subtitle={`Loading Kubernetes metrics across ${aggregated.clusterCount || 0} clusters...`}
+        <ResponsiveLoader
+          title="Overview"
+          subtitle={`Loading Kubernetes metrics across ${
+            aggregated?.clusterCount || 0
+          } clusters...`}
         />
       </Layout>
     );
@@ -95,13 +95,13 @@ export default function Overview() {
       icon: <Server className="w-6 h-6" />,
       path: "/metric/cluster",
       metrics: [
-        `$${aggregated.totalCost?.toFixed(2) || "0.00"} Total Cost`,
+        `$${aggregated?.totalCost?.toFixed(2) || "0.00"} Total Cost`,
         `${
-          (aggregated.avgEfficiency * 100)?.toFixed(1) || "0.0"
+          (aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"
         }% Avg Efficiency`,
-        `${aggregated.avgCpuUsage?.toFixed(1) || "0.0"}% Avg CPU Utilization`,
+        `${aggregated?.avgCpuUsage?.toFixed(1) || "0.0"}% Avg CPU Utilization`,
       ],
-      status: aggregated.avgEfficiency > 0.5 ? "healthy" : "warning",
+      status: aggregated?.avgEfficiency > 0.5 ? "healthy" : "warning",
     },
     {
       title: "Node Metrics",
@@ -109,13 +109,13 @@ export default function Overview() {
       icon: <Box className="w-6 h-6" />,
       path: "/metric/nodes",
       metrics: [
-        `${aggregated.totalNodes || 0} Total Nodes`,
-        `${aggregated.healthyNodes || 0} Healthy`,
+        `${aggregated?.totalNodes || 0} Total Nodes`,
+        `${aggregated?.healthyNodes || 0} Healthy`,
         `${
-          (aggregated.nodeAvgEfficiency * 100)?.toFixed(1) || "0.0"
+          (aggregated?.nodeAvgEfficiency * 100)?.toFixed(1) || "0.0"
         }% Avg Efficiency`,
       ],
-      status: aggregated.warningNodes > 0 ? "warning" : "healthy",
+      status: aggregated?.warningNodes > 0 ? "warning" : "healthy",
     },
     {
       title: "Pod Metrics",
@@ -123,9 +123,9 @@ export default function Overview() {
       icon: <Layers className="w-6 h-6" />,
       path: "/metric/pods",
       metrics: [
-        `${aggregated.totalPods || 0} Total Pods`,
-        `${aggregated.runningPods || 0} Active`,
-        `${aggregated.idlePods || 0} Idle`,
+        `${aggregated?.totalPods || 0} Total Pods`,
+        `${aggregated?.runningPods || 0} Active`,
+        `${aggregated?.idlePods || 0} Idle`,
       ],
       status: "healthy",
     },
@@ -161,13 +161,13 @@ export default function Overview() {
     <Layout
       title="Overview"
       subtitle={`Complete Kubernetes metrics visualization across ${
-        aggregated.clusterCount || 0
+        aggregated?.clusterCount || 0
       } clusters (last 7 days)`}
     >
       <TopBar
         title={"Overview"}
         subtitle={`Complete Kubernetes metrics visualization across
-                  ${aggregated.clusterCount || 0} cluster(last 7 days)`}
+                  ${aggregated?.clusterCount || 0} cluster(last 7 days)`}
       />
       <div className="space-y-6 p-4 lg:p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -180,10 +180,10 @@ export default function Overview() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">
-                ${aggregated.totalCost?.toFixed(2) || "0.00"}
+                ${aggregated?.totalCost?.toFixed(2) || "0.00"}
               </div>
               <p className="text-xs text-muted-foreground">
-                Across {aggregated.clusterCount || 0} clusters
+                Across {aggregated?.clusterCount || 0} clusters
               </p>
             </CardContent>
           </Card>
@@ -198,12 +198,12 @@ export default function Overview() {
             <CardContent>
               <div
                 className={`text-2xl font-bold ${
-                  aggregated.avgEfficiency > 0.5
+                  aggregated?.avgEfficiency > 0.5
                     ? "text-green-600"
                     : "text-yellow-600"
                 }`}
               >
-                {(aggregated.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
+                {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
               </div>
               <p className="text-xs text-muted-foreground">
                 Resource utilization
@@ -218,11 +218,11 @@ export default function Overview() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {aggregated.totalNodes || 0}
+                {aggregated?.totalNodes || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {aggregated.healthyNodes || 0} healthy,{" "}
-                {aggregated.warningNodes || 0} need attention
+                {aggregated?.healthyNodes || 0} healthy,{" "}
+                {aggregated?.warningNodes || 0} need attention
               </p>
             </CardContent>
           </Card>
@@ -236,10 +236,10 @@ export default function Overview() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-blue-600">
-                {aggregated.runningPods || 0}
+                {aggregated?.runningPods || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {aggregated.totalPods || 0} total, {aggregated.idlePods || 0}{" "}
+                {aggregated?.totalPods || 0} total, {aggregated?.idlePods || 0}{" "}
                 idle
               </p>
             </CardContent>
@@ -256,24 +256,24 @@ export default function Overview() {
           <CardContent>
             <p className="text-muted-foreground mb-4">
               Monitor cost efficiency and resource utilization across{" "}
-              {aggregated.clusterCount || 0} Kubernetes clusters. Track spending
-              patterns, identify optimization opportunities, and ensure optimal
-              resource allocation across your infrastructure.
+              {aggregated?.clusterCount || 0} Kubernetes clusters. Track
+              spending patterns, identify optimization opportunities, and ensure
+              optimal resource allocation across your infrastructure.
             </p>
             <div className="flex gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">System Status:</span>
                 {getStatusIcon(
-                  aggregated.avgEfficiency > 0.5 ? "healthy" : "warning"
+                  aggregated?.avgEfficiency > 0.5 ? "healthy" : "warning"
                 )}
                 <span
                   className={
-                    aggregated.avgEfficiency > 0.5
+                    aggregated?.avgEfficiency > 0.5
                       ? "text-green-600"
                       : "text-yellow-600"
                   }
                 >
-                  {aggregated.avgEfficiency > 0.5
+                  {aggregated?.avgEfficiency > 0.5
                     ? "Optimal"
                     : "Needs Optimization"}
                 </span>
@@ -281,7 +281,7 @@ export default function Overview() {
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Clusters:</span>
                 <span className="font-medium">
-                  {aggregated.clusterCount || 0} Active
+                  {aggregated?.clusterCount || 0} Active
                 </span>
               </div>
             </div>
@@ -370,8 +370,8 @@ export default function Overview() {
                   </div>
                   <span className="font-medium">
                     $
-                    {aggregated.totalCost
-                      ? (aggregated.totalCost * 0.63).toFixed(2)
+                    {aggregated?.totalCost
+                      ? (aggregated?.totalCost * 0.63).toFixed(2)
                       : "0.00"}
                   </span>
                 </div>
@@ -382,8 +382,8 @@ export default function Overview() {
                   </div>
                   <span className="font-medium">
                     $
-                    {aggregated.totalCost
-                      ? (aggregated.totalCost * 0.33).toFixed(2)
+                    {aggregated?.totalCost
+                      ? (aggregated?.totalCost * 0.33).toFixed(2)
                       : "0.00"}
                   </span>
                 </div>
@@ -394,8 +394,8 @@ export default function Overview() {
                   </div>
                   <span className="font-medium">
                     $
-                    {aggregated.totalCost
-                      ? (aggregated.totalCost * 0.04).toFixed(2)
+                    {aggregated?.totalCost
+                      ? (aggregated?.totalCost * 0.04).toFixed(2)
                       : "0.00"}
                   </span>
                 </div>
@@ -413,31 +413,31 @@ export default function Overview() {
                   <span className="text-sm">Overall Efficiency</span>
                   <div className="flex items-center gap-2">
                     {getStatusIcon(
-                      aggregated.avgEfficiency > 0.5 ? "healthy" : "warning"
+                      aggregated?.avgEfficiency > 0.5 ? "healthy" : "warning"
                     )}
                     <span
                       className={`font-medium ${
-                        aggregated.avgEfficiency > 0.5
+                        aggregated?.avgEfficiency > 0.5
                           ? "text-green-600"
                           : "text-yellow-600"
                       }`}
                     >
-                      {(aggregated.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
+                      {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
                     </span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Idle Resources</span>
                   <span className="font-medium text-red-600">
-                    ${aggregated.idleCost?.toFixed(2) || "0.00"}
+                    ${aggregated?.idleCost?.toFixed(2) || "0.00"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Optimization Potential</span>
                   <span className="font-medium text-green-600">
-                    {aggregated.avgEfficiency < 0.5
+                    {aggregated?.avgEfficiency < 0.5
                       ? "High"
-                      : aggregated.avgEfficiency < 0.8
+                      : aggregated?.avgEfficiency < 0.8
                       ? "Medium"
                       : "Low"}
                   </span>
@@ -448,7 +448,7 @@ export default function Overview() {
         </div>
 
         {/* Cluster Details */}
-        {clusters.length > 0 && (
+        {clusters?.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Cluster Details</CardTitle>
