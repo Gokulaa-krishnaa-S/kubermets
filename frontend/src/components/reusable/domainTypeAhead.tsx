@@ -17,12 +17,13 @@ interface DomainTypeAheadProps {
 }
 
 const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
-  const { instances, loading, selectedInstance, setSelectedInstance } =
+  const { instances, loading, selectedInstance, setSelectedInstance }: any =
     useCluster();
+  console.log(instances, "-------");
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+
   const providers = [
     {
       value: "AWS",
@@ -73,8 +74,9 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
 
   // Helper function to get provider icon by client name
   const getProviderIcon = (clientName: string) => {
+    console.log(providers);
     const provider = providers.find(
-      (p) => p.value.toLowerCase() === clientName.toLowerCase()
+      (p) => p?.value?.toLowerCase() === clientName?.toLowerCase()
     );
     return provider?.icon || <Server className="w-5 h-5 text-gray-500" />;
   };
@@ -93,10 +95,12 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
     onSelect?.(instance.unique_hash);
   };
 
-  const filteredInstances = instances.filter((instance) =>
-    instance.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredInstances = instances.filter((instance: any) =>
+    instance?.config?.clusterName
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
   );
-
+  console.log(filteredInstances, "----------");
   if (loading) return <p className="text-gray-500">Loading...</p>;
 
   return (
@@ -115,7 +119,8 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
               <div className="flex items-center gap-2 truncate">
                 {getSelectedProviderIcon()}
                 <span className="truncate">
-                  {selectedInstance.client_name} | {selectedInstance.name}
+                  {selectedInstance?.config?.clusterName} |{" "}
+                  {selectedInstance?.name}
                 </span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -154,15 +159,15 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
                     className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm transition-colors"
                   >
                     <div className="flex-shrink-0">
-                      {getProviderIcon(instance.client_name)}
+                      {getProviderIcon(instance?.config?.clusterName)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="font-medium text-gray-900">
-                        {instance.name}
+                        {instance?.config?.clusterName}
                       </span>
-                      <span className="text-gray-500 ml-2">
-                        | {instance.client_name}
-                      </span>
+                      {/* <span className="text-gray-500 ml-2">
+                        | {instance?.config?.clusterName}
+                      </span> */}
                     </div>
                   </div>
                 ))

@@ -1,5 +1,14 @@
 from sqlalchemy import (
-    Column, Integer, String, Float, DateTime, Boolean, JSON, Index, ForeignKey,create_engine
+    Column,
+    Integer,
+    String,
+    Float,
+    DateTime,
+    Boolean,
+    JSON,
+    Index,
+    ForeignKey,
+    create_engine,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
@@ -8,7 +17,7 @@ from datetime import datetime
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.dialects.postgresql import JSON
 import os
- 
+
 
 Base = declarative_base()
 
@@ -20,7 +29,8 @@ class ClusterMetrics(Base):
     __tablename__ = "cluster_metrics"
 
     id = Column(Integer, primary_key=True)
-
+    user_id = Column(Integer, nullable=True)
+    cluster_id = Column(Integer, nullable=True)
     # Cluster identification
     cluster_name = Column(String(100), nullable=False)
 
@@ -83,12 +93,13 @@ class ClusterMetrics(Base):
     # Record metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    # raw_api_response = Column(JSON)
+    raw_api_response = Column(JSON)
     unique_id = Column(String(100))
     query_params = Column(JSON)
     fetch_timestamp = Column(DateTime)
-    nodes = relationship("NodeMetrics", back_populates="cluster", cascade="all, delete-orphan")
-
+    nodes = relationship(
+        "NodeMetrics", back_populates="cluster", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         Index("idx_cluster_name_time", "cluster_name", "timestamp"),
@@ -100,8 +111,6 @@ class ClusterMetrics(Base):
     )
 
 
-
-
 # ================================
 # NodeMetrics Table
 # ================================
@@ -109,8 +118,8 @@ class NodeMetrics(Base):
     __tablename__ = "node_metrics"
 
     id = Column(Integer, primary_key=True)
-    cluster_id = Column(Integer, ForeignKey("cluster_metrics.id"), nullable=False)  
-    
+    cluster_id = Column(Integer, ForeignKey("cluster_metrics.id"), nullable=False)
+    user_id = Column(Integer, nullable=False)
     # Node identification
     node_name = Column(String(255), nullable=False)
     cluster_name = Column(String(100), nullable=False)
@@ -179,7 +188,9 @@ class NodeMetrics(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     cluster = relationship("ClusterMetrics", back_populates="nodes")
-    pods = relationship("PodMetrics", back_populates="node", cascade="all, delete-orphan")
+    pods = relationship(
+        "PodMetrics", back_populates="node", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         Index("idx_node_name_time", "node_name", "timestamp"),
@@ -200,7 +211,6 @@ class NodeMetrics(Base):
     )
 
 
-
 # ================================
 # PodMetrics Table
 # ================================
@@ -208,12 +218,13 @@ class PodMetrics(Base):
     __tablename__ = "pod_metrics"
 
     id = Column(Integer, primary_key=True)
-    node_id = Column(Integer, ForeignKey("node_metrics.id"), nullable=True)  
-    
+    node_id = Column(Integer, ForeignKey("node_metrics.id"), nullable=True)
+    user_id = Column(Integer, nullable=True)
+    cluster_id = Column(Integer, nullable=True)
     # Identification
     key = Column(String(255), nullable=False)
-    namespace = Column(String(100), nullable=True)   # Added (index exists)
-    name = Column(String(100), nullable=True)        # Added (index exists)
+    namespace = Column(String(100), nullable=True)  # Added (index exists)
+    name = Column(String(100), nullable=True)  # Added (index exists)
 
     # Time window
     start_time = Column(DateTime, nullable=False)
@@ -267,7 +278,7 @@ class PodMetrics(Base):
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    # raw_allocation_data = Column(JSON, nullable=True)
+    raw_allocation_data = Column(JSON, nullable=True)
     node = relationship("NodeMetrics", back_populates="pods")
     __table_args__ = (
         Index("idx_pod_key_window", "key", "window"),
@@ -275,7 +286,9 @@ class PodMetrics(Base):
         Index("idx_pod_time_window", "start_time", "end_time", "window"),
         Index("idx_pod_domain_window", "domain", "window"),
         Index("idx_pod_costs", "total_cost", "cpu_cost", "ram_cost"),
-        Index("idx_pod_efficiency", "total_efficiency", "cpu_efficiency", "ram_efficiency"),
+        Index(
+            "idx_pod_efficiency", "total_efficiency", "cpu_efficiency", "ram_efficiency"
+        ),
         Index("idx_pod_idle", "is_idle"),
     )
 
@@ -288,19 +301,19 @@ class DatabaseManager:
         self.SessionLocal = sessionmaker(
             autocommit=False, autoflush=False, bind=self.engine
         )
- 
+
     def create_tables(self):
         """Create all tables in the database"""
         Base.metadata.create_all(bind=self.engine)
- 
+
     def get_session(self):
         """Get a database session"""
         return self.SessionLocal()
- 
+
     # def drop_tables(self):
     #     """Drop all tables (use with caution!)"""
     #     Base.metadata.drop_all(bind=self.engine)
- 
- 
+
+
 # Initialize database manager
 db_manager = DatabaseManager()

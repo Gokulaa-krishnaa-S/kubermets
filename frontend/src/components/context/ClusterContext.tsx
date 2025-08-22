@@ -35,9 +35,10 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
     const fetchInstances = async () => {
       try {
         const data = await ClusterService.getInstanceList();
-        if (data?.instances?.length) {
-          setInstances(data.instances);
-          setSelectedInstance(data.instances[0]); // default select first
+        console.log(data, "-----------");
+        if (data?.data?.length) {
+          setInstances(data.data);
+          setSelectedInstance(data.data[0]); // default select first
         }
       } catch (error) {
         console.error("Error fetching instances:", error);

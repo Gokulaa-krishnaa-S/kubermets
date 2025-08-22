@@ -4,7 +4,7 @@ from models.model import db_manager
 from sqlalchemy import desc, asc
 from datetime import datetime, timedelta
 import os
-from service.data_service import generate_uuid 
+from service.data_service import generate_uuid
 
 
 UPLOAD_FOLDER = "uploads/providers"
@@ -477,6 +477,8 @@ def fetch_metrics():
     try:
         # Extract snapshots from the JSON
         snapshots = data.get("snapshots", [])
+        user_id = data.get("user_id")
+        cluster_id = data.get("cluster_id")
 
         for snapshot in snapshots:
             allocations = snapshot.get("allocations", {})
@@ -489,7 +491,7 @@ def fetch_metrics():
                     # Process all allocations including idle for cluster metrics
                     # Create ClusterMetrics entry
                     cluster_entry = {
-                        "unique_id" : unique_id,
+                        "unique_id": unique_id,
                         "cluster_name": allocation_data.get("cluster_name"),
                         "timestamp": allocation_data.get("timestamp"),
                         "window_start": allocation_data.get("window_start"),
@@ -555,7 +557,9 @@ def fetch_metrics():
                         ),
                         "query_params": allocation_data.get("query_params"),
                         "fetch_timestamp": allocation_data.get("fetch_timestamp"),
-                        # "raw_api_response": allocation_data  # Store the full allocation data
+                        "cluster_id": cluster_id,
+                        "user_id": user_id,
+                        "raw_api_response": allocation_data,
                     }
 
                     cluster_obj = ClusterMetrics(**cluster_entry)
@@ -702,6 +706,8 @@ def fetch_metrics():
                                             "is_active": node_allocation.get(
                                                 "is_active", True
                                             ),
+                                            "cluster_id": cluster_id,
+                                            "user_id": user_id,
                                         }
 
                                         node_obj = NodeMetrics(**node_entry)
@@ -829,7 +835,9 @@ def fetch_metrics():
                                                             "domain": pod_allocation.get(
                                                                 "domain"
                                                             ),
-                                                            # "raw_allocation_data": pod_allocation  # Store the full pod data
+                                                            "cluster_id": cluster_id,
+                                                            "user_id": user_id,
+                                                            "raw_allocation_data": pod_allocation,  # Store the full pod data
                                                         }
 
                                                         pod_obj = PodMetrics(
