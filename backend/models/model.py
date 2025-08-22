@@ -84,6 +84,7 @@ class ClusterMetrics(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     # raw_api_response = Column(JSON)
+    unique_id = Column(String(100))
     query_params = Column(JSON)
     fetch_timestamp = Column(DateTime)
     nodes = relationship("NodeMetrics", back_populates="cluster", cascade="all, delete-orphan")

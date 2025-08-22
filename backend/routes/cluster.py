@@ -4,6 +4,8 @@ from models.model import db_manager
 from sqlalchemy import desc, asc
 from datetime import datetime, timedelta
 import os
+from service.data_service import generate_uuid 
+
 
 UPLOAD_FOLDER = "uploads/providers"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
@@ -471,7 +473,7 @@ def fetch_metrics():
 
     results = {"cluster_metrics": 0, "node_metrics": 0, "pod_metrics": 0, "errors": []}
     session = db_manager.get_session()
-
+    unique_id = generate_uuid()
     try:
         # Extract snapshots from the JSON
         snapshots = data.get("snapshots", [])
@@ -487,6 +489,7 @@ def fetch_metrics():
                     # Process all allocations including idle for cluster metrics
                     # Create ClusterMetrics entry
                     cluster_entry = {
+                        "unique_id" : unique_id,
                         "cluster_name": allocation_data.get("cluster_name"),
                         "timestamp": allocation_data.get("timestamp"),
                         "window_start": allocation_data.get("window_start"),

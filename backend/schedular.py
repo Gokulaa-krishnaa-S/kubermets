@@ -594,7 +594,10 @@ def fetch_kubecost_window(kubecost_url: str, window_minutes: int) -> Dict:
         "shareTenancyCosts": "true",
         "window": window_param,
     }
- 
+    
+    print("=============================")
+    print(params)
+    print("=============================")
     try:
         r = requests.get(f"{kubecost_url}/model/allocation/summary",
                          params=params, timeout=REQUEST_TIMEOUT_SEC)
