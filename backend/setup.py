@@ -6,10 +6,10 @@ from sqlalchemy import text, func
  
 load_dotenv()
 from models import db_manager
-from service.data_service import kubecost_service
-# from models import ClusterMetrics, NodeMetrics, PodMetrics  # ✅ updated schema
-from models.model import ClusterMetrics, NodeMetrics, PodMetrics  # ✅ ensure db_manager is imported
- 
+# from service.data_service import kubecost_service
+# from models import ClusterMetrics, NodeMetrics, PodMetrics  # 
+from models.model import ClusterMetrics, NodeMetrics, PodMetrics 
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 # alembic revision --autogenerate -m "Updates of metrics tables"

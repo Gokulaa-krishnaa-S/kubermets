@@ -83,9 +83,11 @@ class ClusterMetrics(Base):
     # Record metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    raw_api_response = Column(JSON)
+    # raw_api_response = Column(JSON)
     query_params = Column(JSON)
     fetch_timestamp = Column(DateTime)
+    nodes = relationship("NodeMetrics", back_populates="cluster", cascade="all, delete-orphan")
+
 
     __table_args__ = (
         Index("idx_cluster_name_time", "cluster_name", "timestamp"),
@@ -97,82 +99,6 @@ class ClusterMetrics(Base):
     )
 
 
-# ================================
-# PodMetrics Table
-# ================================
-class PodMetrics(Base):
-    __tablename__ = "pod_metrics"
-
-    id = Column(Integer, primary_key=True)
-
-    # Identification
-    key = Column(String(255), nullable=False)
-    namespace = Column(String(100), nullable=True)   # Added (index exists)
-    name = Column(String(100), nullable=True)        # Added (index exists)
-
-    # Time window
-    start_time = Column(DateTime, nullable=False)
-    end_time = Column(DateTime, nullable=False)
-    window = Column(String(10), nullable=False)
-
-    # CPU metrics
-    cpu_core_usage_average = Column(Float, default=0.0)
-    cpu_core_request_average = Column(Float, default=0.0)
-    cpu_cost = Column(Float, default=0.0)
-
-    # Memory metrics
-    ram_byte_usage_average = Column(Float, default=0.0)
-    ram_byte_request_average = Column(Float, default=0.0)
-    ram_cost = Column(Float, default=0.0)
-
-    # GPU metrics
-    gpu_cost = Column(Float, default=0.0)
-    gpu_cost_idle = Column(Float, default=0.0)
-    gpu_request_average = Column(Float, default=0.0)
-    gpu_usage_average = Column(Float, default=0.0)
-
-    # Storage
-    pv_cost = Column(Float, default=0.0)
-    pv_bytes = Column(Float, default=0.0)
-
-    # Additional costs
-    cpu_cost_idle = Column(Float, default=0.0)
-    ram_cost_idle = Column(Float, default=0.0)
-    external_cost = Column(Float, default=0.0)
-    load_balancer_cost = Column(Float, default=0.0)
-    network_cost = Column(Float, default=0.0)
-
-    # Cost breakdown
-    total_cost = Column(Float, default=0.0)
-    shared_cost = Column(Float, default=0.0)
-
-    # Derived fields
-    ram_usage_gb = Column(Float, default=0.0)
-    ram_request_gb = Column(Float, default=0.0)
-    cpu_efficiency = Column(Float, default=0.0)
-    ram_efficiency = Column(Float, default=0.0)
-    total_efficiency = Column(Float, default=0.0)
-
-    # Flags
-    is_idle = Column(Boolean, default=False)
-
-    # Query context
-    domain = Column(String(255), nullable=True)
-
-    # Metadata
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    raw_allocation_data = Column(JSON, nullable=True)
-
-    __table_args__ = (
-        Index("idx_pod_key_window", "key", "window"),
-        Index("idx_pod_namespace_name", "namespace", "name"),
-        Index("idx_pod_time_window", "start_time", "end_time", "window"),
-        Index("idx_pod_domain_window", "domain", "window"),
-        Index("idx_pod_costs", "total_cost", "cpu_cost", "ram_cost"),
-        Index("idx_pod_efficiency", "total_efficiency", "cpu_efficiency", "ram_efficiency"),
-        Index("idx_pod_idle", "is_idle"),
-    )
 
 
 # ================================
@@ -182,7 +108,8 @@ class NodeMetrics(Base):
     __tablename__ = "node_metrics"
 
     id = Column(Integer, primary_key=True)
-
+    cluster_id = Column(Integer, ForeignKey("cluster_metrics.id"), nullable=False)  
+    
     # Node identification
     node_name = Column(String(255), nullable=False)
     cluster_name = Column(String(100), nullable=False)
@@ -250,6 +177,8 @@ class NodeMetrics(Base):
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    cluster = relationship("ClusterMetrics", back_populates="nodes")
+    pods = relationship("PodMetrics", back_populates="node", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_node_name_time", "node_name", "timestamp"),
@@ -267,6 +196,86 @@ class NodeMetrics(Base):
         Index("idx_last_seen", "last_seen"),
         Index("idx_cluster_active_time", "cluster_name", "is_active", "timestamp"),
         Index("idx_node_window_active", "node_name", "window_duration", "is_active"),
+    )
+
+
+
+# ================================
+# PodMetrics Table
+# ================================
+class PodMetrics(Base):
+    __tablename__ = "pod_metrics"
+
+    id = Column(Integer, primary_key=True)
+    node_id = Column(Integer, ForeignKey("node_metrics.id"), nullable=True)  
+    
+    # Identification
+    key = Column(String(255), nullable=False)
+    namespace = Column(String(100), nullable=True)   # Added (index exists)
+    name = Column(String(100), nullable=True)        # Added (index exists)
+
+    # Time window
+    start_time = Column(DateTime, nullable=False)
+    end_time = Column(DateTime, nullable=False)
+    window = Column(String(10), nullable=False)
+
+    # CPU metrics
+    cpu_core_usage_average = Column(Float, default=0.0)
+    cpu_core_request_average = Column(Float, default=0.0)
+    cpu_cost = Column(Float, default=0.0)
+
+    # Memory metrics
+    ram_byte_usage_average = Column(Float, default=0.0)
+    ram_byte_request_average = Column(Float, default=0.0)
+    ram_cost = Column(Float, default=0.0)
+
+    # GPU metrics
+    gpu_cost = Column(Float, default=0.0)
+    gpu_cost_idle = Column(Float, default=0.0)
+    gpu_request_average = Column(Float, default=0.0)
+    gpu_usage_average = Column(Float, default=0.0)
+
+    # Storage
+    pv_cost = Column(Float, default=0.0)
+    pv_bytes = Column(Float, default=0.0)
+
+    # Additional costs
+    cpu_cost_idle = Column(Float, default=0.0)
+    ram_cost_idle = Column(Float, default=0.0)
+    external_cost = Column(Float, default=0.0)
+    load_balancer_cost = Column(Float, default=0.0)
+    network_cost = Column(Float, default=0.0)
+
+    # Cost breakdown
+    total_cost = Column(Float, default=0.0)
+    shared_cost = Column(Float, default=0.0)
+
+    # Derived fields
+    ram_usage_gb = Column(Float, default=0.0)
+    ram_request_gb = Column(Float, default=0.0)
+    cpu_efficiency = Column(Float, default=0.0)
+    ram_efficiency = Column(Float, default=0.0)
+    total_efficiency = Column(Float, default=0.0)
+
+    # Flags
+    is_idle = Column(Boolean, default=False)
+
+    # Query context
+    domain = Column(String(255), nullable=True)
+
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    # raw_allocation_data = Column(JSON, nullable=True)
+    node = relationship("NodeMetrics", back_populates="pods")
+    __table_args__ = (
+        Index("idx_pod_key_window", "key", "window"),
+        Index("idx_pod_namespace_name", "namespace", "name"),
+        Index("idx_pod_time_window", "start_time", "end_time", "window"),
+        Index("idx_pod_domain_window", "domain", "window"),
+        Index("idx_pod_costs", "total_cost", "cpu_cost", "ram_cost"),
+        Index("idx_pod_efficiency", "total_efficiency", "cpu_efficiency", "ram_efficiency"),
+        Index("idx_pod_idle", "is_idle"),
     )
 
 

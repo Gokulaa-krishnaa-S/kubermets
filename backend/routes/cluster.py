@@ -50,15 +50,15 @@ def getPodDetail():
     # ...existing code...
     pass
 
-
 # ================================
 # Bulk Metrics Ingestion Endpoint
 # ================================
 @clusters_bp.route("/fetchMetrics", methods=["POST"])
 def fetch_metrics():
     """
-    Bulk insert metrics for clusters, nodes, and pods.
-    Expects JSON with keys: cluster_metrics, node_metrics, pod_metrics (each a list of dicts).
+    Bulk insert metrics for clusters, nodes, and pods from nested JSON structure.
+    Expects JSON with user_id, cluster_id, and snapshots array.
+    Creates proper relationships between cluster -> nodes -> pods.
     """
     data = request.get_json()
     if not data:
@@ -66,46 +66,199 @@ def fetch_metrics():
 
     results = {"cluster_metrics": 0, "node_metrics": 0, "pod_metrics": 0, "errors": []}
     session = db_manager.get_session()
+    
     try:
-        # ClusterMetrics
-        cluster_metrics = data.get("cluster_metrics", [])
-        for entry in cluster_metrics:
-            try:
-                obj = ClusterMetrics(**entry)
-                session.add(obj)
-                results["cluster_metrics"] += 1
-            except Exception as e:
-                results["errors"].append(f"ClusterMetrics: {str(e)}")
-
-        # NodeMetrics
-        node_metrics = data.get("node_metrics", [])
-        for entry in node_metrics:
-            try:
-                obj = NodeMetrics(**entry)
-                session.add(obj)
-                results["node_metrics"] += 1
-            except Exception as e:
-                results["errors"].append(f"NodeMetrics: {str(e)}")
-
-        # PodMetrics
-        pod_metrics = data.get("pod_metrics", [])
-        for entry in pod_metrics:
-            try:
-                obj = PodMetrics(**entry)
-                session.add(obj)
-                results["pod_metrics"] += 1
-            except Exception as e:
-                results["errors"].append(f"PodMetrics: {str(e)}")
-
+        # Extract snapshots from the JSON
+        snapshots = data.get("snapshots", [])
+        
+        for snapshot in snapshots:
+            allocations = snapshot.get("allocations", {})
+            window_info = snapshot.get("window", {})
+            
+            for allocation_key, allocation_data in allocations.items():
+                cluster_obj = None
+                
+                try:
+                    # Process all allocations including idle for cluster metrics
+                    # Create ClusterMetrics entry
+                    cluster_entry = {
+                        "cluster_name": allocation_data.get("cluster_name"),
+                        "timestamp": allocation_data.get("timestamp"),
+                        "window_start": allocation_data.get("window_start"),
+                        "window_end": allocation_data.get("window_end"),
+                        "window_duration": allocation_data.get("window_duration"),
+                        "total_cost": allocation_data.get("total_cost", 0.0),
+                        "cpu_cost": allocation_data.get("cpu_cost", 0.0),
+                        "cpu_cost_idle": allocation_data.get("cpu_cost_idle", 0.0),
+                        "ram_cost": allocation_data.get("ram_cost", 0.0),
+                        "ram_cost_idle": allocation_data.get("ram_cost_idle", 0.0),
+                        "pv_cost": allocation_data.get("pv_cost", 0.0),
+                        "network_cost": allocation_data.get("network_cost", 0.0),
+                        "gpu_cost": allocation_data.get("gpu_cost", 0.0),
+                        "gpu_cost_idle": allocation_data.get("gpu_cost_idle", 0.0),
+                        "load_balancer_cost": allocation_data.get("load_balancer_cost", 0.0),
+                        "external_cost": allocation_data.get("external_cost", 0.0),
+                        "shared_cost": allocation_data.get("shared_cost", 0.0),
+                        "cpu_core_request_average": allocation_data.get("cpu_core_request_average", 0.0),
+                        "cpu_core_usage_average": allocation_data.get("cpu_core_usage_average", 0.0),
+                        "ram_byte_request_average": allocation_data.get("ram_byte_request_average", 0.0),
+                        "ram_byte_usage_average": allocation_data.get("ram_byte_usage_average", 0.0),
+                        "gpu_request_average": allocation_data.get("gpu_request_average", 0.0),
+                        "gpu_usage_average": allocation_data.get("gpu_usage_average", 0.0),
+                        "total_efficiency": allocation_data.get("total_efficiency", 0.0),
+                        "cpu_usage_percent": allocation_data.get("cpu_usage_percent", 0.0),
+                        "memory_usage_percent": allocation_data.get("memory_usage_percent", 0.0),
+                        "memory_gb_used": allocation_data.get("memory_gb_used", 0.0),
+                        "memory_gb_requested": allocation_data.get("memory_gb_requested", 0.0),
+                        "efficiency_percent": allocation_data.get("efficiency_percent", 0.0),
+                        "cluster_status": allocation_data.get("cluster_status"),
+                        "cluster_version": allocation_data.get("cluster_version"),
+                        "node_count": allocation_data.get("node_count"),
+                        "pod_count": allocation_data.get("pod_count"),
+                        "efficiency_category": allocation_data.get("efficiency_category"),
+                        "is_idle_allocation": allocation_data.get("is_idle_allocation", False),
+                        "query_params": allocation_data.get("query_params"),
+                        "fetch_timestamp": allocation_data.get("fetch_timestamp"),
+                        # "raw_api_response": allocation_data  # Store the full allocation data
+                    }
+                    
+                    cluster_obj = ClusterMetrics(**cluster_entry)
+                    session.add(cluster_obj)
+                    session.flush()  # This assigns the ID to cluster_obj
+                    results["cluster_metrics"] += 1
+                
+                    # Process node data if available (only for non-idle cluster allocations)
+                    if allocation_key != "__idle__":
+                        node_data = allocation_data.get("node_data", {})
+                        if node_data and node_data.get("data"):
+                            node_sets = node_data["data"].get("sets", [])
+                            
+                            for node_set in node_sets:
+                                node_allocations = node_set.get("allocations", {})
+                                
+                                for node_key, node_allocation in node_allocations.items():
+                                    node_obj = None
+                                    
+                                    try:
+                                        # Create NodeMetrics entry with cluster_id foreign key
+                                        node_entry = {
+                                            "cluster_id": cluster_obj.id,  # Foreign key to cluster
+                                            "node_name": node_allocation.get("node_name"),
+                                            "cluster_name": node_allocation.get("cluster_name"),
+                                            "timestamp": node_allocation.get("timestamp"),
+                                            "window_start": node_allocation.get("window_start"),
+                                            "window_end": node_allocation.get("window_end"),
+                                            "window_duration": node_allocation.get("window_duration"),
+                                            "total_cost": node_allocation.get("total_cost", 0.0),
+                                            "cpu_cost": node_allocation.get("cpu_cost", 0.0),
+                                            "cpu_cost_idle": node_allocation.get("cpu_cost_idle", 0.0),
+                                            "ram_cost": node_allocation.get("ram_cost", 0.0),
+                                            "ram_cost_idle": node_allocation.get("ram_cost_idle", 0.0),
+                                            "pv_cost": node_allocation.get("pv_cost", 0.0),
+                                            "network_cost": node_allocation.get("network_cost", 0.0),
+                                            "gpu_cost": node_allocation.get("gpu_cost", 0.0),
+                                            "gpu_cost_idle": node_allocation.get("gpu_cost_idle", 0.0),
+                                            "load_balancer_cost": node_allocation.get("load_balancer_cost", 0.0),
+                                            "external_cost": node_allocation.get("external_cost", 0.0),
+                                            "shared_cost": node_allocation.get("shared_cost", 0.0),
+                                            "cpu_core_request_average": node_allocation.get("cpu_core_request_average", 0.0),
+                                            "cpu_core_usage_average": node_allocation.get("cpu_core_usage_average", 0.0),
+                                            "ram_byte_request_average": node_allocation.get("ram_byte_request_average", 0.0),
+                                            "ram_byte_usage_average": node_allocation.get("ram_byte_usage_average", 0.0),
+                                            "gpu_request_average": node_allocation.get("gpu_request_average", 0.0),
+                                            "gpu_usage_average": node_allocation.get("gpu_usage_average", 0.0),
+                                            "total_efficiency": node_allocation.get("total_efficiency", 0.0),
+                                            "cpu_usage_percent": node_allocation.get("cpu_usage_percent", 0.0),
+                                            "memory_usage_percent": node_allocation.get("memory_usage_percent", 0.0),
+                                            "memory_gb_used": node_allocation.get("memory_gb_used", 0.0),
+                                            "memory_gb_requested": node_allocation.get("memory_gb_requested", 0.0),
+                                            "efficiency_percent": node_allocation.get("efficiency_percent", 0.0),
+                                            "node_status": node_allocation.get("node_status"),
+                                            "node_health_score": node_allocation.get("node_health_score"),
+                                            "node_instance_type": node_allocation.get("node_instance_type"),
+                                            "node_zone": node_allocation.get("node_zone"),
+                                            "is_idle_allocation": node_allocation.get("is_idle_allocation", False),
+                                            "is_unallocated": node_allocation.get("is_unallocated", False),
+                                            "is_system_allocation": node_allocation.get("is_system_allocation", False),
+                                            "first_seen": node_allocation.get("first_seen"),
+                                            "last_seen": node_allocation.get("last_seen"),
+                                            "is_active": node_allocation.get("is_active", True)
+                                        }
+                                        
+                                        node_obj = NodeMetrics(**node_entry)
+                                        session.add(node_obj)
+                                        session.flush()  # This assigns the ID to node_obj
+                                        results["node_metrics"] += 1
+                                        
+                                        # Process pod data if available
+                                        pod_data = node_allocation.get("pod_data", {})
+                                        if pod_data and pod_data.get("data"):
+                                            pod_sets = pod_data["data"].get("sets", [])
+                                            
+                                            for pod_set in pod_sets:
+                                                pod_allocations = pod_set.get("allocations", {})
+                                                
+                                                for pod_key, pod_allocation in pod_allocations.items():
+                                                    try:
+                                                        # Create PodMetrics entry with node_id foreign key
+                                                        pod_entry = {
+                                                            "node_id": node_obj.id,  # Foreign key to node
+                                                            "key": pod_allocation.get("key"),
+                                                            "namespace": pod_allocation.get("namespace"),
+                                                            "name": pod_allocation.get("name"),
+                                                            "start_time": pod_allocation.get("start_time"),
+                                                            "end_time": pod_allocation.get("end_time"),
+                                                            "window": pod_allocation.get("window"),
+                                                            "cpu_core_usage_average": pod_allocation.get("cpu_core_usage_average", 0.0),
+                                                            "cpu_core_request_average": pod_allocation.get("cpu_core_request_average", 0.0),
+                                                            "cpu_cost": pod_allocation.get("cpu_cost", 0.0),
+                                                            "ram_byte_usage_average": pod_allocation.get("ram_byte_usage_average", 0.0),
+                                                            "ram_byte_request_average": pod_allocation.get("ram_byte_request_average", 0.0),
+                                                            "ram_cost": pod_allocation.get("ram_cost", 0.0),
+                                                            "gpu_cost": pod_allocation.get("gpu_cost", 0.0),
+                                                            "gpu_cost_idle": pod_allocation.get("gpu_cost_idle", 0.0),
+                                                            "gpu_request_average": pod_allocation.get("gpu_request_average", 0.0),
+                                                            "gpu_usage_average": pod_allocation.get("gpu_usage_average", 0.0),
+                                                            "pv_cost": pod_allocation.get("pv_cost", 0.0),
+                                                            "pv_bytes": pod_allocation.get("pv_bytes"),
+                                                            "cpu_cost_idle": pod_allocation.get("cpu_cost_idle", 0.0),
+                                                            "ram_cost_idle": pod_allocation.get("ram_cost_idle", 0.0),
+                                                            "external_cost": pod_allocation.get("external_cost", 0.0),
+                                                            "load_balancer_cost": pod_allocation.get("load_balancer_cost", 0.0),
+                                                            "network_cost": pod_allocation.get("network_cost", 0.0),
+                                                            "total_cost": pod_allocation.get("total_cost", 0.0),
+                                                            "shared_cost": pod_allocation.get("shared_cost", 0.0),
+                                                            "ram_usage_gb": pod_allocation.get("ram_usage_gb", 0.0),
+                                                            "ram_request_gb": pod_allocation.get("ram_request_gb", 0.0),
+                                                            "cpu_efficiency": pod_allocation.get("cpu_efficiency", 0.0),
+                                                            "ram_efficiency": pod_allocation.get("ram_efficiency", 0.0),
+                                                            "total_efficiency": pod_allocation.get("total_efficiency", 0.0),
+                                                            "is_idle": pod_allocation.get("is_idle", False),
+                                                            "domain": pod_allocation.get("domain"),
+                                                            # "raw_allocation_data": pod_allocation  # Store the full pod data
+                                                        }
+                                                        
+                                                        pod_obj = PodMetrics(**pod_entry)
+                                                        session.add(pod_obj)
+                                                        results["pod_metrics"] += 1
+                                                        
+                                                    except Exception as e:
+                                                        results["errors"].append(f"PodMetrics {pod_key}: {str(e)}")
+                                                        
+                                    except Exception as e:
+                                        results["errors"].append(f"NodeMetrics {node_key}: {str(e)}")
+                        
+                except Exception as e:
+                    results["errors"].append(f"ClusterMetrics {allocation_key}: {str(e)}")
+        
         session.commit()
-        return jsonify({"message": "Metrics ingested", **results}), 201
+        return jsonify({"message": "Metrics ingested successfully", **results}), 201
+        
     except Exception as e:
         session.rollback()
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Failed to process metrics: {str(e)}"}, **results), 500
     finally:
         session.close()
-   
-
 
 # @clusters_bp.route("/dashboard/summary", methods=["GET"])
 # def dashboard_summary():
