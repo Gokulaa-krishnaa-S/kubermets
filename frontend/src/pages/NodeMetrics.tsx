@@ -32,6 +32,7 @@ import DomainDropdown from "@/components/reusable/domainDropdown";
 
 import { NodeMetricsLoader } from "@/components/loader/nodeloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
+import NodeService from "@/services/NodeService";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
@@ -78,7 +79,12 @@ const NodeMetricsDashboard = () => {
 
   const handleCallNodeData = async (params) => {
     try {
-      const response = await ClusterService.getClusterAllocationSummary(params);
+      const queryParams = {
+        cluster_id: 1,
+        duration: "24h",
+      };
+
+      const response = await NodeService.getNodeAllocationSummary(queryParams);
       return response.data;
     } catch (error) {
       console.error("Failed to fetch cluster summary", error);
@@ -90,37 +96,36 @@ const NodeMetricsDashboard = () => {
     async (queryParams) => {
       try {
         setIsLoadingData(true);
-
         const response = await handleCallNodeData(queryParams);
 
-        if (response.code !== 200 || !response.data?.sets?.[0]?.allocations) {
+        if (!response) {
           throw new Error("Invalid response format");
         }
 
-        const allocations = response.data.sets[0].allocations;
-        const activeNodes: any = Object.values(allocations).filter(
+        const allocations = response;
+        const activeNodes = allocations.filter(
           (node) =>
-            !node["name"].startsWith("__") &&
-            node["cpuCoreRequestAverage"] !== undefined
+            !node.node_name.startsWith("__") &&
+            node.cpu_core_request_average !== undefined
         );
 
         const totalNodes = activeNodes.length;
         const totalCost = activeNodes.reduce(
-          (sum, node) => sum + (node["totalCost"] || 0),
+          (sum, node) => sum + (node.total_cost || 0),
           0
         );
 
         const avgCpuUsage =
           activeNodes.reduce((sum, node) => {
             const usage =
-              (node["cpuCoreUsageAverage"] || 0) /
-              (node["cpuCoreRequestAverage"] || 1);
+              (node.cpu_core_usage_average || 0) /
+              (node.cpu_core_request_average || 1);
             return sum + (isNaN(usage) ? 0 : usage);
           }, 0) / totalNodes;
 
         const avgEfficiency =
           activeNodes.reduce(
-            (sum, node) => sum + (node["totalEfficiency"] || 0),
+            (sum, node) => sum + (node.total_efficiency * 100 || 0),
             0
           ) / totalNodes;
 
@@ -132,21 +137,19 @@ const NodeMetricsDashboard = () => {
         });
 
         const processedNodes = activeNodes.map((node) => {
-          const cpuRequest = node["cpuCoreRequestAverage"] || 0;
-          const cpuUsage = node["cpuCoreUsageAverage"] || 0;
+          const cpuRequest = node.cpu_core_request_average || 0;
+          const cpuUsage = node.cpu_core_usage_average || 0;
           const cpuUtilization =
             cpuRequest > 0 ? (cpuUsage / cpuRequest) * 100 : 0;
 
-          const ramUsageBytes = node["ramByteUsageAverage"] || 0;
-          const ramRequestBytes = node["ramByteRequestAverage"] || 0;
-          const ramUtilizationGB = ramUsageBytes / 1024 ** 3;
-          const ramRequestGB = ramRequestBytes / 1024 ** 3;
+          const ramUsageGB = node.memory_gb_used || 0;
+          const ramRequestGB = node.memory_gb_requested || 0;
           const ramUtilization =
-            ramRequestBytes > 0
-              ? Math.min((ramUsageBytes / ramRequestBytes) * 100, 100)
+            ramRequestGB > 0
+              ? Math.min((ramUsageGB / ramRequestGB) * 100, 100)
               : 0;
 
-          let status = "healthy";
+          let status = node.node_status.toLowerCase();
           if (
             cpuUtilization > thresholds.cpuCritical ||
             ramUtilization > thresholds.ramCritical
@@ -160,19 +163,19 @@ const NodeMetricsDashboard = () => {
           }
 
           return {
-            name: node["name"],
+            name: node.node_name,
             status,
             cpuCores: cpuRequest.toFixed(1),
             cpuUsage: cpuUtilization.toFixed(1),
             ramRequest: ramRequestGB.toFixed(2),
-            ramUsage: ramUtilizationGB.toFixed(2),
+            ramUsage: ramUsageGB.toFixed(2),
             ramUtilization: ramUtilization.toFixed(1),
-            totalCost: (node["totalCost"] || 0).toFixed(2),
-            cpuCost: (node["cpuCost"] || 0).toFixed(2),
-            ramCost: (node["ramCost"] || 0).toFixed(2),
-            pvCost: (node["pvCost"] || 0).toFixed(2),
-            efficiency: (node["totalEfficiency"] || 0).toFixed(2),
-            uptime: calculateUptime(node["start"] || "", node["end"] || ""),
+            totalCost: node.total_cost.toFixed(2),
+            cpuCost: node.cpu_cost.toFixed(2),
+            ramCost: node.ram_cost.toFixed(2),
+            pvCost: node.pv_cost.toFixed(2),
+            efficiency: (node.total_efficiency * 100).toFixed(2),
+            uptime: calculateUptime(node.first_seen, node.last_seen),
           };
         });
 
@@ -181,7 +184,6 @@ const NodeMetricsDashboard = () => {
         console.error("Failed to fetch node data:", err);
         setError("Unable to fetch node data.");
         setNodeData([]);
-        // setSummaryStats({});
       } finally {
         setLoading(false);
         setIsLoadingData(false);
@@ -190,6 +192,110 @@ const NodeMetricsDashboard = () => {
     },
     [thresholds]
   );
+  // const fetchNodeData = useCallback(
+  //   async (queryParams) => {
+  //     try {
+  //       setIsLoadingData(true);
+
+  //       const response = await handleCallNodeData(queryParams);
+
+  //       if (response.code !== 200 || !response.data?.sets?.[0]?.allocations) {
+  //         throw new Error("Invalid response format");
+  //       }
+
+  //       const allocations = response.data.sets[0].allocations;
+  //       const activeNodes: any = Object.values(allocations).filter(
+  //         (node) =>
+  //           !node["name"].startsWith("__") &&
+  //           node["cpuCoreRequestAverage"] !== undefined
+  //       );
+
+  //       const totalNodes = activeNodes.length;
+  //       const totalCost = activeNodes.reduce(
+  //         (sum, node) => sum + (node["totalCost"] || 0),
+  //         0
+  //       );
+
+  //       const avgCpuUsage =
+  //         activeNodes.reduce((sum, node) => {
+  //           const usage =
+  //             (node["cpuCoreUsageAverage"] || 0) /
+  //             (node["cpuCoreRequestAverage"] || 1);
+  //           return sum + (isNaN(usage) ? 0 : usage);
+  //         }, 0) / totalNodes;
+
+  //       const avgEfficiency =
+  //         activeNodes.reduce(
+  //           (sum, node) => sum + (node["totalEfficiency"] || 0),
+  //           0
+  //         ) / totalNodes;
+
+  //       setSummaryStats({
+  //         totalNodes,
+  //         totalCost,
+  //         avgCpuUsage: avgCpuUsage * 100,
+  //         avgEfficiency,
+  //       });
+
+  //       const processedNodes = activeNodes.map((node) => {
+  //         const cpuRequest = node["cpuCoreRequestAverage"] || 0;
+  //         const cpuUsage = node["cpuCoreUsageAverage"] || 0;
+  //         const cpuUtilization =
+  //           cpuRequest > 0 ? (cpuUsage / cpuRequest) * 100 : 0;
+
+  //         const ramUsageBytes = node["ramByteUsageAverage"] || 0;
+  //         const ramRequestBytes = node["ramByteRequestAverage"] || 0;
+  //         const ramUtilizationGB = ramUsageBytes / 1024 ** 3;
+  //         const ramRequestGB = ramRequestBytes / 1024 ** 3;
+  //         const ramUtilization =
+  //           ramRequestBytes > 0
+  //             ? Math.min((ramUsageBytes / ramRequestBytes) * 100, 100)
+  //             : 0;
+
+  //         let status = "healthy";
+  //         if (
+  //           cpuUtilization > thresholds.cpuCritical ||
+  //           ramUtilization > thresholds.ramCritical
+  //         ) {
+  //           status = "critical";
+  //         } else if (
+  //           cpuUtilization > thresholds.cpuWarning ||
+  //           ramUtilization > thresholds.ramWarning
+  //         ) {
+  //           status = "warning";
+  //         }
+
+  //         return {
+  //           name: node["name"],
+  //           status,
+  //           cpuCores: cpuRequest.toFixed(1),
+  //           cpuUsage: cpuUtilization.toFixed(1),
+  //           ramRequest: ramRequestGB.toFixed(2),
+  //           ramUsage: ramUtilizationGB.toFixed(2),
+  //           ramUtilization: ramUtilization.toFixed(1),
+  //           totalCost: (node["totalCost"] || 0).toFixed(2),
+  //           cpuCost: (node["cpuCost"] || 0).toFixed(2),
+  //           ramCost: (node["ramCost"] || 0).toFixed(2),
+  //           pvCost: (node["pvCost"] || 0).toFixed(2),
+  //           efficiency: (node["totalEfficiency"] || 0).toFixed(2),
+  //           uptime: calculateUptime(node["start"] || "", node["end"] || ""),
+  //         };
+  //       });
+
+  //       setNodeData(processedNodes);
+  //     } catch (err) {
+  //       console.error("Failed to fetch node data:", err);
+  //       setError("Unable to fetch node data.");
+  //       setNodeData([]);
+  //       // setSummaryStats({});
+  //     } finally {
+  //       setLoading(false);
+  //       setIsLoadingData(false);
+  //       setIsInitialLoading(false);
+  //     }
+  //   },
+  //   [thresholds]
+  // );
 
   const LoadingBanner = ({ message }: { message: string }) => (
     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -434,9 +540,8 @@ const NodeMetricsDashboard = () => {
 
     return (
       <Card
-        className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${
-          statusColors[status] || statusColors.info
-        }`}
+        className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${statusColors[status] || statusColors.info
+          }`}
       >
         <CardContent className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-3">
@@ -503,8 +608,8 @@ const NodeMetricsDashboard = () => {
       status === "healthy"
         ? "#10b981"
         : status === "warning"
-        ? "#f59e0b"
-        : "#ef4444",
+          ? "#f59e0b"
+          : "#ef4444",
   }));
 
   // Pagination logic
@@ -603,13 +708,12 @@ const NodeMetricsDashboard = () => {
                   typeof page === "number" && handlePageChange(page)
                 }
                 disabled={page === "..."}
-                className={`px-3 py-1 text-sm border rounded transition-colors ${
-                  page === currentPage
+                className={`px-3 py-1 text-sm border rounded transition-colors ${page === currentPage
                     ? "bg-primary text-primary-foreground border-primary"
                     : page === "..."
-                    ? "border-transparent cursor-default"
-                    : "border-border bg-background text-foreground hover:bg-muted"
-                }`}
+                      ? "border-transparent cursor-default"
+                      : "border-border bg-background text-foreground hover:bg-muted"
+                  }`}
               >
                 {page}
               </button>
@@ -644,21 +748,21 @@ const NodeMetricsDashboard = () => {
         {/* {isLoadingData ? (
           <LoadingBanner message="Loading cluster data..." />
         ) : ( */}
-          <FilterBar
-            selectedTimeRange={timeRange}
-            onTimeRangeChange={handleTimeRangeChange}
-            timeRangeVariant="select"
-            timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
-            onFilterClick={handleFilterClick}
-            showFilter={false}
-            onRefresh={refreshAllData}
-            refreshInterval={refreshInterval}
-            onRefreshIntervalChange={handleRefreshIntervalChange}
-            isRefreshing={isRefreshing}
-            lastUpdated={lastUpdated}
-            showRefresh={true}
-            className="mb-6"
-          />
+        <FilterBar
+          selectedTimeRange={timeRange}
+          onTimeRangeChange={handleTimeRangeChange}
+          timeRangeVariant="select"
+          timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
+          onFilterClick={handleFilterClick}
+          showFilter={false}
+          onRefresh={refreshAllData}
+          refreshInterval={refreshInterval}
+          onRefreshIntervalChange={handleRefreshIntervalChange}
+          isRefreshing={isRefreshing}
+          lastUpdated={lastUpdated}
+          showRefresh={true}
+          className="mb-6"
+        />
         {/* )} */}
 
         {/* Header */}
@@ -976,13 +1080,12 @@ const NodeMetricsDashboard = () => {
                         <span>Efficiency</span>
                       </div>
                       <div
-                        className={`font-medium ${
-                          parseFloat(node.efficiency) > 50
+                        className={`font-medium ${parseFloat(node.efficiency) > 50
                             ? "text-emerald-600"
                             : parseFloat(node.efficiency) > 30
-                            ? "text-amber-600"
-                            : "text-red-600"
-                        }`}
+                              ? "text-amber-600"
+                              : "text-red-600"
+                          }`}
                       >
                         {node.efficiency}%
                       </div>
@@ -1063,13 +1166,12 @@ const NodeMetricsDashboard = () => {
                       </td>
                       <td className="p-4">
                         <span
-                          className={`font-medium ${
-                            parseFloat(node.efficiency) > 50
+                          className={`font-medium ${parseFloat(node.efficiency) > 50
                               ? "text-emerald-600"
                               : parseFloat(node.efficiency) > 30
-                              ? "text-amber-600"
-                              : "text-red-600"
-                          }`}
+                                ? "text-amber-600"
+                                : "text-red-600"
+                            }`}
                         >
                           {node.efficiency}%
                         </span>
