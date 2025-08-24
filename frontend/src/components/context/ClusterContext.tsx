@@ -9,6 +9,7 @@ import React, {
 import ClusterService from "@/services/ClusterService";
 
 interface Instance {
+  cluster_id: unknown;
   id: number;
   name: string;
   client_name: string;

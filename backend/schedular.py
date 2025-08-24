@@ -530,7 +530,7 @@ def fetchPodData(kubecost_url: str, cluster: str, node: str) -> Dict:
         "shareNamespaces": "",
         "shareSplit": "weighted",
         "shareTenancyCosts": "true",
-        "window": "3h",
+        "window": "24h",
     }
 
     try:
@@ -566,7 +566,7 @@ def fetchNodeData(kubecost_url: str, cluster: str) -> Dict:
         "shareNamespaces": "",
         "shareSplit": "weighted",
         "shareTenancyCosts": "true",
-        "window": "3h",
+        "window": "24h",
     }
 
     try:
@@ -604,7 +604,7 @@ def fetch_kubecost_window(kubecost_url: str, window_minutes: int) -> Dict:
     """
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(minutes=window_minutes)
-    window_param = f"3h"
+    window_param = f"24h"
 
     params = {
         "accumulate": "true",
