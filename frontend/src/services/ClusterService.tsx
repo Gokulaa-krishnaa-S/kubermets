@@ -136,9 +136,24 @@ class ClusterService {
   /**
    * Fetch allocation summary for clusters using external query params
    */
+  // async getClusterAllocationSummary(queryParams: QueryParams): Promise<any> {
+  //   try {
+  //     const response: AxiosResponse = await this.api.get("/all", {
+  //       params: queryParams,
+  //     });
+  //     return response.data;
+  //   } catch (error) {
+  //     console.error("Error fetching cluster summary:", error);
+  //     throw error;
+  //   }
+  // }
+
+   /**
+   * Fetch allocation summary for clusters using external query params
+   */
   async getClusterAllocationSummary(queryParams: QueryParams): Promise<any> {
     try {
-      const response: AxiosResponse = await this.api.get("/all", {
+      const response: AxiosResponse = await this.api.get("/nodes", {
         params: queryParams,
       });
       return response.data;

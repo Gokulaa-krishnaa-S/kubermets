@@ -212,196 +212,196 @@ def fetch_cluster_metrics_from_db(filters, window_duration, limit, offset):
     return []
 
 
-@clusters_bp.route("/nodes", methods=["GET"])
-def get_node_metrics():
-    """
-    Get node metrics with optional filtering
-    Query params: node_name, cluster_name, window_duration, limit, offset, start_date, end_date
-    """
-    session = db_manager.get_session()
-    try:
-        query = session.query(NodeMetrics)
+# @clusters_bp.route("/nodes", methods=["GET"])
+# def get_node_metrics():
+#     """
+#     Get node metrics with optional filtering
+#     Query params: node_name, cluster_name, window_duration, limit, offset, start_date, end_date
+#     """
+#     session = db_manager.get_session()
+#     try:
+#         query = session.query(NodeMetrics)
 
-        # Apply filters
-        node_name = request.args.get("node_name")
-        if node_name:
-            query = query.filter(NodeMetrics.node_name == node_name)
+#         # Apply filters
+#         node_name = request.args.get("node_name")
+#         if node_name:
+#             query = query.filter(NodeMetrics.node_name == node_name)
 
-        cluster_name = request.args.get("cluster_name")
-        if cluster_name:
-            query = query.filter(NodeMetrics.cluster_name == cluster_name)
+#         cluster_name = request.args.get("cluster_name")
+#         if cluster_name:
+#             query = query.filter(NodeMetrics.cluster_name == cluster_name)
 
-        window_duration = request.args.get("window_duration")
-        if window_duration:
-            query = query.filter(NodeMetrics.window_duration == window_duration)
+#         window_duration = request.args.get("window_duration")
+#         if window_duration:
+#             query = query.filter(NodeMetrics.window_duration == window_duration)
 
-        start_date = request.args.get("start_date")
-        if start_date:
-            start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-            query = query.filter(NodeMetrics.timestamp >= start_date)
+#         start_date = request.args.get("start_date")
+#         if start_date:
+#             start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+#             query = query.filter(NodeMetrics.timestamp >= start_date)
 
-        end_date = request.args.get("end_date")
-        if end_date:
-            end_date = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-            query = query.filter(NodeMetrics.timestamp <= end_date)
+#         end_date = request.args.get("end_date")
+#         if end_date:
+#             end_date = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+#             query = query.filter(NodeMetrics.timestamp <= end_date)
 
-        # Pagination
-        limit = int(request.args.get("limit", 100))
-        offset = int(request.args.get("offset", 0))
+#         # Pagination
+#         limit = int(request.args.get("limit", 100))
+#         offset = int(request.args.get("offset", 0))
 
-        # Order by timestamp desc
-        query = query.order_by(desc(NodeMetrics.timestamp))
+#         # Order by timestamp desc
+#         query = query.order_by(desc(NodeMetrics.timestamp))
 
-        total_count = query.count()
-        metrics = query.limit(limit).offset(offset).all()
+#         total_count = query.count()
+#         metrics = query.limit(limit).offset(offset).all()
 
-        result = []
-        for metric in metrics:
-            result.append(
-                {
-                    "id": metric.id,
-                    "node_name": metric.node_name,
-                    "cluster_name": metric.cluster_name,
-                    "timestamp": (
-                        metric.timestamp.isoformat() if metric.timestamp else None
-                    ),
-                    "window_start": (
-                        metric.window_start.isoformat() if metric.window_start else None
-                    ),
-                    "window_end": (
-                        metric.window_end.isoformat() if metric.window_end else None
-                    ),
-                    "window_duration": metric.window_duration,
-                    "total_cost": metric.total_cost,
-                    "cpu_cost": metric.cpu_cost,
-                    "ram_cost": metric.ram_cost,
-                    "cpu_core_usage_average": metric.cpu_core_usage_average,
-                    "cpu_core_request_average": metric.cpu_core_request_average,
-                    "ram_byte_usage_average": metric.ram_byte_usage_average,
-                    "ram_byte_request_average": metric.ram_byte_request_average,
-                    "total_efficiency": metric.total_efficiency,
-                    "cpu_usage_percent": metric.cpu_usage_percent,
-                    "memory_usage_percent": metric.memory_usage_percent,
-                    "node_status": metric.node_status,
-                    "node_instance_type": metric.node_instance_type,
-                    "node_zone": metric.node_zone,
-                    "is_active": metric.is_active,
-                    "created_at": (
-                        metric.created_at.isoformat() if metric.created_at else None
-                    ),
-                }
-            )
+#         result = []
+#         for metric in metrics:
+#             result.append(
+#                 {
+#                     "id": metric.id,
+#                     "node_name": metric.node_name,
+#                     "cluster_name": metric.cluster_name,
+#                     "timestamp": (
+#                         metric.timestamp.isoformat() if metric.timestamp else None
+#                     ),
+#                     "window_start": (
+#                         metric.window_start.isoformat() if metric.window_start else None
+#                     ),
+#                     "window_end": (
+#                         metric.window_end.isoformat() if metric.window_end else None
+#                     ),
+#                     "window_duration": metric.window_duration,
+#                     "total_cost": metric.total_cost,
+#                     "cpu_cost": metric.cpu_cost,
+#                     "ram_cost": metric.ram_cost,
+#                     "cpu_core_usage_average": metric.cpu_core_usage_average,
+#                     "cpu_core_request_average": metric.cpu_core_request_average,
+#                     "ram_byte_usage_average": metric.ram_byte_usage_average,
+#                     "ram_byte_request_average": metric.ram_byte_request_average,
+#                     "total_efficiency": metric.total_efficiency,
+#                     "cpu_usage_percent": metric.cpu_usage_percent,
+#                     "memory_usage_percent": metric.memory_usage_percent,
+#                     "node_status": metric.node_status,
+#                     "node_instance_type": metric.node_instance_type,
+#                     "node_zone": metric.node_zone,
+#                     "is_active": metric.is_active,
+#                     "created_at": (
+#                         metric.created_at.isoformat() if metric.created_at else None
+#                     ),
+#                 }
+#             )
 
-        return (
-            jsonify(
-                {
-                    "data": result,
-                    "total_count": total_count,
-                    "limit": limit,
-                    "offset": offset,
-                }
-            ),
-            200,
-        )
+#         return (
+#             jsonify(
+#                 {
+#                     "data": result,
+#                     "total_count": total_count,
+#                     "limit": limit,
+#                     "offset": offset,
+#                 }
+#             ),
+#             200,
+#         )
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        session.close()
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+#     finally:
+#         session.close()
 
 
-@clusters_bp.route("/pods", methods=["GET"])
-def get_pod_metrics():
-    """
-    Get pod metrics with optional filtering
-    Query params: namespace, name, window, limit, offset, start_date, end_date
-    """
-    session = db_manager.get_session()
-    try:
-        query = session.query(PodMetrics)
+# @clusters_bp.route("/pods", methods=["GET"])
+# def get_pod_metrics():
+#     """
+#     Get pod metrics with optional filtering
+#     Query params: namespace, name, window, limit, offset, start_date, end_date
+#     """
+#     session = db_manager.get_session()
+#     try:
+#         query = session.query(PodMetrics)
 
-        # Apply filters
-        namespace = request.args.get("namespace")
-        if namespace:
-            query = query.filter(PodMetrics.namespace == namespace)
+#         # Apply filters
+#         namespace = request.args.get("namespace")
+#         if namespace:
+#             query = query.filter(PodMetrics.namespace == namespace)
 
-        name = request.args.get("name")
-        if name:
-            query = query.filter(PodMetrics.name == name)
+#         name = request.args.get("name")
+#         if name:
+#             query = query.filter(PodMetrics.name == name)
 
-        window = request.args.get("window")
-        if window:
-            query = query.filter(PodMetrics.window == window)
+#         window = request.args.get("window")
+#         if window:
+#             query = query.filter(PodMetrics.window == window)
 
-        start_date = request.args.get("start_date")
-        if start_date:
-            start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-            query = query.filter(PodMetrics.start_time >= start_date)
+#         start_date = request.args.get("start_date")
+#         if start_date:
+#             start_date = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+#             query = query.filter(PodMetrics.start_time >= start_date)
 
-        end_date = request.args.get("end_date")
-        if end_date:
-            end_date = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-            query = query.filter(PodMetrics.end_time <= end_date)
+#         end_date = request.args.get("end_date")
+#         if end_date:
+#             end_date = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+#             query = query.filter(PodMetrics.end_time <= end_date)
 
-        # Pagination
-        limit = int(request.args.get("limit", 100))
-        offset = int(request.args.get("offset", 0))
+#         # Pagination
+#         limit = int(request.args.get("limit", 100))
+#         offset = int(request.args.get("offset", 0))
 
-        # Order by start_time desc
-        query = query.order_by(desc(PodMetrics.start_time))
+#         # Order by start_time desc
+#         query = query.order_by(desc(PodMetrics.start_time))
 
-        total_count = query.count()
-        metrics = query.limit(limit).offset(offset).all()
+#         total_count = query.count()
+#         metrics = query.limit(limit).offset(offset).all()
 
-        result = []
-        for metric in metrics:
-            result.append(
-                {
-                    "id": metric.id,
-                    "key": metric.key,
-                    "namespace": metric.namespace,
-                    "name": metric.name,
-                    "start_time": (
-                        metric.start_time.isoformat() if metric.start_time else None
-                    ),
-                    "end_time": (
-                        metric.end_time.isoformat() if metric.end_time else None
-                    ),
-                    "window": metric.window,
-                    "total_cost": metric.total_cost,
-                    "cpu_cost": metric.cpu_cost,
-                    "ram_cost": metric.ram_cost,
-                    "cpu_core_usage_average": metric.cpu_core_usage_average,
-                    "cpu_core_request_average": metric.cpu_core_request_average,
-                    "ram_byte_usage_average": metric.ram_byte_usage_average,
-                    "ram_byte_request_average": metric.ram_byte_request_average,
-                    "total_efficiency": metric.total_efficiency,
-                    "cpu_efficiency": metric.cpu_efficiency,
-                    "ram_efficiency": metric.ram_efficiency,
-                    "is_idle": metric.is_idle,
-                    "domain": metric.domain,
-                    "created_at": (
-                        metric.created_at.isoformat() if metric.created_at else None
-                    ),
-                }
-            )
+#         result = []
+#         for metric in metrics:
+#             result.append(
+#                 {
+#                     "id": metric.id,
+#                     "key": metric.key,
+#                     "namespace": metric.namespace,
+#                     "name": metric.name,
+#                     "start_time": (
+#                         metric.start_time.isoformat() if metric.start_time else None
+#                     ),
+#                     "end_time": (
+#                         metric.end_time.isoformat() if metric.end_time else None
+#                     ),
+#                     "window": metric.window,
+#                     "total_cost": metric.total_cost,
+#                     "cpu_cost": metric.cpu_cost,
+#                     "ram_cost": metric.ram_cost,
+#                     "cpu_core_usage_average": metric.cpu_core_usage_average,
+#                     "cpu_core_request_average": metric.cpu_core_request_average,
+#                     "ram_byte_usage_average": metric.ram_byte_usage_average,
+#                     "ram_byte_request_average": metric.ram_byte_request_average,
+#                     "total_efficiency": metric.total_efficiency,
+#                     "cpu_efficiency": metric.cpu_efficiency,
+#                     "ram_efficiency": metric.ram_efficiency,
+#                     "is_idle": metric.is_idle,
+#                     "domain": metric.domain,
+#                     "created_at": (
+#                         metric.created_at.isoformat() if metric.created_at else None
+#                     ),
+#                 }
+#             )
 
-        return (
-            jsonify(
-                {
-                    "data": result,
-                    "total_count": total_count,
-                    "limit": limit,
-                    "offset": offset,
-                }
-            ),
-            200,
-        )
+#         return (
+#             jsonify(
+#                 {
+#                     "data": result,
+#                     "total_count": total_count,
+#                     "limit": limit,
+#                     "offset": offset,
+#                 }
+#             ),
+#             200,
+#         )
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        session.close()
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
+#     finally:
+#         session.close()
 
 
 @clusters_bp.route("/get_pod_details", methods=["GET"])

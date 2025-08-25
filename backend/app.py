@@ -1,3 +1,4 @@
+
 # app.py - Updated with database integration
 import os
 from flask import Flask, jsonify
@@ -13,6 +14,8 @@ load_dotenv()
 
 # Import your modules
 from routes.cluster import clusters_bp
+from routes.node import nodes_bp
+from routes.pod import pods_bp   
 from models.model import db_manager
 
 # Configure logging
@@ -35,6 +38,9 @@ def create_app():
 
     # Register blueprints
     app.register_blueprint(clusters_bp)
+    app.register_blueprint(nodes_bp)  
+    app.register_blueprint(pods_bp)    # For /v1/nodes
+
 
     # Setup Swagger documentation
     swagger = Swagger(app, template_file="./docs/swagger.yaml")

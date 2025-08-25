@@ -530,7 +530,7 @@ def fetchPodData(kubecost_url: str, cluster: str, node: str) -> Dict:
         "shareNamespaces": "",
         "shareSplit": "weighted",
         "shareTenancyCosts": "true",
-        "window": "3h",
+        "window": "24h",
     }
 
     try:
@@ -566,7 +566,7 @@ def fetchNodeData(kubecost_url: str, cluster: str) -> Dict:
         "shareNamespaces": "",
         "shareSplit": "weighted",
         "shareTenancyCosts": "true",
-        "window": "3h",
+        "window": "24h",
     }
 
     try:
