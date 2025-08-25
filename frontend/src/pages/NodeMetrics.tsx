@@ -81,6 +81,7 @@ const NodeMetricsDashboard = () => {
     try {
       const queryParams = {
         cluster_id: 1,
+        user_id: 1,
         duration: timeRange,
       };
 
@@ -194,9 +195,21 @@ const NodeMetricsDashboard = () => {
   );
 
   const LoadingBanner = ({ message }: { message: string }) => (
-    <div className="mb-4 p-3 rounded-lg" style={{ background: 'hsl(var(--primary) / 0.05)', border: '1px solid hsl(var(--primary) / 0.15)' }}>
+    <div
+      className="mb-4 p-3 rounded-lg"
+      style={{
+        background: "hsl(var(--primary) / 0.05)",
+        border: "1px solid hsl(var(--primary) / 0.15)",
+      }}
+    >
       <div className="flex items-center gap-2">
-        <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'hsl(var(--primary))', borderTopColor: 'transparent' }} />
+        <div
+          className="w-4 h-4 border-2 rounded-full animate-spin"
+          style={{
+            borderColor: "hsl(var(--primary))",
+            borderTopColor: "transparent",
+          }}
+        />
         <span className="text-[hsl(var(--primary))] text-sm">{message}</span>
       </div>
     </div>
@@ -367,13 +380,28 @@ const NodeMetricsDashboard = () => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border border-border rounded-lg shadow-lg p-3 backdrop-blur-sm">
-          {label ? (<p className="font-medium text-foreground mb-2">{label}</p>) : <></>}
+          {label ? (
+            <p className="font-medium text-foreground mb-2">{label}</p>
+          ) : (
+            <></>
+          )}
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center gap-2 text-sm">
-              {entry.color ? <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: entry.color?.startsWith('hsl') ? entry.color : undefined, background: entry.color?.startsWith('hsl') ? entry.color : undefined }}
-              /> : <></>}
+              {entry.color ? (
+                <div
+                  className="w-3 h-3 rounded-sm"
+                  style={{
+                    backgroundColor: entry.color?.startsWith("hsl")
+                      ? entry.color
+                      : undefined,
+                    background: entry.color?.startsWith("hsl")
+                      ? entry.color
+                      : undefined,
+                  }}
+                />
+              ) : (
+                <></>
+              )}
               <span className="text-muted-foreground">{entry.name}:</span>
               <span className="font-medium text-foreground">
                 {formatter ? formatter(entry.value, entry.name) : entry.value}
@@ -405,7 +433,6 @@ const NodeMetricsDashboard = () => {
         text: "text-[hsl(var(--destructive))]",
         border: "border-[hsl(var(--destructive)/0.2)]",
         label: "Critical",
-
       },
     };
 
@@ -422,10 +449,8 @@ const NodeMetricsDashboard = () => {
 
   const MetricCard = ({ title, value, subtitle, icon, status, trend }) => {
     const statusColors = {
-      healthy:
-        "border-[hsl(var(--success))] bg-[hsl(var(--success)/0.05)]",
-      warning:
-        "border-[hsl(var(--warning))] bg-[hsl(var(--warning)/0.05)]",
+      healthy: "border-[hsl(var(--success))] bg-[hsl(var(--success)/0.05)]",
+      warning: "border-[hsl(var(--warning))] bg-[hsl(var(--warning)/0.05)]",
       critical:
         "border-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.05)]",
       info: "border-border bg-card",
@@ -433,8 +458,9 @@ const NodeMetricsDashboard = () => {
 
     return (
       <Card
-        className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${statusColors[status] || statusColors.info
-          }`}
+        className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${
+          statusColors[status] || statusColors.info
+        }`}
       >
         <CardContent className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-3">
@@ -501,12 +527,12 @@ const NodeMetricsDashboard = () => {
       status === "healthy"
         ? "hsl(var(--chart-storage))"
         : status === "warning"
-          ? "hsl(var(--warning))"
-          : "hsl(var(--chart-cpu))",
+        ? "hsl(var(--warning))"
+        : "hsl(var(--chart-cpu))",
   }));
 
   // Pagination logic
-  const totalItems = nodeData.length; 
+  const totalItems = nodeData.length;
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
@@ -601,12 +627,13 @@ const NodeMetricsDashboard = () => {
                   typeof page === "number" && handlePageChange(page)
                 }
                 disabled={page === "..."}
-                className={`px-3 py-1 text-sm border rounded transition-colors ${page === currentPage
+                className={`px-3 py-1 text-sm border rounded transition-colors ${
+                  page === currentPage
                     ? "bg-primary text-primary-foreground border-primary"
                     : page === "..."
-                      ? "border-transparent cursor-default"
-                      : "border-border bg-background text-foreground hover:bg-muted"
-                  }`}
+                    ? "border-transparent cursor-default"
+                    : "border-border bg-background text-foreground hover:bg-muted"
+                }`}
               >
                 {page}
               </button>
@@ -657,7 +684,6 @@ const NodeMetricsDashboard = () => {
           className="mb-6"
         />
         {/* )} */}
-
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
@@ -872,8 +898,16 @@ const NodeMetricsDashboard = () => {
                     stroke="hsl(var(--chart-cpu-line))"
                     strokeWidth={3}
                     name="CPU Usage"
-                    dot={{ fill: "hsl(var(--chart-cpu-line))", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "hsl(var(--chart-cpu-line))", strokeWidth: 2 }}
+                    dot={{
+                      fill: "hsl(var(--chart-cpu-line))",
+                      strokeWidth: 2,
+                      r: 4,
+                    }}
+                    activeDot={{
+                      r: 6,
+                      stroke: "hsl(var(--chart-cpu-line))",
+                      strokeWidth: 2,
+                    }}
                   />
                   <Line
                     type="monotone"
@@ -881,8 +915,16 @@ const NodeMetricsDashboard = () => {
                     stroke="hsl(var(--chart-ram))"
                     strokeWidth={3}
                     name="RAM Usage"
-                    dot={{ fill: "hsl(var(--chart-ram))", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "hsl(var(--chart-ram))", strokeWidth: 2 }}
+                    dot={{
+                      fill: "hsl(var(--chart-ram))",
+                      strokeWidth: 2,
+                      r: 4,
+                    }}
+                    activeDot={{
+                      r: 6,
+                      stroke: "hsl(var(--chart-ram))",
+                      strokeWidth: 2,
+                    }}
                   />
                   <Line
                     type="monotone"
@@ -890,8 +932,16 @@ const NodeMetricsDashboard = () => {
                     stroke="hsl(var(--chart-storage))"
                     strokeWidth={3}
                     name="Efficiency"
-                    dot={{ fill: "hsl(var(--chart-storage))", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "hsl(var(--chart-storage))", strokeWidth: 2 }}
+                    dot={{
+                      fill: "hsl(var(--chart-storage))",
+                      strokeWidth: 2,
+                      r: 4,
+                    }}
+                    activeDot={{
+                      r: 6,
+                      stroke: "hsl(var(--chart-storage))",
+                      strokeWidth: 2,
+                    }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -964,12 +1014,13 @@ const NodeMetricsDashboard = () => {
                         <span>Efficiency</span>
                       </div>
                       <div
-                        className={`font-medium ${parseFloat(node.efficiency) > 50
+                        className={`font-medium ${
+                          parseFloat(node.efficiency) > 50
                             ? "text-emerald-600"
                             : parseFloat(node.efficiency) > 30
-                              ? "text-amber-600"
-                              : "text-red-600"
-                          }`}
+                            ? "text-amber-600"
+                            : "text-red-600"
+                        }`}
                       >
                         {node.efficiency}%
                       </div>
@@ -995,7 +1046,10 @@ const NodeMetricsDashboard = () => {
             <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b" style={{ color: 'hsl(var(--primary))' }}>
+                  <tr
+                    className="border-b"
+                    style={{ color: "hsl(var(--primary))" }}
+                  >
                     <th className="text-left p-4 font-medium">Node</th>
                     <th className="text-left p-4 font-medium">Status</th>
                     <th className="text-left p-4 font-medium">CPU</th>
@@ -1010,12 +1064,21 @@ const NodeMetricsDashboard = () => {
                     <tr
                       key={startIndex + index}
                       className="border-b transition-colors"
-                      style={{ color: 'hsl(var(--foreground))', backgroundColor: undefined }}
+                      style={{
+                        color: "hsl(var(--foreground))",
+                        backgroundColor: undefined,
+                      }}
                     >
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg" style={{ background: 'hsl(var(--primary) / 0.1)' }}>
-                            <Server className="w-4 h-4" style={{ color: 'hsl(var(--primary))' }} />
+                          <div
+                            className="p-2 rounded-lg"
+                            style={{ background: "hsl(var(--primary) / 0.1)" }}
+                          >
+                            <Server
+                              className="w-4 h-4"
+                              style={{ color: "hsl(var(--primary))" }}
+                            />
                           </div>
                           <span className="font-medium">{node.name}</span>
                         </div>
@@ -1051,12 +1114,13 @@ const NodeMetricsDashboard = () => {
                       </td>
                       <td className="p-4">
                         <span
-                          className={`font-medium ${parseFloat(node.efficiency) > 50
+                          className={`font-medium ${
+                            parseFloat(node.efficiency) > 50
                               ? "text-emerald-600"
                               : parseFloat(node.efficiency) > 30
-                                ? "text-amber-600"
-                                : "text-red-600"
-                            }`}
+                              ? "text-amber-600"
+                              : "text-red-600"
+                          }`}
                         >
                           {node.efficiency}%
                         </span>

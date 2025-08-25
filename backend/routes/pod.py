@@ -7,7 +7,7 @@ pods_bp = Blueprint("pods", __name__, url_prefix="/v1/pods")
 
 
 @pods_bp.route("/", methods=["GET"])
-def get_pod_metrics():
+def pod_metrics():
     """
     Fetch pod metrics by cluster_id with optional time window duration
     Params:
@@ -34,180 +34,10 @@ def get_pod_metrics():
         search = request.args.get("search")
         # Convert duration into datetime filter
         end_time = datetime.utcnow()
-        if duration.endswith("h"):
-            hours = int(duration[:-1])
-            start_time = end_time - timedelta(hours=hours)
-        elif duration.endswith("d"):
-            days = int(duration[:-1])
-            start_time = end_time - timedelta(days=days)
-        elif duration.endswith("m"):  # months → approx 30 days each
-            months = int(duration[:-1])
-            start_time = end_time - timedelta(days=months * 30)
-        else:
-            return jsonify({"error": "Invalid duration format"}), 400
-        print(f"Query time range: {start_time} to {end_time}")
-        total_count = (
-            session.query(func.count(PodMetrics.id))
-            .filter(PodMetrics.cluster_id == cluster_id)
-            .scalar()
+        result = get_pod_metrics(
+            session, cluster_id, user_id, duration, namespace, search
         )
-        print(f"Total pod records for cluster {cluster_id}: {total_count}")
-        # Debug: show available cluster_ids
-        existing_cluster_ids = session.query(func.distinct(PodMetrics.cluster_id)).all()
-        print(
-            f"Available cluster_ids in database: {[row[0] for row in existing_cluster_ids]}"
-        )
-        # Check what timestamp fields are available in your pod data
-        sample_timestamps = (
-            session.query(
-                PodMetrics.start_time, PodMetrics.end_time, PodMetrics.created_at
-            )
-            .filter(PodMetrics.cluster_id.in_([1]))
-            .limit(3)
-            .all()
-        )
-        print("Sample timestamp data:")
-        for row in sample_timestamps:
-            print(
-                f"  start_time: {row.start_time}, end_time: {row.end_time}, created_at: {row.created_at}"
-            )
-        if total_count == 0:
-            return (
-                jsonify(
-                    {
-                        "cluster_id": cluster_id,
-                        "user_id": user_id,
-                        "duration": duration,
-                        "namespace": namespace,
-                        "search": search,
-                        "data": [],
-                        "start_time": start_time.isoformat(),
-                        "end_time": end_time.isoformat(),
-                        "total_count": 0,
-                        "debug": {
-                            "message": "No data found for this cluster_id",
-                            "available_cluster_ids": [
-                                row[0] for row in existing_cluster_ids
-                            ],
-                        },
-                    }
-                ),
-                200,
-            )
-
-        query = session.query(
-            PodMetrics.name,
-            PodMetrics.namespace,
-            PodMetrics.key,
-            func.sum(PodMetrics.total_cost).label("total_cost"),
-            func.sum(PodMetrics.cpu_cost).label("cpu_cost"),
-            func.sum(PodMetrics.ram_cost).label("ram_cost"),
-            func.sum(PodMetrics.pv_cost).label("pv_cost"),
-            func.sum(PodMetrics.gpu_cost).label("gpu_cost"),
-            func.sum(PodMetrics.network_cost).label("network_cost"),
-            func.sum(PodMetrics.load_balancer_cost).label("load_balancer_cost"),
-            func.sum(PodMetrics.external_cost).label("external_cost"),
-            func.sum(PodMetrics.shared_cost).label("shared_cost"),
-            func.avg(PodMetrics.cpu_core_usage_average).label("cpu_core_usage_average"),
-            func.avg(PodMetrics.cpu_core_request_average).label(
-                "cpu_core_request_average"
-            ),
-            func.avg(PodMetrics.ram_byte_usage_average).label("ram_byte_usage_average"),
-            func.avg(PodMetrics.ram_byte_request_average).label(
-                "ram_byte_request_average"
-            ),
-            func.avg(PodMetrics.gpu_usage_average).label("gpu_usage_average"),
-            func.avg(PodMetrics.gpu_request_average).label("gpu_request_average"),
-            func.avg(PodMetrics.pv_bytes).label("pv_bytes"),
-            func.avg(PodMetrics.total_efficiency).label("total_efficiency"),
-            func.avg(PodMetrics.cpu_efficiency).label("cpu_efficiency"),
-            func.avg(PodMetrics.ram_efficiency).label("ram_efficiency"),
-            func.avg(PodMetrics.ram_usage_gb).label("ram_usage_gb"),
-            func.avg(PodMetrics.ram_request_gb).label("ram_request_gb"),
-            func.bool_or(PodMetrics.is_idle).label("is_idle"),
-            func.min(PodMetrics.start_time).label("start_time"),
-            func.max(PodMetrics.end_time).label("end_time"),
-            func.min(PodMetrics.created_at).label("created_at"),
-            func.max(PodMetrics.updated_at).label("updated_at"),
-            PodMetrics.domain.label("domain"),
-        ).filter(
-            PodMetrics.cluster_id == cluster_id,  # Use as string, same as nodes API
-            PodMetrics.user_id == user_id,
-            PodMetrics.timestamp >= start_time,  # FIXED: Use >= instead of <=
-            PodMetrics.timestamp <= end_time,  # FIXED: Use start_time consistently
-        )
-
-        # Apply optional filters
-        if namespace:
-            query = query.filter(PodMetrics.namespace == namespace)
-
-        if search:
-            query = query.filter(PodMetrics.name.ilike(f"%{search}%"))
-
-        # Group by pod identifiers
-        query = query.group_by(
-            PodMetrics.name, PodMetrics.namespace, PodMetrics.key, PodMetrics.domain
-        )
-
-        # 4️⃣ Execute query
-        results = query.all()
-        print(f"Query returned {len(results)} results")
-
-        # 5️⃣ Format response as list of dicts
-        data = []
-        for row in results:
-            pod_data = {
-                "id": row.key,
-                "name": row.name,
-                "namespace": row.namespace,
-                "domain": row.domain,
-                "totalCost": float(row.total_cost or 0),
-                "cpuCost": float(row.cpu_cost or 0),
-                "ramCost": float(row.ram_cost or 0),
-                "pvCost": float(row.pv_cost or 0),
-                "gpuCost": float(row.gpu_cost or 0),
-                "networkCost": float(row.network_cost or 0),
-                "loadBalancerCost": float(row.load_balancer_cost or 0),
-                "externalCost": float(row.external_cost or 0),
-                "sharedCost": float(row.shared_cost or 0),
-                "cpuCoreUsageAverage": float(row.cpu_core_usage_average or 0),
-                "cpuCoreRequestAverage": float(row.cpu_core_request_average or 0),
-                "ramByteUsageAverage": float(row.ram_byte_usage_average or 0),
-                "ramByteRequestAverage": float(row.ram_byte_request_average or 0),
-                "gpuUsageAverage": float(row.gpu_usage_average or 0),
-                "gpuRequestAverage": float(row.gpu_request_average or 0),
-                "pvBytes": float(row.pv_bytes or 0),
-                "totalEfficiency": float(row.total_efficiency or 0),
-                "cpuEfficiency": float(row.cpu_efficiency or 0),
-                "ramEfficiency": float(row.ram_efficiency or 0),
-                "ramUsageGB": float(row.ram_usage_gb or 0),
-                "ramRequestGB": float(row.ram_request_gb or 0),
-                "isIdle": bool(row.is_idle),
-                "startTime": row.start_time.isoformat() if row.start_time else None,
-                "endTime": row.end_time.isoformat() if row.end_time else None,
-                "createdAt": row.created_at.isoformat() if row.created_at else None,
-                "updatedAt": row.updated_at.isoformat() if row.updated_at else None,
-            }
-            data.append(pod_data)
-
-        print(f"=== Fetched {len(data)} pod metrics ===")
-
-        return (
-            jsonify(
-                {
-                    "cluster_id": cluster_id,
-                    "user_id": user_id,
-                    "duration": duration,
-                    "namespace": namespace,
-                    "search": search,
-                    "data": data,
-                    "start_time": start_time.isoformat(),
-                    "end_time": end_time.isoformat(),
-                    "total_count": len(data),
-                }
-            ),
-            200,
-        )
+        return jsonify(result)
 
     except Exception as e:
         print(f"Error fetching pod metrics: {str(e)}")
@@ -666,3 +496,168 @@ def get_pod_details(pod_name):
         return jsonify({"error": str(e)}), 500
     finally:
         session.close()
+
+
+# 1️⃣ Parse duration utility
+def parse_duration(duration: str, end_time: datetime):
+    if duration.endswith("h"):
+        hours = int(duration[:-1])
+        start_time = end_time - timedelta(hours=hours)
+    elif duration.endswith("d"):
+        days = int(duration[:-1])
+        start_time = end_time - timedelta(days=days)
+    elif duration.endswith("m"):  # months → approx 30 days each
+        months = int(duration[:-1])
+        start_time = end_time - timedelta(days=months * 30)
+    else:
+        raise ValueError("Invalid duration format")
+    return start_time, end_time
+
+
+# 2️⃣ Build pod query
+def build_pod_query(
+    session, cluster_id, user_id, start_time, end_time, namespace=None, search=None
+):
+    query = session.query(
+        PodMetrics.name,
+        PodMetrics.namespace,
+        PodMetrics.key,
+        func.sum(PodMetrics.total_cost).label("total_cost"),
+        func.sum(PodMetrics.cpu_cost).label("cpu_cost"),
+        func.sum(PodMetrics.ram_cost).label("ram_cost"),
+        func.sum(PodMetrics.pv_cost).label("pv_cost"),
+        func.sum(PodMetrics.gpu_cost).label("gpu_cost"),
+        func.sum(PodMetrics.network_cost).label("network_cost"),
+        func.sum(PodMetrics.load_balancer_cost).label("load_balancer_cost"),
+        func.sum(PodMetrics.external_cost).label("external_cost"),
+        func.sum(PodMetrics.shared_cost).label("shared_cost"),
+        func.avg(PodMetrics.cpu_core_usage_average).label("cpu_core_usage_average"),
+        func.avg(PodMetrics.cpu_core_request_average).label("cpu_core_request_average"),
+        func.avg(PodMetrics.ram_byte_usage_average).label("ram_byte_usage_average"),
+        func.avg(PodMetrics.ram_byte_request_average).label("ram_byte_request_average"),
+        func.avg(PodMetrics.gpu_usage_average).label("gpu_usage_average"),
+        func.avg(PodMetrics.gpu_request_average).label("gpu_request_average"),
+        func.avg(PodMetrics.pv_bytes).label("pv_bytes"),
+        func.avg(PodMetrics.total_efficiency).label("total_efficiency"),
+        func.avg(PodMetrics.cpu_efficiency).label("cpu_efficiency"),
+        func.avg(PodMetrics.ram_efficiency).label("ram_efficiency"),
+        func.avg(PodMetrics.ram_usage_gb).label("ram_usage_gb"),
+        func.avg(PodMetrics.ram_request_gb).label("ram_request_gb"),
+        func.bool_or(PodMetrics.is_idle).label("is_idle"),
+        func.min(PodMetrics.start_time).label("start_time"),
+        func.max(PodMetrics.end_time).label("end_time"),
+        func.min(PodMetrics.created_at).label("created_at"),
+        func.max(PodMetrics.updated_at).label("updated_at"),
+        PodMetrics.domain.label("domain"),
+    ).filter(
+        PodMetrics.cluster_id == cluster_id,
+        PodMetrics.user_id == user_id,
+        PodMetrics.timestamp >= start_time,
+        PodMetrics.timestamp <= end_time,
+    )
+
+    if namespace:
+        query = query.filter(PodMetrics.namespace == namespace)
+
+    if search:
+        query = query.filter(PodMetrics.name.ilike(f"%{search}%"))
+
+    return query.group_by(
+        PodMetrics.name, PodMetrics.namespace, PodMetrics.key, PodMetrics.domain
+    )
+
+
+# 3️⃣ Format row results
+def format_pod_results(results):
+    data = []
+    for row in results:
+        data.append(
+            {
+                "id": row.key,
+                "name": row.name,
+                "namespace": row.namespace,
+                "domain": row.domain,
+                "totalCost": float(row.total_cost or 0),
+                "cpuCost": float(row.cpu_cost or 0),
+                "ramCost": float(row.ram_cost or 0),
+                "pvCost": float(row.pv_cost or 0),
+                "gpuCost": float(row.gpu_cost or 0),
+                "networkCost": float(row.network_cost or 0),
+                "loadBalancerCost": float(row.load_balancer_cost or 0),
+                "externalCost": float(row.external_cost or 0),
+                "sharedCost": float(row.shared_cost or 0),
+                "cpuCoreUsageAverage": float(row.cpu_core_usage_average or 0),
+                "cpuCoreRequestAverage": float(row.cpu_core_request_average or 0),
+                "ramByteUsageAverage": float(row.ram_byte_usage_average or 0),
+                "ramByteRequestAverage": float(row.ram_byte_request_average or 0),
+                "gpuUsageAverage": float(row.gpu_usage_average or 0),
+                "gpuRequestAverage": float(row.gpu_request_average or 0),
+                "pvBytes": float(row.pv_bytes or 0),
+                "totalEfficiency": float(row.total_efficiency or 0),
+                "cpuEfficiency": float(row.cpu_efficiency or 0),
+                "ramEfficiency": float(row.ram_efficiency or 0),
+                "ramUsageGB": float(row.ram_usage_gb or 0),
+                "ramRequestGB": float(row.ram_request_gb or 0),
+                "isIdle": bool(row.is_idle),
+                "startTime": row.start_time.isoformat() if row.start_time else None,
+                "endTime": row.end_time.isoformat() if row.end_time else None,
+                "createdAt": row.created_at.isoformat() if row.created_at else None,
+                "updatedAt": row.updated_at.isoformat() if row.updated_at else None,
+            }
+        )
+    return data
+
+
+# 4️⃣ Main reusable function
+def get_pod_metrics(
+    session, cluster_id, user_id, duration, namespace=None, search=None
+):
+    try:
+        end_time = datetime.utcnow()
+        start_time, end_time = parse_duration(duration, end_time)
+
+        total_count = (
+            session.query(func.count(PodMetrics.id))
+            .filter(PodMetrics.cluster_id == cluster_id)
+            .scalar()
+        )
+
+        if total_count == 0:
+            existing_cluster_ids = session.query(
+                func.distinct(PodMetrics.cluster_id)
+            ).all()
+            return {
+                "cluster_id": cluster_id,
+                "user_id": user_id,
+                "duration": duration,
+                "namespace": namespace,
+                "search": search,
+                "data": [],
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "total_count": 0,
+                "debug": {
+                    "message": "No data found for this cluster_id",
+                    "available_cluster_ids": [row[0] for row in existing_cluster_ids],
+                },
+            }
+
+        query = build_pod_query(
+            session, cluster_id, user_id, start_time, end_time, namespace, search
+        )
+        results = query.all()
+        data = format_pod_results(results)
+
+        return {
+            "cluster_id": cluster_id,
+            "user_id": user_id,
+            "duration": duration,
+            "namespace": namespace,
+            "search": search,
+            "data": data,
+            "start_time": start_time.isoformat(),
+            "end_time": end_time.isoformat(),
+            "total_count": len(data),
+        }
+    except ValueError as e:
+        return {"error": str(e)}
