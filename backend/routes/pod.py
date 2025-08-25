@@ -37,7 +37,7 @@ def get_pod_metrics():
         # Convert duration into datetime filter
         end_time = datetime.utcnow()
         if duration.endswith("h"):
-            hours = int(duration[:-1])
+            hours = int(duration[:-1]) 
             start_time = end_time - timedelta(hours=hours)
         elif duration.endswith("d"):
             days = int(duration[:-1])
