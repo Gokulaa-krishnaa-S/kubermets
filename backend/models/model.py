@@ -225,7 +225,7 @@ class PodMetrics(Base):
     key = Column(String(255), nullable=False)
     namespace = Column(String(100), nullable=True)  # Added (index exists)
     name = Column(String(100), nullable=True)  # Added (index exists)
-
+    timestamp = Column(DateTime, nullable=False)
     # Time window
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
@@ -281,7 +281,7 @@ class PodMetrics(Base):
     raw_allocation_data = Column(JSON, nullable=True)
     node = relationship("NodeMetrics", back_populates="pods")
     __table_args__ = (
-        Index("idx_pod_key_window", "key", "window"),
+        Index("idx_pod_key_window", "key", "window", "timestamp"),
         Index("idx_pod_namespace_name", "namespace", "name"),
         Index("idx_pod_time_window", "start_time", "end_time", "window"),
         Index("idx_pod_domain_window", "domain", "window"),
