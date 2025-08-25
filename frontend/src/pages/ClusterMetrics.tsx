@@ -35,7 +35,7 @@ import {
 
 export default function ClusterMetrics() {
   const { selectedInstance } = useCluster();
-  let selectedHash = selectedInstance?.unique_hash;
+  let selectedHash = selectedInstance?.unique_hash || "-";
   const [clusterStats, setClusterStats] = useState([]);
   const [clusters, setClusters] = useState([]);
   const [chartData, setChartData] = useState({
@@ -107,141 +107,91 @@ export default function ClusterMetrics() {
   const handleCallClusterData = useCallback(async (queryParams) => {
     try {
       console.log("Calling cluster data API with:", queryParams);
-      const res = await ClusterService.getClusterAllocationSummary(queryParams);
+      const res = await ClusterService.getClusterDetails(queryParams);
 
-      // Enhanced API failure checking
-      console.log(res, "condition 5-----------------");
-      console.log(res.data, "condition 2------------------");
-      //  setLastUpdated(new Date());
-
-      // Handle cache timestamp for last updated
-      // if (res?.cached === true && res?.cache_timestamp) {
-      //   const cacheDate = new Date(res.cache_timestamp);
-      //   const formattedTime = cacheDate.toLocaleTimeString();
-      //   setLastUpdated(cacheDate); // Set the actual Date object
-      //   setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
-      // } else {
-      //   const currentDate = new Date();
-      //   const formattedTime = currentDate.toLocaleTimeString();
-      //   setLastUpdated(currentDate); // Set the actual Date object
-      //   setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
-      // }
-
-      if (res?.api_failed === true) {
-        console.log("came to conditon 2");
+      if (res?.api_failed) {
         setServerStatus("down");
         setIsAutoRefreshPaused(true);
         console.warn("API reported failure:", res.data);
-
-        // Still process data if available despite API failure
-        if (res?.data?.data?.sets?.[0]?.allocations) {
-          // Process cached data...
-        } else {
-          throw new Error("No data available and API failed");
-        }
+        if (!res?.data) throw new Error("No data available and API failed");
       } else {
         setServerStatus("live");
       }
 
-      // ... rest of the function remains the same
-      const allocations = res?.data?.data?.sets?.[0]?.allocations || {};
+      const allocations = res?.data || []; // Backend now returns array like [{cluster_name: ..., total_cost: ..., ...}]
 
-      // Filter out idle data for cluster list
-      const activeAllocations = Object.entries(allocations).filter(
-        ([name]) => name !== "__idle__"
+      // Separate idle and active clusters
+      const idleEntry = allocations.find((a) => a.cluster_name === "__idle__");
+      const activeClusters = allocations.filter(
+        (a) =>
+          a.cluster_name !== "__idle__" && a.cluster_name !== "cluster-total"
+      );
+      const totalEntry = allocations.find(
+        (a) => a.cluster_name === "cluster-total"
       );
 
-      const clusterList = activeAllocations.map(([name, cluster]) => {
-        const c = cluster as ClusterAllocation;
-        return {
-          name,
-          cpu: `${(
-            (c.cpuCoreUsageAverage / c.cpuCoreRequestAverage) * 100 || 0
-          ).toFixed(0)}%`,
-          memory: `${(
-            (c.ramByteUsageAverage / c.ramByteRequestAverage) * 100 || 0
-          ).toFixed(0)}%`,
-          cost: `$${c.totalCost.toFixed(2)}`,
-          cpuCores: c.cpuCoreUsageAverage?.toFixed(2) || "0",
-          memoryGB: bytesToGB(c.ramByteUsageAverage || 0),
-          efficiency: c.totalEfficiency
-            ? `${(c.totalEfficiency * 100).toFixed(1)}%`
-            : "N/A",
-          version: c.version ?? "N/A",
-          nodes: 0,
-          pods: 0,
-          status: c.status ?? "running",
-        };
-      });
+      // Prepare cluster list for UI (active only)
+      const clusterList = activeClusters.map((c) => ({
+        name: c.cluster_name,
+        cpu: c.cpu_usage_percent ? `${c.cpu_usage_percent.toFixed(0)}%` : "0%",
+        memory: c.memory_usage_percent
+          ? `${c.memory_usage_percent.toFixed(0)}%`
+          : "0%",
+        cost: `$${(c.total_cost || 0).toFixed(2)}`,
+        cpuCores: c.cpu_core_usage_average?.toFixed(2) || "0",
+        memoryGB: bytesToGB(c.ram_byte_usage_average || 0),
+        efficiency: c.efficiency_percent
+          ? `${c.efficiency_percent.toFixed(1)}%`
+          : "N/A",
+        version: c.cluster_version ?? "N/A",
+        nodes: c.node_count || 0,
+        pods: c.pod_count || 0,
+        status: c.cluster_status ?? "running",
+      }));
 
-      // Calculate totals including idle
-      const totalCpuCost: any = Object.values(allocations).reduce(
-        (sum: number, c) => sum + ((c as ClusterAllocation).cpuCost || 0),
-        0
-      );
-      const totalRamCost: any = Object.values(allocations).reduce(
-        (sum: number, c) => sum + ((c as ClusterAllocation).ramCost || 0),
-        0
-      );
-      const totalStorage: any = Object.values(allocations).reduce(
-        (sum: number, c) => sum + ((c as ClusterAllocation).pvCost || 0),
-        0
-      );
-
-      // Calculate additional metrics
-      const totalCpuCores = activeAllocations.reduce(
-        (sum, [, c]) =>
-          sum + ((c as ClusterAllocation).cpuCoreUsageAverage || 0),
-        0
-      );
-
-      const totalMemoryBytes = activeAllocations.reduce(
-        (sum, [, c]) =>
-          sum + ((c as ClusterAllocation).ramByteUsageAverage || 0),
-        0
-      );
-
+      // Set cluster list to state
       setClusters(clusterList);
 
+      // Use total entry for global stats (includes idle+active)
       setClusterStats([
         {
           title: "Active Clusters",
-          value: activeAllocations.length,
+          value: activeClusters.length,
           subtitle: "Running clusters",
           icon: <Server className="w-4 h-4" />,
           status: "healthy",
         },
         {
           title: "CPU Cost",
-          value: `$${totalCpuCost.toFixed(2)}`,
+          value: `$${(totalEntry?.cpu_cost || 0).toFixed(2)}`,
           subtitle: "This period",
           icon: <Cpu className="w-4 h-4" />,
           status: "info",
         },
         {
           title: "Memory Cost",
-          value: `$${(totalRamCost as number).toFixed(2)}`,
+          value: `$${(totalEntry?.ram_cost || 0).toFixed(2)}`,
           subtitle: "This period",
           icon: <Activity className="w-4 h-4" />,
           status: "healthy",
         },
         {
           title: "Storage Cost",
-          value: `$${(totalStorage as number).toFixed(2)}`,
+          value: `$${(totalEntry?.pv_cost || 0).toFixed(2)}`,
           subtitle: "This period",
           icon: <HardDrive className="w-4 h-4" />,
           status: "info",
         },
         {
           title: "Total CPU Cores",
-          value: totalCpuCores.toFixed(1),
+          value: (totalEntry?.cpu_core_usage_average || 0).toFixed(1),
           subtitle: "In use",
           icon: <Zap className="w-4 h-4" />,
           status: "healthy",
         },
         {
           title: "Total Memory",
-          value: `${bytesToGB(totalMemoryBytes)} GB`,
+          value: `${bytesToGB(totalEntry?.ram_byte_usage_average || 0)} GB`,
           subtitle: "In use",
           icon: <Database className="w-4 h-4" />,
           status: "info",
@@ -376,21 +326,9 @@ export default function ClusterMetrics() {
 
       try {
         const queryParams = {
-          window,
-          aggregate: "cluster",
-          accumulate: true,
-          external: false,
-          shareCost: 0,
-          shareTenancyCosts: true,
-          idle: true,
-          shareIdle: true,
-          idleByNode: true,
-          shareLabels: "",
-          shareNamespaces: "",
-          shareSplit: "weighted",
-          filter: "",
-          domain,
-          force_refresh: true,
+          user_id: 1,
+          cluster_id: 1,
+          window: "24h",
         };
 
         console.log("Fetching all data with params:", queryParams);
@@ -551,62 +489,6 @@ export default function ClusterMetrics() {
       refreshAllData(false); // No toast, force refresh
     }
   }, [selectedHash]);
-
-  const ServerStatusBanner = () => {
-    if (serverStatus === "down" || isAutoRefreshPaused) {
-      return (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <h4 className="font-semibold text-red-800">
-                {serverStatus === "down" ? "Server Down" : "Connection Issues"}
-              </h4>
-              <p className="text-sm text-red-700 mt-1">
-                {serverStatus === "down"
-                  ? "Unable to reach the server. Auto-refresh is paused to prevent continuous failed requests."
-                  : "Auto-refresh has been paused due to connection issues."}{" "}
-                Click the refresh button to retry and resume automatic updates.
-              </p>
-              <div className="mt-3 flex items-center gap-3">
-                <button
-                  onClick={() => refreshAllData(true)}
-                  disabled={isRefreshing}
-                  className="px-4 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                >
-                  {isRefreshing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Retrying...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="w-4 h-4" />
-                      Retry Connection
-                    </>
-                  )}
-                </button>
-                <div className="text-sm text-red-600 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  Auto-refresh paused
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const LoadingBanner = ({ message }: { message: string }) => (
-    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-      <div className="flex items-center gap-2">
-        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <span className="text-blue-800 text-sm">{message}</span>
-      </div>
-    </div>
-  );
 
   // Calculate resource metrics from clusters data
   const getResourceMetrics = () => {
@@ -799,21 +681,21 @@ export default function ClusterMetrics() {
       {/* {isLoadingData ? (
         <LoadingBanner message="Loading cluster data..." />
       ) : ( */}
-        <FilterBar
-          selectedTimeRange={timeRange}
-          onTimeRangeChange={handleTimeRangeChange}
-          timeRangeVariant="select"
-          timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
-          onFilterClick={handleFilterClick}
-          showFilter={false}
-          onRefresh={refreshAllData}
-          refreshInterval={refreshInterval}
-          onRefreshIntervalChange={handleRefreshIntervalChange}
-          isRefreshing={isRefreshing}
-          lastUpdated={lastUpdated}
-          showRefresh
-          className="mb-6"
-        />
+      <FilterBar
+        selectedTimeRange={timeRange}
+        onTimeRangeChange={handleTimeRangeChange}
+        timeRangeVariant="select"
+        timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
+        onFilterClick={handleFilterClick}
+        showFilter={false}
+        onRefresh={refreshAllData}
+        refreshInterval={refreshInterval}
+        onRefreshIntervalChange={handleRefreshIntervalChange}
+        isRefreshing={isRefreshing}
+        lastUpdated={lastUpdated}
+        showRefresh
+        className="mb-6"
+      />
       {/* )} */}
 
       <div className="space-y-6">
@@ -1027,46 +909,6 @@ export default function ClusterMetrics() {
                 </CardContent>
               </Card>
             )}
-
-            {/* CPU and Memory Charts */}
-            {/* {(chartData.cpuData.length > 0 ||
-              chartData.memoryData.length > 0) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {chartData.cpuData.length > 0 && (
-                  <Card className="shadow-lg border-0">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-bold text-gray-900">
-                        CPU Usage
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <GroupedBarChart
-                        data={chartData.cpuData}
-                        title={undefined}
-                        yAxisLabel={undefined}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-
-                  {chartData.memoryData.length > 0 && (
-                    <Card className="shadow-lg border-0">
-                      <CardHeader>
-                        <CardTitle className="text-lg font-bold text-gray-900">
-                          Memory Usage
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <GroupedBarChart
-                          data={chartData.memoryData}
-                          title={undefined}
-                          yAxisLabel={undefined}
-                        />
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )} */}
           </div>
 
           {/* Right Column - Enhanced Sidebar */}
@@ -1170,62 +1012,6 @@ export default function ClusterMetrics() {
               </Card>
             )}
 
-            {/* Quick Actions */}
-            {/* <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
-                    <Settings className="w-4 h-4 text-white" />
-                  </div>
-                  Quick Actions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-blue-50 hover:border-blue-200 border border-transparent transition-all duration-200 text-left group">
-                    <div className="p-2 bg-blue-100 rounded-lg group-hover:bg-blue-200 transition-colors">
-                      <Monitor className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-blue-800">
-                        Node Monitor
-                      </span>
-                      <p className="text-xs text-gray-500">View node details</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-400 ml-auto group-hover:text-blue-600 transition-colors" />
-                  </button>
-
-                  <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-green-50 hover:border-green-200 border border-transparent transition-all duration-200 text-left group">
-                    <div className="p-2 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
-                      <Shield className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-green-800">
-                        Security Scan
-                      </span>
-                      <p className="text-xs text-gray-500">
-                        Run security checks
-                      </p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-400 ml-auto group-hover:text-green-600 transition-colors" />
-                  </button>
-
-                  <button className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-purple-50 hover:border-purple-200 border border-transparent transition-all duration-200 text-left group">
-                    <div className="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                      <BarChart3 className="w-4 h-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-purple-800">
-                        Analytics
-                      </span>
-                      <p className="text-xs text-gray-500">Detailed reports</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-400 ml-auto group-hover:text-purple-600 transition-colors" />
-                  </button>
-                </div>
-              </CardContent>
-            </Card> */}
-
             {/* System Health */}
             {/* Bottom Section - Cost Breakdown Donut Chart */}
             {chartData.costBreakdown.length > 0 && (
@@ -1251,53 +1037,6 @@ export default function ClusterMetrics() {
                 </CardContent>
               </Card>
             )}
-            {/* <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
-                    <Activity className="w-4 h-4 text-white" />
-                  </div>
-                  System Health
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium text-gray-700">
-                        API Server
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-green-700">
-                      Healthy
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium text-gray-700">
-                        Data Collection
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-green-700">
-                      Active
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium text-gray-700">
-                        Monitoring
-                      </span>
-                    </div>
-                    <span className="text-sm font-medium text-blue-700">
-                      Running
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card> */}
           </div>
         </div>
       </div>

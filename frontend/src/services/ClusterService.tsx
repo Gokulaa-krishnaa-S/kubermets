@@ -148,6 +148,17 @@ class ClusterService {
     }
   }
 
+  async getClusterDetails(queryParams: QueryParams): Promise<any> {
+    try {
+      const response: AxiosResponse = await this.api.get("/clusters", {
+        params: queryParams,
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching cluster summary:", error);
+      throw error;
+    }
+  }
   /**
    * Get cluster metrics from database
    */

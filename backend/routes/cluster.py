@@ -1,7 +1,9 @@
 from flask import Blueprint, jsonify, Response, request
 from models.model import ClusterMetrics, NodeMetrics, PodMetrics
 from models.model import db_manager
-from sqlalchemy import desc, asc
+from sqlalchemy import desc, asc, func
+
+
 from datetime import datetime, timedelta
 import os
 from service.data_service import generate_uuid
@@ -31,74 +33,156 @@ def health():
 @clusters_bp.route("/clusters", methods=["GET"])
 def get_cluster_metrics():
     """
-    Get cluster metrics with optional filtering
+    Fetch cluster metrics:
+    - If requested window not available, pick largest smaller window.
+    - Return last 2 periods (with cumulative values) for each cluster_name and __idle__.
     """
-    print("=== Flask Route /clusters Hit ===")
-    print("Request method:", request.method)
-    print("Request URL:", request.url)
-    print("Request args:", dict(request.args))
-    print("Request headers:", dict(request.headers))
 
+    session = db_manager.get_session()
     try:
-        # Get query parameters
-        cluster_name = request.args.get("cluster_name")
-        window_duration = request.args.get("window_duration", "1h")  # Default to 1h
-        limit = request.args.get("limit", 100, type=int)
-        offset = request.args.get("offset", 0, type=int)
-        start_date = request.args.get("start_date")
-        end_date = request.args.get("end_date")
+        cluster_id = request.args.get("cluster_id", type=int)
+        user_id = request.args.get("user_id", type=int)
+        requested_window = request.args.get("window", type=str)
 
-        print("Parsed parameters:")
-        print(f"  - cluster_name: {cluster_name}")
-        print(f"  - window_duration: {window_duration}")
-        print(f"  - limit: {limit}")
-        print(f"  - offset: {offset}")
-        print(f"  - start_date: {start_date}")
-        print(f"  - end_date: {end_date}")
+        # Base filters
+        filters = []
+        if cluster_id:
+            filters.append(ClusterMetrics.cluster_id == cluster_id)
+        if user_id:
+            filters.append(ClusterMetrics.user_id == user_id)
 
-        # Build filters dictionary
-        filters = {}
-        if cluster_name:
-            filters["cluster_name"] = cluster_name
-        if start_date:
-            filters["start_date"] = start_date
-        if end_date:
-            filters["end_date"] = end_date
+        # Step 1: Determine which window_duration to use
+        available_windows = (
+            session.query(ClusterMetrics.window_duration)
+            .filter(*filters)
+            .distinct()
+            .all()
+        )
+        available_windows = [w[0] for w in available_windows]
 
-        print("Filters to apply:", filters)
+        def window_to_hours(w):
+            if w.endswith("h"):
+                return int(w[:-1])
+            if w.endswith("d"):
+                return int(w[:-1]) * 24
+            return int(w)
 
-        # Call your database service/function here
-        # Replace this with your actual database call
-        cluster_metrics = fetch_cluster_metrics_from_db(
-            filters=filters, window_duration=window_duration, limit=limit, offset=offset
+        req_hours = window_to_hours(requested_window) if requested_window else None
+        candidate_windows = [
+            w
+            for w in available_windows
+            if req_hours and window_to_hours(w) <= req_hours
+        ]
+        chosen_window = (
+            max(candidate_windows, key=window_to_hours) if candidate_windows else None
         )
 
-        print(f"Retrieved {len(cluster_metrics)} cluster metrics from database")
+        if not chosen_window:
+            return jsonify({"error": "No available window <= requested"}), 404
 
-        # Format response
-        response_data = {
-            "data": cluster_metrics,
-            "total": len(cluster_metrics),
-            "limit": limit,
-            "offset": offset,
-            "filters_applied": filters,
-        }
+        filters.append(ClusterMetrics.window_duration == chosen_window)
 
-        print("Returning response with data count:", len(cluster_metrics))
-        return jsonify(response_data), 200
+        # Step 2: Find last 2 distinct periods (by timestamp)
+        last_two_periods = (
+            session.query(ClusterMetrics.timestamp)
+            .filter(*filters)
+            .distinct()
+            .order_by(ClusterMetrics.timestamp.desc())
+            .limit(2)
+            .all()
+        )
+        last_two_periods = [p[0] for p in last_two_periods]
+
+        if not last_two_periods:
+            return jsonify({"data": []}), 200
+
+        # Step 3: Fetch rows for those periods
+        recent_data = (
+            session.query(ClusterMetrics)
+            .filter(*filters)
+            .filter(ClusterMetrics.timestamp.in_(last_two_periods))
+            .all()
+        )
+
+        # Step 4: Aggregate by cluster_name (including __idle__)
+        aggregated = {}
+        for row in recent_data:
+            key = row.cluster_name
+            if key not in aggregated:
+                aggregated[key] = {
+                    "cluster_name": key,
+                    "total_cost": 0.0,
+                    "cpu_cost": 0.0,
+                    "cpu_cost_idle": 0.0,
+                    "ram_cost": 0.0,
+                    "ram_cost_idle": 0.0,
+                    "pv_cost": 0.0,
+                    "network_cost": 0.0,
+                    "gpu_cost": 0.0,
+                    "gpu_cost_idle": 0.0,
+                    "load_balancer_cost": 0.0,
+                    "external_cost": 0.0,
+                    "shared_cost": 0.0,
+                    "cpu_core_request_average": 0.0,
+                    "cpu_core_usage_average": 0.0,
+                    "ram_byte_request_average": 0.0,
+                    "ram_byte_usage_average": 0.0,
+                    "gpu_request_average": 0.0,
+                    "gpu_usage_average": 0.0,
+                    "total_efficiency": 0.0,
+                    "cpu_usage_percent": 0.0,
+                    "memory_usage_percent": 0.0,
+                    "memory_gb_used": 0.0,
+                    "memory_gb_requested": 0.0,
+                    "efficiency_percent": 0.0,
+                    "cluster_status": row.cluster_status,
+                    "node_count": 0,
+                    "pod_count": 0,
+                    "efficiency_category": row.efficiency_category,
+                    "is_idle_allocation": row.is_idle_allocation,
+                    "timestamps": [],
+                }
+
+            agg = aggregated[key]
+            agg["total_cost"] += row.total_cost
+            agg["cpu_cost"] += row.cpu_cost
+            agg["cpu_cost_idle"] += row.cpu_cost_idle
+            agg["ram_cost"] += row.ram_cost
+            agg["ram_cost_idle"] += row.ram_cost_idle
+            agg["pv_cost"] += row.pv_cost
+            agg["network_cost"] += row.network_cost
+            agg["gpu_cost"] += row.gpu_cost
+            agg["gpu_cost_idle"] += row.gpu_cost_idle
+            agg["load_balancer_cost"] += row.load_balancer_cost
+            agg["external_cost"] += row.external_cost
+            agg["shared_cost"] += row.shared_cost
+            agg["cpu_core_request_average"] += row.cpu_core_request_average
+            agg["cpu_core_usage_average"] += row.cpu_core_usage_average
+            agg["ram_byte_request_average"] += row.ram_byte_request_average
+            agg["ram_byte_usage_average"] += row.ram_byte_usage_average
+            agg["gpu_request_average"] += row.gpu_request_average
+            agg["gpu_usage_average"] += row.gpu_usage_average
+            agg["total_efficiency"] += row.total_efficiency
+            agg["cpu_usage_percent"] += row.cpu_usage_percent
+            agg["memory_usage_percent"] += row.memory_usage_percent
+            agg["memory_gb_used"] += row.memory_gb_used
+            agg["memory_gb_requested"] += row.memory_gb_requested
+            agg["efficiency_percent"] += row.efficiency_percent
+            agg["node_count"] += row.node_count
+            agg["pod_count"] += row.pod_count
+            agg["timestamps"].append(row.timestamp.isoformat())
+
+        return jsonify({"data": list(aggregated.values())}), 200
 
     except Exception as e:
         print(f"Error in get_cluster_metrics: {str(e)}")
-        print(f"Error type: {type(e).__name__}")
-        import traceback
-
-        print("Full traceback:")
-        traceback.print_exc()
-
         return (
             jsonify({"error": "Failed to fetch cluster metrics", "message": str(e)}),
             500,
         )
+
+    finally:
+        session.close()
 
 
 # Helper function - replace with your actual database query

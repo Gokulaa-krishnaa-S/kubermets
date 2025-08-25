@@ -604,7 +604,7 @@ def fetch_kubecost_window(kubecost_url: str, window_minutes: int) -> Dict:
     """
     end_time = datetime.utcnow()
     start_time = end_time - timedelta(minutes=window_minutes)
-    window_param = f"3h"
+    window_param = f"24h"
 
     params = {
         "accumulate": "true",
