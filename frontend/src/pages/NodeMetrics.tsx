@@ -81,7 +81,7 @@ const NodeMetricsDashboard = () => {
     try {
       const queryParams = {
         cluster_id: 1,
-        duration: "24h",
+        duration: timeRange,
       };
 
       const response = await NodeService.getNodeAllocationSummary(queryParams);
