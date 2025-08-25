@@ -36,7 +36,7 @@ const App = () => (
             <Route path="/new" element={<K8sDashboard />} />
             <Route path="/alerts-events" element={<AlertsAndCost />} />
             <Route path="/billing-cost" element={<BillingAndCost />} />
-            <Route path="/settings" element={<Settings />} />
+            {/* <Route path="/settings" element={<Settings />} /> */}
             <Route path="/instance" element={<KubernetesInstanceList />} />
 
             {/* Nested metric routes */}
