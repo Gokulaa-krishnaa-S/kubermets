@@ -11,6 +11,7 @@ def get_pod_metrics():
     Fetch pod metrics by cluster_id with optional time window duration
     Params:
       cluster_id (required)
+      user_id (required)
       duration: 1h, 6h, 24h, 7d, 30d (default: 24h)
       namespace (optional): filter by namespace
       search (optional): search by pod name
@@ -20,6 +21,8 @@ def get_pod_metrics():
     try:
         # 1️⃣ Get cluster_id from request
         cluster_id = request.args.get("cluster_id")
+        user_id = request.args.get("user_id")
+        print(user_id,"=================user_id=================")
         print(f"Requested cluster_id: {cluster_id}")
         if not cluster_id:
             return jsonify({"error": "cluster_id is required"}), 400
@@ -68,6 +71,7 @@ def get_pod_metrics():
         if total_count == 0:
             return jsonify({
                 "cluster_id": cluster_id,
+                "user_id": user_id,
                 "duration": duration,
                 "namespace": namespace,
                 "search": search,
@@ -114,6 +118,7 @@ def get_pod_metrics():
             PodMetrics.domain.label("domain")
         ).filter(
             PodMetrics.cluster_id == cluster_id,  # Use as string, same as nodes API
+            PodMetrics.user_id == user_id,
             PodMetrics.start_time >= start_time,   # FIXED: Use >= instead of <=
             PodMetrics.start_time <= end_time      # FIXED: Use start_time consistently
         )
@@ -178,6 +183,7 @@ def get_pod_metrics():
 
         return jsonify({
             "cluster_id": cluster_id,
+            "user_id": user_id,
             "duration": duration,
             "namespace": namespace,
             "search": search,
@@ -204,6 +210,7 @@ def get_pod_details(pod_name):
     Fetch essential details for a specific pod (streamlined response)
     Params:
       cluster_id (required)
+      user_id (required)
       namespace (optional)
       duration: 1h, 6h, 24h, 7d, 30d (default: 7d)
       
@@ -214,6 +221,8 @@ def get_pod_details(pod_name):
     try:
         # Get parameters
         cluster_id = request.args.get("cluster_id")
+        user_id = request.args.get("user_id")
+        print(user_id,"=================user_id=================")
         if not cluster_id:
             return jsonify({"error": "cluster_id is required"}), 400
             
@@ -279,6 +288,7 @@ def get_pod_details(pod_name):
             func.bool_or(PodMetrics.is_idle).label("has_idle_periods")
         ).filter(
             PodMetrics.cluster_id == cluster_id,
+            PodMetrics.user_id == user_id,
             PodMetrics.name == pod_name,
             PodMetrics.start_time >= start_time,
             PodMetrics.start_time <= end_time
@@ -306,6 +316,7 @@ def get_pod_details(pod_name):
                 "error": "Pod not found",
                 "pod_name": pod_name,
                 "cluster_id": cluster_id,
+                "user_id": user_id,
                 "namespace": namespace,
                 "time_range": f"{start_time.isoformat()} to {end_time.isoformat()}"
             }), 404
@@ -376,6 +387,7 @@ def get_pod_details(pod_name):
         return jsonify({
             "pod_name": pod_name,
             "cluster_id": cluster_id,
+            "user_id": user_id,
             "data": pod_summary
         }), 200
 
@@ -398,6 +410,8 @@ def get_pod_timeline(pod_name):
     session = db_manager.get_session()
     try:
         cluster_id = request.args.get("cluster_id")
+        user_id = request.args.get("user_id")
+        print(user_id,"=================user_id=================")
         if not cluster_id:
             return jsonify({"error": "cluster_id is required"}), 400
             
@@ -426,6 +440,7 @@ def get_pod_timeline(pod_name):
             PodMetrics.ram_efficiency
         ).filter(
             PodMetrics.cluster_id == cluster_id,
+            PodMetrics.user_id == user_id,
             PodMetrics.name == pod_name,
             PodMetrics.start_time >= start_time,
             PodMetrics.start_time <= end_time
@@ -455,6 +470,7 @@ def get_pod_timeline(pod_name):
         return jsonify({
             "pod_name": pod_name,
             "cluster_id": cluster_id,
+            "user_id": user_id,
             "timeline": timeline,
             "total_points": len(timeline)
         }), 200
@@ -469,6 +485,7 @@ def get_pod_details(pod_name):
     Fetch detailed metrics for a specific pod
     Params:
       cluster_id (required)
+        user_id (required)
       namespace (optional)
       duration: 1h, 6h, 24h, 7d, 30d (default: 7d)
     """
@@ -477,6 +494,8 @@ def get_pod_details(pod_name):
     try:
         # Get parameters
         cluster_id = request.args.get("cluster_id")
+        user_id = request.args.get("user_id")
+        print(user_id,"=================user_id=================")
         if not cluster_id:
             return jsonify({"error": "cluster_id is required"}), 400
             
@@ -498,6 +517,7 @@ def get_pod_details(pod_name):
         # Build query for specific pod - Use same approach as main endpoint
         query = session.query(PodMetrics).filter(
             PodMetrics.cluster_id == cluster_id,  # String comparison like nodes API
+            PodMetrics.user_id == user_id,
             PodMetrics.name == pod_name,
             PodMetrics.start_time >= start_time,
             PodMetrics.start_time <= end_time
@@ -518,6 +538,7 @@ def get_pod_details(pod_name):
                 "debug": {
                     "pod_name": pod_name,
                     "cluster_id": cluster_id,
+                    "user_id": user_id,
                     "namespace": namespace,
                     "time_range": f"{start_time} to {end_time}"
                 }
@@ -584,6 +605,7 @@ def get_pod_details(pod_name):
         return jsonify({
             "pod_name": pod_name,
             "cluster_id": cluster_id,
+            "user_id": user_id,
             "namespace": namespace,
             "domain": domain,
             "duration": duration,
