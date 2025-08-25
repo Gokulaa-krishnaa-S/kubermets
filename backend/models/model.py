@@ -310,9 +310,9 @@ class DatabaseManager:
         """Get a database session"""
         return self.SessionLocal()
 
-    # def drop_tables(self):
-    #     """Drop all tables (use with caution!)"""
-    #     Base.metadata.drop_all(bind=self.engine)
+    def drop_tables(self):
+        """Drop all tables (use with caution!)"""
+        Base.metadata.drop_all(bind=self.engine)
 
 
 # Initialize database manager

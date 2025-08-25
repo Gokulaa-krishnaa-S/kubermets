@@ -118,16 +118,34 @@ export default function ClusterMetrics() {
         setServerStatus("live");
       }
 
-      const allocations = res?.data || []; // Backend now returns array like [{cluster_name: ..., total_cost: ..., ...}]
+      const allocations = res?.data || [];
+      console.log(allocations, "------");
 
       // Separate idle and active clusters
-      const idleEntry = allocations.find((a) => a.cluster_name === "__idle__");
+      const idleEntry =
+        allocations.find((a) => a.cluster_name === "__idle__") || {};
       const activeClusters = allocations.filter(
         (a) =>
           a.cluster_name !== "__idle__" && a.cluster_name !== "cluster-total"
       );
-      const totalEntry = allocations.find(
-        (a) => a.cluster_name === "cluster-total"
+
+      // Calculate "cluster-total" by summing idle + all active
+      const totalEntry = activeClusters.concat(idleEntry).reduce(
+        (acc, cur) => {
+          acc.cpu_cost += cur.cpu_cost || 0;
+          acc.ram_cost += cur.ram_cost || 0;
+          acc.pv_cost += cur.pv_cost || 0;
+          acc.cpu_core_usage_average += cur.cpu_core_usage_average || 0;
+          acc.ram_byte_usage_average += cur.ram_byte_usage_average || 0;
+          return acc;
+        },
+        {
+          cpu_cost: 0,
+          ram_cost: 0,
+          pv_cost: 0,
+          cpu_core_usage_average: 0,
+          ram_byte_usage_average: 0,
+        }
       );
 
       // Prepare cluster list for UI (active only)
@@ -149,10 +167,9 @@ export default function ClusterMetrics() {
         status: c.cluster_status ?? "running",
       }));
 
-      // Set cluster list to state
       setClusters(clusterList);
 
-      // Use total entry for global stats (includes idle+active)
+      // Set cluster stats using computed totalEntry (active + idle)
       setClusterStats([
         {
           title: "Active Clusters",
@@ -163,35 +180,35 @@ export default function ClusterMetrics() {
         },
         {
           title: "CPU Cost",
-          value: `$${(totalEntry?.cpu_cost || 0).toFixed(2)}`,
+          value: `$${(totalEntry.cpu_cost || 0).toFixed(2)}`,
           subtitle: "This period",
           icon: <Cpu className="w-4 h-4" />,
           status: "info",
         },
         {
           title: "Memory Cost",
-          value: `$${(totalEntry?.ram_cost || 0).toFixed(2)}`,
+          value: `$${(totalEntry.ram_cost || 0).toFixed(2)}`,
           subtitle: "This period",
           icon: <Activity className="w-4 h-4" />,
           status: "healthy",
         },
         {
           title: "Storage Cost",
-          value: `$${(totalEntry?.pv_cost || 0).toFixed(2)}`,
+          value: `$${(totalEntry.pv_cost || 0).toFixed(2)}`,
           subtitle: "This period",
           icon: <HardDrive className="w-4 h-4" />,
           status: "info",
         },
         {
           title: "Total CPU Cores",
-          value: (totalEntry?.cpu_core_usage_average || 0).toFixed(1),
+          value: (totalEntry.cpu_core_usage_average || 0).toFixed(1),
           subtitle: "In use",
           icon: <Zap className="w-4 h-4" />,
           status: "healthy",
         },
         {
           title: "Total Memory",
-          value: `${bytesToGB(totalEntry?.ram_byte_usage_average || 0)} GB`,
+          value: `${bytesToGB(totalEntry.ram_byte_usage_average || 0)} GB`,
           subtitle: "In use",
           icon: <Database className="w-4 h-4" />,
           status: "info",
@@ -328,7 +345,7 @@ export default function ClusterMetrics() {
         const queryParams = {
           user_id: 1,
           cluster_id: 1,
-          window: "24h",
+          window: window,
         };
 
         console.log("Fetching all data with params:", queryParams);
@@ -685,7 +702,8 @@ export default function ClusterMetrics() {
         selectedTimeRange={timeRange}
         onTimeRangeChange={handleTimeRangeChange}
         timeRangeVariant="select"
-        timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
+        // timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
+        timeRangeOptions={["24h", "7d", "30d"]}
         onFilterClick={handleFilterClick}
         showFilter={false}
         onRefresh={refreshAllData}
@@ -754,10 +772,10 @@ export default function ClusterMetrics() {
                     clusters.map((cluster, index) => (
                       <div
                         key={`${cluster.name}-${index}`}
-                        onClick={() => {
-                          setSelectedCluster(cluster.name);
-                          setShowClusterModal(true);
-                        }}
+                        // onClick={() => {
+                        //   setSelectedCluster(cluster.name);
+                        //   setShowClusterModal(true);
+                        // }}
                         className="group p-6 border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-lg transition-all duration-300 cursor-pointer bg-white hover:bg-blue-50/30"
                       >
                         <div className="flex items-start justify-between mb-6">
@@ -874,10 +892,10 @@ export default function ClusterMetrics() {
                                 : "just now"}
                             </span>
                           </div>
-                          <button className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium group-hover:translate-x-1 transition-all duration-200">
+                          {/* <button className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium group-hover:translate-x-1 transition-all duration-200">
                             View Details
                             <ChevronRight className="w-4 h-4" />
-                          </button>
+                          </button> */}
                         </div>
                       </div>
                     ))

@@ -18,12 +18,12 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 
 const predefinedOptions = [
-  { label: "One Hour", value: "1h" },
-  { label: "Three Hours", value: "3h" },
-  { label: "Seven Hours", value: "7h" },
-  // { label: "Month to date", value: "month_to_date" },
-  // { label: "Last week", value: "last_week" },
-  { label: "Twelve Hours", value: "12h" },
+  // { label: "One Hour", value: "1h" },
+  // { label: "Three Hours", value: "3h" },
+  // { label: "Seven Hours", value: "7h" },
+  // // { label: "Month to date", value: "month_to_date" },
+  // // { label: "Last week", value: "last_week" },
+  // { label: "Twelve Hours", value: "12h" },
   { label: "Last 24h", value: "24h" },
   { label: "Last 48h", value: "48h" },
   { label: "Last 7 days", value: "7d" },

@@ -58,6 +58,7 @@ def get_cluster_metrics():
             .distinct()
             .all()
         )
+        print(available_windows, "---------------------")
         available_windows = [w[0] for w in available_windows]
 
         def window_to_hours(w):
@@ -68,6 +69,7 @@ def get_cluster_metrics():
             return int(w)
 
         req_hours = window_to_hours(requested_window) if requested_window else None
+        print(req_hours, "-------------------_+++++++++++++++++++++++++++++")
         candidate_windows = [
             w
             for w in available_windows
@@ -76,7 +78,7 @@ def get_cluster_metrics():
         chosen_window = (
             max(candidate_windows, key=window_to_hours) if candidate_windows else None
         )
-
+        print(chosen_window, "----choosen window-------------------------------------")
         if not chosen_window:
             return jsonify({"error": "No available window <= requested"}), 404
 
@@ -92,7 +94,7 @@ def get_cluster_metrics():
             .all()
         )
         last_two_periods = [p[0] for p in last_two_periods]
-
+        print(last_two_periods, "----------------last-two_peirodss---------")
         if not last_two_periods:
             return jsonify({"data": []}), 200
 
@@ -103,7 +105,7 @@ def get_cluster_metrics():
             .filter(ClusterMetrics.timestamp.in_(last_two_periods))
             .all()
         )
-
+        print(recent_data, "-----------recentdata")
         # Step 4: Aggregate by cluster_name (including __idle__)
         aggregated = {}
         for row in recent_data:
