@@ -236,7 +236,7 @@ useEffect(() => {
     setIsInitialLoading(true);
     fetchData();
   }
-}, [selectedTimeRange, selectedInstance?.cluster_id]); // Use cluster_id instead of selectedHash
+}, [selectedTimeRange, selectedInstance?.cluster_id]); 
 
 // Fixed refresh interval effect
 useEffect(() => {
