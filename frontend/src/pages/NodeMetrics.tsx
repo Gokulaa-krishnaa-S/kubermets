@@ -658,15 +658,6 @@ const NodeMetricsDashboard = () => {
         />
         {/* )} */}
 
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-            Node Metrics Dashboard
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Monitor cluster performance and resource utilization
-          </p>
-        </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
