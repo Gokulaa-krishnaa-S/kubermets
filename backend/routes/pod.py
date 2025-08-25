@@ -27,14 +27,11 @@ def get_pod_metrics():
         print(f"Requested cluster_id: {cluster_id}")
         if not cluster_id:
             return jsonify({"error": "cluster_id is required"}), 400
-
         # 2️⃣ Get duration (default: 24h)
         duration = request.args.get("duration", "24h")
-
         # Optional filters
         namespace = request.args.get("namespace")
         search = request.args.get("search")
-
         # Convert duration into datetime filter
         end_time = datetime.utcnow()
         if duration.endswith("h"):
@@ -48,22 +45,32 @@ def get_pod_metrics():
             start_time = end_time - timedelta(days=months * 30)
         else:
             return jsonify({"error": "Invalid duration format"}), 400
-
         print(f"Query time range: {start_time} to {end_time}")
-
         total_count = (
             session.query(func.count(PodMetrics.id))
             .filter(PodMetrics.cluster_id == cluster_id)
             .scalar()
         )
         print(f"Total pod records for cluster {cluster_id}: {total_count}")
-
         # Debug: show available cluster_ids
         existing_cluster_ids = session.query(func.distinct(PodMetrics.cluster_id)).all()
         print(
             f"Available cluster_ids in database: {[row[0] for row in existing_cluster_ids]}"
         )
-
+        # Check what timestamp fields are available in your pod data
+        sample_timestamps = (
+            session.query(
+                PodMetrics.start_time, PodMetrics.end_time, PodMetrics.created_at
+            )
+            .filter(PodMetrics.cluster_id.in_([1]))
+            .limit(3)
+            .all()
+        )
+        print("Sample timestamp data:")
+        for row in sample_timestamps:
+            print(
+                f"  start_time: {row.start_time}, end_time: {row.end_time}, created_at: {row.created_at}"
+            )
         if total_count == 0:
             return (
                 jsonify(

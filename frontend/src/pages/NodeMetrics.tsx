@@ -192,116 +192,12 @@ const NodeMetricsDashboard = () => {
     },
     [thresholds]
   );
-  // const fetchNodeData = useCallback(
-  //   async (queryParams) => {
-  //     try {
-  //       setIsLoadingData(true);
-
-  //       const response = await handleCallNodeData(queryParams);
-
-  //       if (response.code !== 200 || !response.data?.sets?.[0]?.allocations) {
-  //         throw new Error("Invalid response format");
-  //       }
-
-  //       const allocations = response.data.sets[0].allocations;
-  //       const activeNodes: any = Object.values(allocations).filter(
-  //         (node) =>
-  //           !node["name"].startsWith("__") &&
-  //           node["cpuCoreRequestAverage"] !== undefined
-  //       );
-
-  //       const totalNodes = activeNodes.length;
-  //       const totalCost = activeNodes.reduce(
-  //         (sum, node) => sum + (node["totalCost"] || 0),
-  //         0
-  //       );
-
-  //       const avgCpuUsage =
-  //         activeNodes.reduce((sum, node) => {
-  //           const usage =
-  //             (node["cpuCoreUsageAverage"] || 0) /
-  //             (node["cpuCoreRequestAverage"] || 1);
-  //           return sum + (isNaN(usage) ? 0 : usage);
-  //         }, 0) / totalNodes;
-
-  //       const avgEfficiency =
-  //         activeNodes.reduce(
-  //           (sum, node) => sum + (node["totalEfficiency"] || 0),
-  //           0
-  //         ) / totalNodes;
-
-  //       setSummaryStats({
-  //         totalNodes,
-  //         totalCost,
-  //         avgCpuUsage: avgCpuUsage * 100,
-  //         avgEfficiency,
-  //       });
-
-  //       const processedNodes = activeNodes.map((node) => {
-  //         const cpuRequest = node["cpuCoreRequestAverage"] || 0;
-  //         const cpuUsage = node["cpuCoreUsageAverage"] || 0;
-  //         const cpuUtilization =
-  //           cpuRequest > 0 ? (cpuUsage / cpuRequest) * 100 : 0;
-
-  //         const ramUsageBytes = node["ramByteUsageAverage"] || 0;
-  //         const ramRequestBytes = node["ramByteRequestAverage"] || 0;
-  //         const ramUtilizationGB = ramUsageBytes / 1024 ** 3;
-  //         const ramRequestGB = ramRequestBytes / 1024 ** 3;
-  //         const ramUtilization =
-  //           ramRequestBytes > 0
-  //             ? Math.min((ramUsageBytes / ramRequestBytes) * 100, 100)
-  //             : 0;
-
-  //         let status = "healthy";
-  //         if (
-  //           cpuUtilization > thresholds.cpuCritical ||
-  //           ramUtilization > thresholds.ramCritical
-  //         ) {
-  //           status = "critical";
-  //         } else if (
-  //           cpuUtilization > thresholds.cpuWarning ||
-  //           ramUtilization > thresholds.ramWarning
-  //         ) {
-  //           status = "warning";
-  //         }
-
-  //         return {
-  //           name: node["name"],
-  //           status,
-  //           cpuCores: cpuRequest.toFixed(1),
-  //           cpuUsage: cpuUtilization.toFixed(1),
-  //           ramRequest: ramRequestGB.toFixed(2),
-  //           ramUsage: ramUtilizationGB.toFixed(2),
-  //           ramUtilization: ramUtilization.toFixed(1),
-  //           totalCost: (node["totalCost"] || 0).toFixed(2),
-  //           cpuCost: (node["cpuCost"] || 0).toFixed(2),
-  //           ramCost: (node["ramCost"] || 0).toFixed(2),
-  //           pvCost: (node["pvCost"] || 0).toFixed(2),
-  //           efficiency: (node["totalEfficiency"] || 0).toFixed(2),
-  //           uptime: calculateUptime(node["start"] || "", node["end"] || ""),
-  //         };
-  //       });
-
-  //       setNodeData(processedNodes);
-  //     } catch (err) {
-  //       console.error("Failed to fetch node data:", err);
-  //       setError("Unable to fetch node data.");
-  //       setNodeData([]);
-  //       // setSummaryStats({});
-  //     } finally {
-  //       setLoading(false);
-  //       setIsLoadingData(false);
-  //       setIsInitialLoading(false);
-  //     }
-  //   },
-  //   [thresholds]
-  // );
 
   const LoadingBanner = ({ message }: { message: string }) => (
-    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+    <div className="mb-4 p-3 rounded-lg" style={{ background: 'hsl(var(--primary) / 0.05)', border: '1px solid hsl(var(--primary) / 0.15)' }}>
       <div className="flex items-center gap-2">
-        <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <span className="text-blue-800 text-sm">{message}</span>
+        <div className="w-4 h-4 border-2 rounded-full animate-spin" style={{ borderColor: 'hsl(var(--primary))', borderTopColor: 'transparent' }} />
+        <span className="text-[hsl(var(--primary))] text-sm">{message}</span>
       </div>
     </div>
   );
@@ -471,13 +367,13 @@ const NodeMetricsDashboard = () => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border border-border rounded-lg shadow-lg p-3 backdrop-blur-sm">
-          <p className="font-medium text-foreground mb-2">{label}</p>
+          {label ? (<p className="font-medium text-foreground mb-2">{label}</p>) : <></>}
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center gap-2 text-sm">
-              <div
+              {entry.color ? <div
                 className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: entry.color }}
-              />
+                style={{ backgroundColor: entry.color?.startsWith('hsl') ? entry.color : undefined, background: entry.color?.startsWith('hsl') ? entry.color : undefined }}
+              /> : <></>}
               <span className="text-muted-foreground">{entry.name}:</span>
               <span className="font-medium text-foreground">
                 {formatter ? formatter(entry.value, entry.name) : entry.value}
@@ -493,25 +389,23 @@ const NodeMetricsDashboard = () => {
   const StatusBadge = ({ status }) => {
     const statusConfig = {
       healthy: {
-        bg: "bg-emerald-100 dark:bg-emerald-900/30",
-        text: "text-emerald-700 dark:text-emerald-300",
-        border: "border-emerald-200 dark:border-emerald-700",
+        bg: "bg-[hsl(var(--success)/0.1)]",
+        text: "text-[hsl(var(--success))]",
+        border: "border-[hsl(var(--success)/0.2)]",
         label: "Healthy",
-        icon: "🟢",
       },
       warning: {
-        bg: "bg-amber-100 dark:bg-amber-900/30",
-        text: "text-amber-700 dark:text-amber-300",
-        border: "border-amber-200 dark:border-amber-700",
+        bg: "bg-[hsl(var(--warning)/0.1)]",
+        text: "text-[hsl(var(--warning))]",
+        border: "border-[hsl(var(--warning)/0.2)]",
         label: "Warning",
-        icon: "🟡",
       },
       critical: {
-        bg: "bg-red-100 dark:bg-red-900/30",
-        text: "text-red-700 dark:text-red-300",
-        border: "border-red-200 dark:border-red-700",
+        bg: "bg-[hsl(var(--destructive)/0.1)]",
+        text: "text-[hsl(var(--destructive))]",
+        border: "border-[hsl(var(--destructive)/0.2)]",
         label: "Critical",
-        icon: "🔴",
+
       },
     };
 
@@ -521,7 +415,6 @@ const NodeMetricsDashboard = () => {
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}
       >
-        <span className="text-xs">{config.icon}</span>
         {config.label}
       </span>
     );
@@ -530,11 +423,11 @@ const NodeMetricsDashboard = () => {
   const MetricCard = ({ title, value, subtitle, icon, status, trend }) => {
     const statusColors = {
       healthy:
-        "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20",
+        "border-[hsl(var(--success))] bg-[hsl(var(--success)/0.05)]",
       warning:
-        "border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20",
+        "border-[hsl(var(--warning))] bg-[hsl(var(--warning)/0.05)]",
       critical:
-        "border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20",
+        "border-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.05)]",
       info: "border-border bg-card",
     };
 
@@ -606,14 +499,14 @@ const NodeMetricsDashboard = () => {
     value: count,
     color:
       status === "healthy"
-        ? "#10b981"
+        ? "hsl(var(--chart-storage))"
         : status === "warning"
-          ? "#f59e0b"
-          : "#ef4444",
+          ? "hsl(var(--warning))"
+          : "hsl(var(--chart-cpu))",
   }));
 
   // Pagination logic
-  const totalItems = nodeData.length;
+  const totalItems = nodeData.length; 
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
@@ -765,15 +658,6 @@ const NodeMetricsDashboard = () => {
         />
         {/* )} */}
 
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-            Node Metrics Dashboard
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Monitor cluster performance and resource utilization
-          </p>
-        </div>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
@@ -916,21 +800,21 @@ const NodeMetricsDashboard = () => {
                     <Bar
                       dataKey="cpu"
                       stackId="cost"
-                      fill="#ef4444"
+                      fill="hsl(var(--chart-cpu))"
                       name="CPU"
                       radius={[0, 0, 0, 0]}
                     />
                     <Bar
                       dataKey="ram"
                       stackId="cost"
-                      fill="#3b82f6"
+                      fill="hsl(var(--chart-ram))"
                       name="RAM"
                       radius={[0, 0, 0, 0]}
                     />
                     <Bar
                       dataKey="storage"
                       stackId="cost"
-                      fill="#10b981"
+                      fill="hsl(var(--chart-storage))"
                       name="Storage"
                       radius={[2, 2, 0, 0]}
                     />
@@ -985,29 +869,29 @@ const NodeMetricsDashboard = () => {
                   <Line
                     type="monotone"
                     dataKey="cpuUsage"
-                    stroke="#ef4444"
+                    stroke="hsl(var(--chart-cpu-line))"
                     strokeWidth={3}
                     name="CPU Usage"
-                    dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "#ef4444", strokeWidth: 2 }}
+                    dot={{ fill: "hsl(var(--chart-cpu-line))", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: "hsl(var(--chart-cpu-line))", strokeWidth: 2 }}
                   />
                   <Line
                     type="monotone"
                     dataKey="ramUsage"
-                    stroke="#3b82f6"
+                    stroke="hsl(var(--chart-ram))"
                     strokeWidth={3}
                     name="RAM Usage"
-                    dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "#3b82f6", strokeWidth: 2 }}
+                    dot={{ fill: "hsl(var(--chart-ram))", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: "hsl(var(--chart-ram))", strokeWidth: 2 }}
                   />
                   <Line
                     type="monotone"
                     dataKey="efficiency"
-                    stroke="#10b981"
+                    stroke="hsl(var(--chart-storage))"
                     strokeWidth={3}
                     name="Efficiency"
-                    dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "#10b981", strokeWidth: 2 }}
+                    dot={{ fill: "hsl(var(--chart-storage))", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, stroke: "hsl(var(--chart-storage))", strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -1111,7 +995,7 @@ const NodeMetricsDashboard = () => {
             <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b text-primary">
+                  <tr className="border-b" style={{ color: 'hsl(var(--primary))' }}>
                     <th className="text-left p-4 font-medium">Node</th>
                     <th className="text-left p-4 font-medium">Status</th>
                     <th className="text-left p-4 font-medium">CPU</th>
@@ -1125,12 +1009,13 @@ const NodeMetricsDashboard = () => {
                   {currentNodes.map((node, index) => (
                     <tr
                       key={startIndex + index}
-                      className="border-b hover:bg-muted/50 transition-colors text-foreground"
+                      className="border-b transition-colors"
+                      style={{ color: 'hsl(var(--foreground))', backgroundColor: undefined }}
                     >
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-primary/10">
-                            <Server className="w-4 h-4 text-primary" />
+                          <div className="p-2 rounded-lg" style={{ background: 'hsl(var(--primary) / 0.1)' }}>
+                            <Server className="w-4 h-4" style={{ color: 'hsl(var(--primary))' }} />
                           </div>
                           <span className="font-medium">{node.name}</span>
                         </div>

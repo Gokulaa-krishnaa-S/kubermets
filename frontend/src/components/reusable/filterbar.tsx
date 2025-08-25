@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Filter as FilterIcon,
+  Filter,
   RefreshCw,
   ChevronDown,
   Clock,
@@ -18,12 +18,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 
 const predefinedOptions = [
-  // { label: "One Hour", value: "1h" },
-  // { label: "Three Hours", value: "3h" },
-  // { label: "Seven Hours", value: "7h" },
-  // // { label: "Month to date", value: "month_to_date" },
-  // // { label: "Last week", value: "last_week" },
-  // { label: "Twelve Hours", value: "12h" },
   { label: "Last 24h", value: "24h" },
   { label: "Last 48h", value: "48h" },
   { label: "Last 7 days", value: "7d" },
@@ -157,7 +151,7 @@ const Calendar = ({
   };
 
   return (
-    <div className="w-80 bg-white border border-gray-200 rounded-lg shadow-lg p-4">
+    <div className="w-80 max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-lg p-4">
       {/* Date Range Inputs */}
       <div className="flex items-center gap-2 mb-4 p-2 border border-gray-200 rounded">
         <input
@@ -312,13 +306,14 @@ export const Days: React.FC<DaysProps> = ({
 
   if (variant === "buttons") {
     return (
-      <div className={`flex items-center gap-2 ${className}`}>
+      <div className={`flex flex-wrap items-center gap-2 ${className}`}>
         {["1h", "6h", "24h", "7d", "30d"].map((range) => (
           <Button
             key={range}
             variant={selectedTimeRange === range ? "default" : "outline"}
             size="sm"
             onClick={() => onTimeRangeChange(range)}
+            className="text-xs sm:text-sm"
           >
             {range}
           </Button>
@@ -333,10 +328,10 @@ export const Days: React.FC<DaysProps> = ({
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
-            className="flex items-center gap-2 min-w-[140px] justify-between"
+            className="flex items-center gap-2 min-w-[120px] sm:min-w-[140px] justify-between text-xs sm:text-sm"
           >
-            <span>{getSelectedLabel()}</span>
-            <ChevronDown className="w-4 h-4" />
+            <span className="truncate">{getSelectedLabel()}</span>
+            <ChevronDown className="w-4 h-4 flex-shrink-0" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64 p-0">
@@ -383,7 +378,7 @@ export const Days: React.FC<DaysProps> = ({
 
       {/* Custom Calendar Modal */}
       {showCustomCalendar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
           <Calendar
             selectedStart={null}
             selectedEnd={null}
@@ -403,7 +398,7 @@ interface FilterProps {
   className?: string;
 }
 
-export const Filter: React.FC<FilterProps> = ({
+export const FilterButton: React.FC<FilterProps> = ({
   onFilterClick,
   className = "",
 }) => {
@@ -411,10 +406,11 @@ export const Filter: React.FC<FilterProps> = ({
     <Button
       variant="outline"
       onClick={onFilterClick}
-      className={`flex items-center gap-2 ${className}`}
+      className={`flex items-center gap-2 text-xs sm:text-sm ${className}`}
+      size="sm"
     >
-      <FilterIcon className="w-4 h-4" />
-      Filter
+      <Filter className="w-4 h-4" />
+      <span className="hidden sm:inline">Filter</span>
     </Button>
   );
 };
@@ -480,9 +476,9 @@ export const Refresh: React.FC<RefreshProps> = ({
   };
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       {lastUpdated && (
-        <div className="flex items-center gap-1 text-sm text-gray-500">
+        <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 order-3 sm:order-1 w-full sm:w-auto">
           <Clock className="w-3 h-3" />
           <span>Updated {formatLastUpdated(lastUpdated)}</span>
         </div>
@@ -493,12 +489,12 @@ export const Refresh: React.FC<RefreshProps> = ({
         size="sm"
         onClick={() => onRefresh(true)}
         disabled={isRefreshing}
-        className="flex items-center gap-2"
+        className="flex items-center gap-2 text-xs sm:text-sm order-1 sm:order-2"
       >
         <RefreshCw
           className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
         />
-        Refresh
+        <span className="hidden sm:inline">Refresh</span>
       </Button>
 
       <DropdownMenu>
@@ -506,7 +502,7 @@ export const Refresh: React.FC<RefreshProps> = ({
           <Button
             variant="outline"
             size="sm"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-xs sm:text-sm order-2 sm:order-3"
           >
             <RefreshCw className="w-4 h-4" />
             <span className="hidden sm:inline">
@@ -567,8 +563,9 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   className = "",
 }) => {
   return (
-    <div className={`flex items-center justify-between gap-4 ${className}`}>
-      <div className="flex-shrink-0">
+    <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 ${className}`}>
+      {/* Time Range Selection */}
+      <div className="flex-shrink-0 order-1">
         <Days
           selectedTimeRange={selectedTimeRange}
           onTimeRangeChange={onTimeRangeChange}
@@ -577,20 +574,92 @@ export const FilterBar: React.FC<FilterBarProps> = ({
         />
       </div>
 
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {showFilter && <Filter onFilterClick={onFilterClick} />}
-        {showRefresh && (
-          <Refresh
-            onRefresh={onRefresh}
-            refreshInterval={refreshInterval}
-            onRefreshIntervalChange={onRefreshIntervalChange}
-            isRefreshing={isRefreshing}
-            lastUpdated={lastUpdated}
-          />
+      {/* Filter and Refresh Controls */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-2 flex-shrink-0 order-2">
+        {/* Filter and action buttons */}
+        <div className="flex items-center gap-2">
+          {showFilter && <FilterButton onFilterClick={onFilterClick} />}
+          {showRefresh && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onRefresh(true)}
+                disabled={isRefreshing}
+                className="flex items-center gap-2 text-xs sm:text-sm"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                <span className="hidden sm:inline">Refresh</span>
+              </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2 text-xs sm:text-sm"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span className="">
+                      {refreshInterval ? 
+                        refreshOptions.find(opt => opt.value === refreshInterval)?.label.replace("Every ", "") || "10 seconds"
+                        : "Off"
+                      }
+                    </span>
+                    {/* <span className="sm:hidden">auto</span> */}
+                    <ChevronDown className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {refreshOptions.map((option) => (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onClick={() => onRefreshIntervalChange(option.value)}
+                      className={`cursor-pointer text-gray-700 dark:text-white ${
+                        refreshInterval === option.value ? "bg-accent" : ""
+                      }`}
+                    >
+                      {option.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </div>
+
+        {/* Last updated info */}
+        {lastUpdated && showRefresh && (
+          <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
+            <Clock className="w-3 h-3" />
+            <span>Updated {formatLastUpdated(lastUpdated)}</span>
+          </div>
         )}
       </div>
     </div>
   );
+};
+
+// Add the missing refreshOptions constant
+const refreshOptions = [
+  { label: "Every 10 seconds", value: 10000 },
+  { label: "Every 30 seconds", value: 30000 },
+  { label: "Every 1 minute", value: 60000 },
+  { label: "Every 2 minutes", value: 120000 },
+  { label: "Every 5 minutes", value: 300000 },
+  { label: "Every 10 minutes", value: 600000 },
+];
+
+// Helper function for formatLastUpdated
+const formatLastUpdated = (date: Date) => {
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  return `${Math.floor(diff / 3600)}h ago`;
 };
 
 // Demo Component
@@ -608,26 +677,50 @@ const Demo = () => {
   };
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-4 sm:p-6 space-y-8 max-w-6xl mx-auto">
       <div>
-        <h2 className="text-lg font-semibold mb-4">Updated Filter Bar Demo</h2>
-        <FilterBar
-          selectedTimeRange={selectedTimeRange}
-          onTimeRangeChange={setSelectedTimeRange}
-          timeRangeVariant="select"
-          showFilter={true}
-          onFilterClick={() => alert("Filter clicked")}
-          onRefresh={handleRefresh}
-          refreshInterval={refreshInterval}
-          onRefreshIntervalChange={setRefreshInterval}
-          isRefreshing={isRefreshing}
-          lastUpdated={lastUpdated}
-        />
+        <h2 className="text-lg font-semibold mb-4">Responsive Filter Bar Demo</h2>
+        <div className="border border-gray-200 rounded-lg p-4">
+          <FilterBar
+            selectedTimeRange={selectedTimeRange}
+            onTimeRangeChange={setSelectedTimeRange}
+            timeRangeVariant="select"
+            showFilter={true}
+            onFilterClick={() => alert("Filter clicked")}
+            onRefresh={handleRefresh}
+            refreshInterval={refreshInterval}
+            onRefreshIntervalChange={setRefreshInterval}
+            isRefreshing={isRefreshing}
+            lastUpdated={lastUpdated}
+          />
+        </div>
       </div>
 
       <div>
-        <h3 className="text-md font-medium mb-2">Selected Time Range:</h3>
-        <p className="text-gray-600">{selectedTimeRange}</p>
+        <h3 className="text-md font-medium mb-2">Button Variant Demo</h3>
+        <div className="border border-gray-200 rounded-lg p-4">
+          <FilterBar
+            selectedTimeRange={selectedTimeRange}
+            onTimeRangeChange={setSelectedTimeRange}
+            timeRangeVariant="buttons"
+            showFilter={true}
+            onFilterClick={() => alert("Filter clicked")}
+            onRefresh={handleRefresh}
+            refreshInterval={refreshInterval}
+            onRefreshIntervalChange={setRefreshInterval}
+            isRefreshing={isRefreshing}
+            lastUpdated={lastUpdated}
+          />
+        </div>
+      </div>
+
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h3 className="text-md font-medium mb-2">Current Settings:</h3>
+        <div className="space-y-1 text-sm text-gray-600">
+          <p><strong>Time Range:</strong> {selectedTimeRange}</p>
+          <p><strong>Refresh Interval:</strong> {refreshInterval ? `${refreshInterval/1000}s` : 'Off'}</p>
+          <p><strong>Last Updated:</strong> {lastUpdated.toLocaleTimeString()}</p>
+        </div>
       </div>
     </div>
   );

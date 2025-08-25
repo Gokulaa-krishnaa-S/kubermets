@@ -6,6 +6,11 @@
 
 @layer base {
   :root {
+    /* Chart Colors */
+    --chart-cpu: 0 68% 42%; /* #b22222 (CPU - deep red) */
+    --chart-ram: 217 91% 60%; /* #3b82f6 (RAM - blue) */
+    --chart-storage: 160 84% 39%; /* #10b981 (Storage - green) */
+    --chart-cpu-line: 0 84% 60%; /* #ef4444 (CPU Line - bright red) */
     /* Core */
     --background: 0 0% 100%;
     --foreground: 0 0% 0%;
@@ -31,7 +36,7 @@
     --warning: 39 100% 56%; /* #F59E0B */
     --warning-foreground: 0 0% 100%;
 
-    --destructive: 344 98% 44%;
+    --destructive: 0 68% 42%;
     --destructive-foreground: 0 0% 100%;
 
     /* UI Support */
@@ -96,6 +101,12 @@
   }
 
   .dark {
+    /* Chart Colors */
+    --chart-cpu: 0 85% 60%; /* #ff4d4f (CPU - vivid red for dark) */
+    --chart-ram: 217 91% 70%; /* #60a5fa (RAM - lighter blue for dark) */
+    --chart-storage: 160 84% 45%; /* #22d3a8 (Storage - lighter green for dark) */
+    --chart-cpu-line: 0 100% 67%; /* #ff6b6b (CPU Line - bright red for dark) */
+
     --background: 222 47% 11%;
     --foreground: 215 25% 95%;
 
@@ -177,22 +188,13 @@
       hsl(340 82% 60%)
     );
   }
-
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
 }
-
 
 #chart-desc::-webkit-scrollbar {
   display: none; /* Chrome, Safari */
 }
 
 #chart-desc {
-  -ms-overflow-style: none;  /* IE/Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
 }

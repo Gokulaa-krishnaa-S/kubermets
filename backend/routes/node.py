@@ -38,6 +38,9 @@ def get_node_metrics():
         else:
             return jsonify({"error": "Invalid duration format"}), 400
 
+
+        print(start_time , "---START TIME------" , end_time)
+
         # 3️⃣ Build query: sum numeric fields, group by node_name
         query = session.query(
             NodeMetrics.node_name,

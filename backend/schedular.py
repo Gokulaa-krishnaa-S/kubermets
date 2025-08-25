@@ -316,6 +316,7 @@ def format_pod_metrics(
         # Time window
         "start_time": start_time,
         "end_time": end_time,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
         "window": calculate_window_duration(start_time, end_time),
         # CPU metrics
         "cpu_core_usage_average": allocation_data.get("cpuCoreUsageAverage", 0.0),

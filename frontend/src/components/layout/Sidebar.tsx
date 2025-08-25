@@ -51,7 +51,7 @@ const metricItems = [
 
 const platformItems = [
   // { title: "Billing & Cost", url: "/billing-cost", icon: DollarSign },
-  { title: "Settings", url: "/settings", icon: Settings },
+  // { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
