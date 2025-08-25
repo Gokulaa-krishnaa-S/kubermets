@@ -188,14 +188,6 @@
       hsl(340 82% 60%)
     );
   }
-
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
 }
 
 #chart-desc::-webkit-scrollbar {
