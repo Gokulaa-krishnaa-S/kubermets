@@ -10,14 +10,17 @@ if (!baseURL) {
 }
 
 interface PodMetricsQueryParams {
-  cluster_id: string;
+  cluster_id: string | number;
+  user_id: string | number;
   duration?: string;
   namespace?: string;
   search?: string;
 }
 
+
 interface PodDetailsQueryParams {
   cluster_id: string;
+  user_id: string;
   namespace?: string;
   duration?: string;
   domain?: string;

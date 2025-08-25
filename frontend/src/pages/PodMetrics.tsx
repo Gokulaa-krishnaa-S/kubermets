@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Search,
   X,
+  User,
 } from "lucide-react";
 import {
   XAxis,
@@ -152,14 +153,14 @@ const fetchData = async (showToast = false) => {
   try {
     // Get cluster ID - make sure this returns a valid value
     // const clusterId = selectedInstance?.cluster_id || selectedInstance?.id || "1";
-    const clusterId =  "1";
+    // const clusterId =  "1";
 
-    console.log("Using cluster ID:", clusterId);
+
     
     const queryParams = {
-      cluster_id: clusterId.toString(),
-      duration: selectedTimeRange, // Use selectedTimeRange directly since your API expects the same format
-      // Add search filter if exists
+      cluster_id: 1,
+      user_id: 1,
+      duration: selectedTimeRange, 
       ...(searchTerm && { search: searchTerm })
     };
 
@@ -262,6 +263,7 @@ const handlePodDetails = async (name) => {
   try {
     const queryParams = {
       cluster_id: "1",
+      user_id: "1",
       duration: "7d",
       ...(selectedHash && { domain: selectedHash })
     };
@@ -357,6 +359,7 @@ const handlePodDetailsAlternative = async (name) => {
   try {
     const queryParams = {
       cluster_id: "1",
+      user_id: "1",
       duration: "7d",
       ...(selectedHash && { domain: selectedHash })
     };
