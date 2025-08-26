@@ -10,7 +10,7 @@ if (!baseURL) {
 }
 
 interface QueryParams {
-  [key: string]: string | number | boolean | undefined;
+  [key: string]: string | number | boolean | any | undefined;
 }
 
 interface MetricsResponse<T> {
