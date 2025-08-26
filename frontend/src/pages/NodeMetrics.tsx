@@ -96,6 +96,7 @@ const NodeMetricsDashboard = () => {
     try {
       const queryParams = {
         cluster_id: 1,
+        user_id: 1,
         duration: timeRange,
       };
 
@@ -460,13 +461,28 @@ const NodeMetricsDashboard = () => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border border-border rounded-lg shadow-lg p-3 backdrop-blur-sm">
-          <p className="font-medium text-foreground mb-2">{label}</p>
+          {label ? (
+            <p className="font-medium text-foreground mb-2">{label}</p>
+          ) : (
+            <></>
+          )}
           {payload.map((entry, index) => (
             <div key={index} className="flex items-center gap-2 text-sm">
-              <div
-                className="w-3 h-3 rounded-sm"
-                style={{ backgroundColor: entry.color }}
-              />
+              {entry.color ? (
+                <div
+                  className="w-3 h-3 rounded-sm"
+                  style={{
+                    backgroundColor: entry.color?.startsWith("hsl")
+                      ? entry.color
+                      : undefined,
+                    background: entry.color?.startsWith("hsl")
+                      ? entry.color
+                      : undefined,
+                  }}
+                />
+              ) : (
+                <></>
+              )}
               <span className="text-muted-foreground">{entry.name}:</span>
               <span className="font-medium text-foreground">
                 {formatter ? formatter(entry.value, entry.name) : entry.value}
@@ -482,25 +498,22 @@ const NodeMetricsDashboard = () => {
   const StatusBadge = ({ status }) => {
     const statusConfig = {
       healthy: {
-        bg: "bg-emerald-100 dark:bg-emerald-900/30",
-        text: "text-emerald-700 dark:text-emerald-300",
-        border: "border-emerald-200 dark:border-emerald-700",
+        bg: "bg-[hsl(var(--success)/0.1)]",
+        text: "text-[hsl(var(--success))]",
+        border: "border-[hsl(var(--success)/0.2)]",
         label: "Healthy",
-        icon: "🟢",
       },
       warning: {
-        bg: "bg-amber-100 dark:bg-amber-900/30",
-        text: "text-amber-700 dark:text-amber-300",
-        border: "border-amber-200 dark:border-amber-700",
+        bg: "bg-[hsl(var(--warning)/0.1)]",
+        text: "text-[hsl(var(--warning))]",
+        border: "border-[hsl(var(--warning)/0.2)]",
         label: "Warning",
-        icon: "🟡",
       },
       critical: {
-        bg: "bg-red-100 dark:bg-red-900/30",
-        text: "text-red-700 dark:text-red-300",
-        border: "border-red-200 dark:border-red-700",
+        bg: "bg-[hsl(var(--destructive)/0.1)]",
+        text: "text-[hsl(var(--destructive))]",
+        border: "border-[hsl(var(--destructive)/0.2)]",
         label: "Critical",
-        icon: "🔴",
       },
     };
 
@@ -510,7 +523,6 @@ const NodeMetricsDashboard = () => {
       <span
         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}
       >
-        <span className="text-xs">{config.icon}</span>
         {config.label}
       </span>
     );
@@ -518,12 +530,10 @@ const NodeMetricsDashboard = () => {
 
   const MetricCard = ({ title, value, subtitle, icon, status, trend }) => {
     const statusColors = {
-      healthy:
-        "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20",
-      warning:
-        "border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20",
+      healthy: "border-[hsl(var(--success))] bg-[hsl(var(--success)/0.05)]",
+      warning: "border-[hsl(var(--warning))] bg-[hsl(var(--warning)/0.05)]",
       critical:
-        "border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20",
+        "border-[hsl(var(--destructive))] bg-[hsl(var(--destructive)/0.05)]",
       info: "border-border bg-card",
     };
 
@@ -600,10 +610,10 @@ const NodeMetricsDashboard = () => {
     value: count,
     color:
       status === "healthy"
-        ? "#10b981"
+        ? "hsl(var(--chart-storage))"
         : status === "warning"
-          ? "#f59e0b"
-          : "#ef4444",
+        ? "hsl(var(--warning))"
+        : "hsl(var(--chart-cpu))",
   }));
 
   // Pagination logic
@@ -702,12 +712,13 @@ const NodeMetricsDashboard = () => {
                   typeof page === "number" && handlePageChange(page)
                 }
                 disabled={page === "..."}
-                className={`px-3 py-1 text-sm border rounded transition-colors ${page === currentPage
+                className={`px-3 py-1 text-sm border rounded transition-colors ${
+                  page === currentPage
                     ? "bg-primary text-primary-foreground border-primary"
                     : page === "..."
-                      ? "border-transparent cursor-default"
-                      : "border-border bg-background text-foreground hover:bg-muted"
-                  }`}
+                    ? "border-transparent cursor-default"
+                    : "border-border bg-background text-foreground hover:bg-muted"
+                }`}
               >
                 {page}
               </button>
@@ -974,21 +985,21 @@ const NodeMetricsDashboard = () => {
                     <Bar
                       dataKey="cpu"
                       stackId="cost"
-                      fill="#ef4444"
+                      fill="hsl(var(--chart-cpu))"
                       name="CPU"
                       radius={[0, 0, 0, 0]}
                     />
                     <Bar
                       dataKey="ram"
                       stackId="cost"
-                      fill="#3b82f6"
+                      fill="hsl(var(--chart-ram))"
                       name="RAM"
                       radius={[0, 0, 0, 0]}
                     />
                     <Bar
                       dataKey="storage"
                       stackId="cost"
-                      fill="#10b981"
+                      fill="hsl(var(--chart-storage))"
                       name="Storage"
                       radius={[2, 2, 0, 0]}
                     />
@@ -1050,29 +1061,53 @@ const NodeMetricsDashboard = () => {
                   <Line
                     type="monotone"
                     dataKey="cpuUsage"
-                    stroke="#ef4444"
+                    stroke="hsl(var(--chart-cpu-line))"
                     strokeWidth={3}
                     name="CPU Usage"
-                    dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "#ef4444", strokeWidth: 2 }}
+                    dot={{
+                      fill: "hsl(var(--chart-cpu-line))",
+                      strokeWidth: 2,
+                      r: 4,
+                    }}
+                    activeDot={{
+                      r: 6,
+                      stroke: "hsl(var(--chart-cpu-line))",
+                      strokeWidth: 2,
+                    }}
                   />
                   <Line
                     type="monotone"
                     dataKey="ramUsage"
-                    stroke="#3b82f6"
+                    stroke="hsl(var(--chart-ram))"
                     strokeWidth={3}
                     name="RAM Usage"
-                    dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "#3b82f6", strokeWidth: 2 }}
+                    dot={{
+                      fill: "hsl(var(--chart-ram))",
+                      strokeWidth: 2,
+                      r: 4,
+                    }}
+                    activeDot={{
+                      r: 6,
+                      stroke: "hsl(var(--chart-ram))",
+                      strokeWidth: 2,
+                    }}
                   />
                   <Line
                     type="monotone"
                     dataKey="efficiency"
-                    stroke="#10b981"
+                    stroke="hsl(var(--chart-storage))"
                     strokeWidth={3}
                     name="Efficiency"
-                    dot={{ fill: "#10b981", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, stroke: "#10b981", strokeWidth: 2 }}
+                    dot={{
+                      fill: "hsl(var(--chart-storage))",
+                      strokeWidth: 2,
+                      r: 4,
+                    }}
+                    activeDot={{
+                      r: 6,
+                      stroke: "hsl(var(--chart-storage))",
+                      strokeWidth: 2,
+                    }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -1150,12 +1185,13 @@ const NodeMetricsDashboard = () => {
                         <span>Efficiency</span>
                       </div>
                       <div
-                        className={`font-medium ${parseFloat(node.efficiency) > 50
+                        className={`font-medium ${
+                          parseFloat(node.efficiency) > 50
                             ? "text-emerald-600"
                             : parseFloat(node.efficiency) > 30
-                              ? "text-amber-600"
-                              : "text-red-600"
-                          }`}
+                            ? "text-amber-600"
+                            : "text-red-600"
+                        }`}
                       >
                         {node.efficiency}%
                       </div>
@@ -1186,7 +1222,10 @@ const NodeMetricsDashboard = () => {
             <div className="hidden lg:block overflow-x-auto">
               <table className={`w-full ${serverStatus === 'down' ? 'opacity-75' : ''}`}>
                 <thead>
-                  <tr className="border-b text-primary">
+                  <tr
+                    className="border-b"
+                    style={{ color: "hsl(var(--primary))" }}
+                  >
                     <th className="text-left p-4 font-medium">Node</th>
                     <th className="text-left p-4 font-medium">Status</th>
                     <th className="text-left p-4 font-medium">CPU</th>
@@ -1200,12 +1239,22 @@ const NodeMetricsDashboard = () => {
                   {currentNodes.map((node, index) => (
                     <tr
                       key={startIndex + index}
-                      className="border-b hover:bg-muted/50 transition-colors text-foreground"
+                      className="border-b transition-colors"
+                      style={{
+                        color: "hsl(var(--foreground))",
+                        backgroundColor: undefined,
+                      }}
                     >
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-primary/10">
-                            <Server className="w-4 h-4 text-primary" />
+                          <div
+                            className="p-2 rounded-lg"
+                            style={{ background: "hsl(var(--primary) / 0.1)" }}
+                          >
+                            <Server
+                              className="w-4 h-4"
+                              style={{ color: "hsl(var(--primary))" }}
+                            />
                           </div>
                           <span className="font-medium">{node.name}</span>
                         </div>
@@ -1241,12 +1290,13 @@ const NodeMetricsDashboard = () => {
                       </td>
                       <td className="p-4">
                         <span
-                          className={`font-medium ${parseFloat(node.efficiency) > 50
+                          className={`font-medium ${
+                            parseFloat(node.efficiency) > 50
                               ? "text-emerald-600"
                               : parseFloat(node.efficiency) > 30
-                                ? "text-amber-600"
-                                : "text-red-600"
-                            }`}
+                              ? "text-amber-600"
+                              : "text-red-600"
+                          }`}
                         >
                           {node.efficiency}%
                         </span>
