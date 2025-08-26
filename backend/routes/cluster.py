@@ -280,6 +280,79 @@ def getPodDetail():
         session.close()
 
 
+
+@clusters_bp.route("/latest-timestamp", methods=["GET"])
+
+def get_latest_timestamp_route():
+
+    """
+
+    Fetch the most recent record's timestamp for a given cluster_id.
+
+    """
+
+    cluster_id = request.args.get("cluster_id", type=int)
+
+    if not cluster_id:
+
+        return jsonify({"error": "cluster_id is required"}), 400
+
+
+
+    session = db_manager.get_session()
+
+    try:
+
+        latest_record = (
+
+            session.query(ClusterMetrics.timestamp)
+
+            .filter(ClusterMetrics.cluster_id == cluster_id)  
+
+            .order_by(desc(ClusterMetrics.timestamp))
+
+            .first()
+
+        )
+
+
+
+        if not latest_record:
+
+            return jsonify({"message": f"No records found for cluster_id={cluster_id}"}), 404
+
+
+
+        return jsonify({
+
+            "latest_timestamp": latest_record.timestamp.isoformat()
+
+        }), 200
+
+
+
+    except Exception as e:
+
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+
+        session.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @clusters_bp.route("/dashboard/summary", methods=["GET"])
 def dashboard_summary():
     """
@@ -922,790 +995,7 @@ def get_instance():
                 "terraform_file": "terraform_123.tfvars",
                 "updated_at": "2025-08-12T11:40:47.650507",
                 "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": ["asia-south1-a", "asia-south1-b"],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "july291",
-                    },
-                    "clusterName": "gcp-cls2-sify-prod",
-                    "cpuPools": [
-                        {
-                            "cpu_np_capacity_type": "on-demand",
-                            "cpu_np_instance_type": "e2medium",
-                            "cpu_np_max_node_count": "2",
-                            "cpu_np_min_node_count": "0",
-                            "cpu_np_name": "cpu2x",
-                        }
-                    ],
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "gpuPools": [
-                        {
-                            "gpu_np_capacity_type": "on-demand",
-                            "gpu_np_instance_type": "e2medium",
-                            "gpu_np_max_node_count": "2",
-                            "gpu_np_min_node_count": "0",
-                            "gpu_np_name": "cpu2x",
-                        }
-                    ],
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-08-11T16:51:29.327589",
-                "id": 47,
-                "status": 1,
-                "terraform_file": "terraform_123.tfvars",
-                "updated_at": "2025-08-12T06:37:31.086685",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": ["asia-south1-a", "asia-south1-b"],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "july291",
-                    },
-                    "clusterName": "gcp-cls2-sify-uat",
-                    "cpuPools": [
-                        {
-                            "cpu_np_capacity_type": "on-demand",
-                            "cpu_np_instance_type": "e2-medium",
-                            "cpu_np_max_node_count": "2",
-                            "cpu_np_min_node_count": "0",
-                            "cpu_np_name": "cpu2x",
-                        }
-                    ],
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "gpuPools": [
-                        {
-                            "gpu_np_capacity_type": "on-demand",
-                            "gpu_np_instance_type": "e2-medium",
-                            "gpu_np_max_node_count": "1",
-                            "gpu_np_min_node_count": "0",
-                            "gpu_np_name": "gpu2x",
-                        }
-                    ],
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-08-11T12:25:27.150346",
-                "id": 46,
-                "status": 1,
-                "terraform_file": "terraform_123.tfvars",
-                "updated_at": "2025-08-11T12:25:27.150352",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": [
-                        "africa-south1-a",
-                        "asia-south1-a",
-                        "asia-south1-b",
-                        "asia-south1-c",
-                    ],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "july291",
-                    },
-                    "clusterName": "gcp-cls2-sify-uatt",
-                    "cpuPools": [
-                        {
-                            "cpu_np_capacity_type": "on-demand",
-                            "cpu_np_instance_type": "e2-medium",
-                            "cpu_np_max_node_count": "2",
-                            "cpu_np_min_node_count": "0",
-                            "cpu_np_name": "cpu2x",
-                        }
-                    ],
-                    "gcpProjectId": "sify-ai-pocc",
-                    "gcpRegion": "asia-south1",
-                    "gpuPools": [
-                        {
-                            "gpu_np_capacity_type": "on-demand",
-                            "gpu_np_instance_type": "e2-medium",
-                            "gpu_np_max_node_count": "3",
-                            "gpu_np_min_node_count": "0",
-                            "gpu_np_name": "gpu2x",
-                        }
-                    ],
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-08-11T12:05:38.033586",
-                "id": 45,
-                "status": 1,
-                "terraform_file": "terraform_123.tfvars",
-                "updated_at": "2025-08-11T12:05:38.033591",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": ["asia-south1-a", "asia-south1-b"],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "july291",
-                    },
-                    "clusterName": "gcp-cls2-sify-devvv",
-                    "cpuPools": [
-                        {
-                            "cpu_np_capacity_type": "on-demand",
-                            "cpu_np_instance_type": "standard",
-                            "cpu_np_max_node_count": "2",
-                            "cpu_np_min_node_count": "1",
-                            "cpu_np_name": "cpu2x",
-                        }
-                    ],
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "gpuPools": [
-                        {
-                            "gpu_np_capacity_type": "on-demand",
-                            "gpu_np_instance_type": "standard",
-                            "gpu_np_max_node_count": "2",
-                            "gpu_np_min_node_count": "0",
-                            "gpu_np_name": "gpu2x",
-                        }
-                    ],
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-08-06T07:21:40.147056",
-                "id": 44,
-                "status": 1,
-                "terraform_file": "terraform_123.tfvars",
-                "updated_at": "2025-08-11T12:36:00.525900",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": ["asia-south1-a", "asia-south1-b"],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "july291",
-                    },
-                    "clusterName": "gcp-cls1-sifypocc",
-                    "cpuPools": [
-                        {
-                            "cpu_np_capacity_type": "spot",
-                            "cpu_np_instance_type": "standard",
-                            "cpu_np_max_node_count": "2",
-                            "cpu_np_min_node_count": "1",
-                            "cpu_np_name": "cpu2x",
-                        }
-                    ],
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "gpuPools": [
-                        {
-                            "gpu_np_capacity_type": "on-demand",
-                            "gpu_np_instance_type": "standard",
-                            "gpu_np_max_node_count": "2",
-                            "gpu_np_min_node_count": "0",
-                            "gpu_np_name": "gpu2x",
-                        }
-                    ],
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-08-04T12:04:36.616462",
-                "id": 43,
-                "status": 1,
-                "terraform_file": "terraform_123.tfvars",
-                "updated_at": "2025-08-04T12:04:36.616466",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": ["africa-south1-a", "africa-south1-b"],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "july291",
-                    },
-                    "clusterName": "gcp-cls1-sifypoc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "africa-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "networkTags": ["dev"],
-                    "platformFeatures": [
-                        "blobStorage",
-                        "clusterIntegration",
-                        "registry",
-                    ],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-08-04T04:57:37.633223",
-                "id": 42,
-                "status": 1,
-                "terraform_file": "terraform_123.tfvars",
-                "updated_at": "2025-08-04T04:57:37.633230",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": ["asia-south1-a", "asia-south1-b"],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "july291",
-                    },
-                    "clusterName": "gke-clusterr-sifypocc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.30",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-08-03T17:24:46.623175",
-                "id": 41,
-                "status": 1,
-                "terraform_file": None,
-                "updated_at": "2025-08-03T17:24:46.623180",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": [
-                        "asia-south1-a",
-                        "asia-south1-b",
-                        "asia-south1-c",
-                    ],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "july291",
-                    },
-                    "clusterName": "gcp-cls1-sifypoc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "networkTags": [],
-                    "platformFeatures": [],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-07-28T16:04:23.411619",
-                "id": 39,
-                "status": 1,
-                "terraform_file": "terraform_20250728160423416676.tfvars",
-                "updated_at": "2025-08-03T17:01:52.462246",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": ["asia-south1-a", "asia-south1-b"],
-                    "bucketConfig": {
-                        "gcsBucketName": "bucket bkt-ai-platform-gke-test",
-                        "prefixPath": "test",
-                    },
-                    "clusterName": "gke-cluster-sifypoc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "networkTags": ["dev"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-07-28T15:54:19.162771",
-                "id": 38,
-                "status": 1,
-                "terraform_file": "terraform_1753718059.tfvars",
-                "updated_at": "2025-08-03T17:04:33.288140",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": [
-                        "asia-south1-a",
-                        "asia-south1-b",
-                        "asia-south1-c",
-                    ],
-                    "bucketConfig": {
-                        "gcsBucketName": "bucket bkt-ai-platform-gke-test",
-                        "prefixPath": "test",
-                    },
-                    "clusterName": "gke-cluster-sifypoc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-07-28T15:50:41.020899",
-                "id": 37,
-                "status": 1,
-                "terraform_file": "terraform_1753717841.tfvars",
-                "updated_at": "2025-07-28T15:54:09.637265",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": [
-                        "asia-south1-a",
-                        "asia-south1-b",
-                        "asia-south1-c",
-                    ],
-                    "bucketConfig": {
-                        "gcsBucketName": "bucket bkt-ai-platform-gke-test",
-                        "prefixPath": "test",
-                    },
-                    "clusterName": "gke-cluster-sifypoc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-07-28T15:47:58.732284",
-                "id": 36,
-                "status": 1,
-                "terraform_file": "terraform_1753717678.tfvars",
-                "updated_at": "2025-08-03T17:07:16.765306",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": [
-                        "asia-south1-a",
-                        "asia-south1-b",
-                        "asia-south1-c",
-                    ],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "test",
-                    },
-                    "clusterName": "gke-cluster-sifypoc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-07-28T15:31:10.172588",
-                "id": 35,
-                "status": 1,
-                "terraform_file": "terraform_1753716670.tfvars",
-                "updated_at": "2025-07-28T15:31:10.172593",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": [
-                        "asia-south1-a",
-                        "asia-south1-b",
-                        "asia-south1-c",
-                    ],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "test",
-                    },
-                    "clusterName": "gke-cluster-sifypoc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "networkTags": [""],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-07-28T15:29:03.764934",
-                "id": 34,
-                "status": 1,
-                "terraform_file": "terraform_1753716543.tfvars",
-                "updated_at": "2025-07-28T15:29:03.764939",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": [
-                        "us-central1-a",
-                        "asia-south1-a",
-                        "asia-south1-b",
-                    ],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "test",
-                    },
-                    "clusterName": "gke-cluster-sifypoc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.1.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-07-28T13:17:21.505548",
-                "id": 33,
-                "status": 1,
-                "terraform_file": "terraform_1753708641.tfvars",
-                "updated_at": "2025-07-28T13:17:21.505553",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": [
-                        "us-central1-a",
-                        "asia-south1-a",
-                        "asia-south1-b",
-                    ],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "test",
-                    },
-                    "clusterName": "gke-cluster-sifypoc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.1.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-07-28T13:12:34.142650",
-                "id": 32,
-                "status": 1,
-                "terraform_file": "terraform_1753708354.tfvars",
-                "updated_at": "2025-07-28T13:12:34.142655",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": ["asia-south1-a", "asia-south1-b"],
-                    "bucketConfig": {
-                        "gcsBucketName": "bucket bkt-ai-platform-gke-test",
-                        "prefixPath": "test",
-                    },
-                    "clusterName": "gke-cluster-sifypoc",
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.1.0.0/21",
-                    "kubernetesVersion": "1.30",
-                    "networkConfig": "create-new",
-                    "networkTags": ["dev"],
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-07-28T13:02:35.751081",
-                "id": 31,
-                "status": 1,
-                "terraform_file": "terraform_1753707755.tfvars",
-                "updated_at": "2025-07-28T13:02:35.751086",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "aws",
-                "config": {
-                    "authentication": "aws-profile",
-                    "availabilityZones": ["us-east-1b", "us-east-1c"],
-                    "awsProfile": "new_profile",
-                    "certificateConfig": {
-                        "domainNames": ["http://localhost:3000/"],
-                        "loadBalancerType": "public",
-                    },
-                    "clusterName": "New AWS Cluster",
-                    "kubernetesVersion": "1.32",
-                    "platformFeatures": ["blobStorage"],
-                    "privateSubnetCidrs": ["Subnet CIDRs"],
-                    "publicSubnetCidrs": ["Subnet CIDRs"],
-                    "region": "us-east-1",
-                    "s3BucketName": "image bucket",
-                    "vpcCidr": "test VPC CIDR",
-                },
-                "created_at": "2025-07-09T06:53:17.653958",
-                "id": 7,
-                "status": 1,
-                "terraform_file": None,
-                "updated_at": "2025-07-09T06:53:17.653958",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "aws",
-                "config": {
-                    "authentication": "aws-profile",
-                    "availabilityZones": ["us-east-1b", "us-east-1c"],
-                    "awsProfile": "new_profile",
-                    "certificateConfig": {
-                        "domainNames": ["http://localhost:3000/"],
-                        "loadBalancerType": "public",
-                    },
-                    "clusterName": "New AWS Cluster",
-                    "kubernetesVersion": "1.32",
-                    "platformFeatures": ["blobStorage"],
-                    "privateSubnetCidrs": ["Subnet CIDRs"],
-                    "publicSubnetCidrs": ["Subnet CIDRs"],
-                    "region": "us-east-1",
-                    "s3BucketName": "image bucket",
-                    "vpcCidr": "test VPC CIDR",
-                },
-                "created_at": "2025-07-09T06:52:48.518356",
-                "id": 6,
-                "status": 1,
-                "terraform_file": None,
-                "updated_at": "2025-07-09T06:52:48.518356",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "aws",
-                "config": {
-                    "authentication": "aws-profile",
-                    "availabilityZones": ["us-east-1b", "us-east-1c"],
-                    "awsProfile": "new_profile",
-                    "certificateConfig": {
-                        "domainNames": ["http://localhost:3000/"],
-                        "loadBalancerType": "public",
-                    },
-                    "clusterName": "New AWS Cluster",
-                    "kubernetesVersion": "1.32",
-                    "platformFeatures": ["blobStorage"],
-                    "privateSubnetCidrs": ["Subnet CIDRs"],
-                    "publicSubnetCidrs": ["Subnet CIDRs"],
-                    "region": "us-east-1",
-                    "s3BucketName": "image bucket",
-                    "vpcCidr": "test VPC CIDR",
-                },
-                "created_at": "2025-07-09T06:52:27.352016",
-                "id": 5,
-                "status": 1,
-                "terraform_file": None,
-                "updated_at": "2025-07-09T06:52:27.352016",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "sify",
-                "config": {
-                    "authentication": "aws-profile",
-                    "availabilityZones": ["us-east-1a", "us-east-1b"],
-                    "awsProfile": "new_profile",
-                    "certificateConfig": {"loadBalancerType": "public"},
-                    "clusterName": "test cluster",
-                    "dynamodbTableName": "test db",
-                    "kubernetesVersion": "1.32",
-                    "platformFeatures": [
-                        "blobStorage",
-                        "clusterIntegration",
-                        "registry",
-                    ],
-                    "privateSubnetCidrs": ["qetrqegf"],
-                    "publicSubnetCidrs": ["west"],
-                    "region": "us-east-1",
-                    "s3BucketName": "testdata bucket",
-                    "vpcCidr": "test VPC CIDR",
-                },
-                "created_at": "2025-07-07T10:37:40.990886",
-                "id": 4,
-                "status": 1,
-                "terraform_file": None,
-                "updated_at": "2025-07-07T10:37:40.990886",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "authentication": "aws-profile",
-                    "availabilityZones": ["us-east-1c"],
-                    "awsProfile": "new_profile",
-                    "certificateConfig": {
-                        "domainNames": ["http://localhost:3000/platform_ai"],
-                        "loadBalancerType": "public",
-                        "sslCertificates": ["no ssl"],
-                    },
-                    "clusterName": "test cluster 03",
-                    "dynamodbTableName": "test db",
-                    "kubernetesVersion": "1.32",
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "privateSubnetCidrs": ["Public Subnet CIDRs"],
-                    "publicSubnetCidrs": ["Public Subnet CIDRs"],
-                    "region": "eu-west-3",
-                    "s3BucketName": "testdata bucket",
-                    "vpcCidr": "test VPC CIDR",
-                },
-                "created_at": "2025-07-07T09:58:37.938251",
-                "id": 3,
-                "status": 1,
-                "terraform_file": None,
-                "updated_at": "2025-07-07T09:58:37.938251",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "azure",
-                "config": {
-                    "authentication": "aws-profile",
-                    "availabilityZones": ["us-east-1a", "us-east-1b"],
-                    "awsProfile": "new_profile",
-                    "certificateConfig": {
-                        "domainNames": ["http://localhost:3000/"],
-                        "loadBalancerType": "public",
-                        "sslCertificates": [],
-                    },
-                    "clusterName": "test cluster 02",
-                    "dynamodbTableName": "test db",
-                    "kubernetesVersion": "1.32",
-                    "platformFeatures": ["blobStorage", "registry"],
-                    "privateSubnetCidrs": [],
-                    "publicSubnetCidrs": ["efgwrwrh"],
-                    "region": "us-east-1",
-                    "s3BucketName": "testdata bucket",
-                    "vpcCidr": "test VPC CIDR",
-                },
-                "created_at": "2025-07-07T09:48:46.873193",
-                "id": 2,
-                "status": 1,
-                "terraform_file": None,
-                "updated_at": "2025-07-07T09:48:46.873193",
-                "user_id": 1,
-            },
-            {
-                "cluster_type": "aws",
-                "config": {
-                    "authentication": "aws-profile",
-                    "availabilityZones": ["us-east-1a", "us-east-1b"],
-                    "awsProfile": "new_profile",
-                    "certificateConfig": {
-                        "domainNames": ["http://localhost:3000/"],
-                        "loadBalancerType": "public",
-                        "sslCertificates": [],
-                    },
-                    "clusterName": "test cluster 1",
-                    "dynamodbTableName": "test db",
-                    "kubernetesVersion": "1.32",
-                    "platformFeatures": ["blobStorage", "registry"],
-                    "privateSubnetCidrs": [],
-                    "publicSubnetCidrs": ["efgwrwrh"],
-                    "region": "us-east-1",
-                    "s3BucketName": "testdata bucket",
-                    "vpcCidr": "test VPC CIDR",
-                },
-                "created_at": "2025-07-07T01:47:05.654526",
-                "id": 1,
-                "status": 1,
-                "terraform_file": None,
-                "updated_at": "2025-07-07T01:47:05.654526",
-                "user_id": 1,
-            },
+            },  
         ]
         return jsonify({"message": "Metrics ingested", "data": data}), 200
     except Exception as e:
