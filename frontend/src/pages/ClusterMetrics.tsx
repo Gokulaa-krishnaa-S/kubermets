@@ -14,7 +14,11 @@ import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
 
 // Import the standardized connection status components
-import { ConnectionStatusBanner, NetworkStatusIndicator, LoadingBanner } from "./ConnectionStatusBanner";
+import {
+  ConnectionStatusBanner,
+  NetworkStatusIndicator,
+  LoadingBanner,
+} from "./ConnectionStatusBanner";
 
 import {
   Server,
@@ -60,11 +64,13 @@ export default function ClusterMetrics() {
 
   // Standardized connection status states
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('connected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connected" | "disconnected"
+  >("connected");
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [maxRetries, setMaxRetries] = useState(3);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Add loading state to prevent multiple simultaneous calls
   const [isLoadingData, setIsLoadingData] = useState(false);
 
@@ -74,20 +80,20 @@ export default function ClusterMetrics() {
   // Connection error detection function
   const isConnectionError = (error) => {
     if (!error) return false;
-    
-    const errorMessage = error.message?.toLowerCase() || '';
+
+    const errorMessage = error.message?.toLowerCase() || "";
     const errorCode = error.code || error.status;
-    
+
     return (
-      errorMessage.includes('network') ||
-      errorMessage.includes('connection') ||
-      errorMessage.includes('timeout') ||
-      errorMessage.includes('fetch') ||
-      errorMessage.includes('cors') ||
-      errorMessage.includes('enotfound') ||
-      errorMessage.includes('econnrefused') ||
-      errorCode === 'NETWORK_ERROR' ||
-      errorCode === 'ERR_NETWORK' ||
+      errorMessage.includes("network") ||
+      errorMessage.includes("connection") ||
+      errorMessage.includes("timeout") ||
+      errorMessage.includes("fetch") ||
+      errorMessage.includes("cors") ||
+      errorMessage.includes("enotfound") ||
+      errorMessage.includes("econnrefused") ||
+      errorCode === "NETWORK_ERROR" ||
+      errorCode === "ERR_NETWORK" ||
       errorCode === 0 ||
       errorCode === 502 ||
       errorCode === 503 ||
@@ -97,7 +103,7 @@ export default function ClusterMetrics() {
 
   const handleApiFailure = (error: any, showToast = true) => {
     setServerStatus("down");
-    setConnectionStatus('disconnected');
+    setConnectionStatus("disconnected");
     setIsAutoRefreshPaused(true);
 
     if (showToast) {
@@ -126,262 +132,281 @@ export default function ClusterMetrics() {
   };
 
   // Enhanced cluster data API call with retry logic
-  const handleCallClusterData = useCallback(async (queryParams, isRetry = false) => {
-    try {
-      console.log("Calling cluster data API with:", queryParams);
-      const res = await ClusterService.getClusterDetails(queryParams);
+  const handleCallClusterData = useCallback(
+    async (queryParams, isRetry = false) => {
+      try {
+        console.log("Calling cluster data API with:", queryParams);
+        const res = await ClusterService.getClusterDetails(queryParams);
 
-      if (res?.api_failed) {
-        setServerStatus("down");
-        setConnectionStatus('disconnected');
-        setIsAutoRefreshPaused(true);
-        console.warn("API reported failure:", res.data);
-        if (!res?.data) throw new Error("No data available and API failed");
-      } else {
-        setServerStatus("live");
-        setConnectionStatus('connected');
-        setRetryAttempts(0);
-        setError(null);
-        setIsAutoRefreshPaused(false);
-      }
-
-      const allocations = res?.data || [];
-      console.log(allocations, "------");
-
-      // Separate idle and active clusters
-      const idleEntry =
-        allocations.find((a) => a.cluster_name === "__idle__") || {};
-      const activeClusters = allocations.filter(
-        (a) =>
-          a.cluster_name !== "__idle__" && a.cluster_name !== "cluster-total"
-      );
-
-      // Calculate "cluster-total" by summing idle + all active
-      const totalEntry = activeClusters.concat(idleEntry).reduce(
-        (acc, cur) => {
-          acc.cpu_cost += cur.cpu_cost || 0;
-          acc.ram_cost += cur.ram_cost || 0;
-          acc.pv_cost += cur.pv_cost || 0;
-          acc.cpu_core_usage_average += cur.cpu_core_usage_average || 0;
-          acc.ram_byte_usage_average += cur.ram_byte_usage_average || 0;
-          return acc;
-        },
-        {
-          cpu_cost: 0,
-          ram_cost: 0,
-          pv_cost: 0,
-          cpu_core_usage_average: 0,
-          ram_byte_usage_average: 0,
-        }
-      );
-
-      // Prepare cluster list for UI (active only)
-      const clusterList = activeClusters.map((c) => ({
-        name: c.cluster_name,
-        cpu: c.cpu_usage_percent ? `${c.cpu_usage_percent.toFixed(0)}%` : "0%",
-        memory: c.memory_usage_percent
-          ? `${c.memory_usage_percent.toFixed(0)}%`
-          : "0%",
-        cost: `$${(c.total_cost || 0).toFixed(2)}`,
-        cpuCores: c.cpu_core_usage_average?.toFixed(2) || "0",
-        memoryGB: bytesToGB(c.ram_byte_usage_average || 0),
-        efficiency: c.efficiency_percent
-          ? `${c.efficiency_percent.toFixed(1)}%`
-          : "N/A",
-        version: c.cluster_version ?? "N/A",
-        nodes: c.node_count || 0,
-        pods: c.pod_count || 0,
-        status: c.cluster_status ?? "running",
-      }));
-
-      setClusters(clusterList);
-
-      // Set cluster stats using computed totalEntry (active + idle)
-      setClusterStats([
-        {
-          title: "Active Clusters",
-          value: activeClusters.length,
-          subtitle: "Running clusters",
-          icon: <Server className="w-4 h-4" />,
-          status: "healthy",
-        },
-        {
-          title: "CPU Cost",
-          value: `$${(totalEntry.cpu_cost || 0).toFixed(2)}`,
-          subtitle: "This period",
-          icon: <Cpu className="w-4 h-4" />,
-          status: "info",
-        },
-        {
-          title: "Memory Cost",
-          value: `$${(totalEntry.ram_cost || 0).toFixed(2)}`,
-          subtitle: "This period",
-          icon: <Activity className="w-4 h-4" />,
-          status: "healthy",
-        },
-        {
-          title: "Storage Cost",
-          value: `$${(totalEntry.pv_cost || 0).toFixed(2)}`,
-          subtitle: "This period",
-          icon: <HardDrive className="w-4 h-4" />,
-          status: "info",
-        },
-        {
-          title: "Total CPU Cores",
-          value: (totalEntry.cpu_core_usage_average || 0).toFixed(1),
-          subtitle: "In use",
-          icon: <Zap className="w-4 h-4" />,
-          status: "healthy",
-        },
-        {
-          title: "Total Memory",
-          value: `${bytesToGB(totalEntry.ram_byte_usage_average || 0)} GB`,
-          subtitle: "In use",
-          icon: <Database className="w-4 h-4" />,
-          status: "info",
-        },
-      ]);
-    } catch (error) {
-      console.error("Failed to fetch cluster summary", error);
-      
-      if (isConnectionError(error)) {
-        setConnectionStatus('disconnected');
-        setServerStatus('down');
-        
-        if (!isRetry && retryAttempts < maxRetries) {
-          console.log(`Connection failed, retrying cluster data... (${retryAttempts + 1}/${maxRetries})`);
-          setRetryAttempts(prev => prev + 1);
-          
-          setTimeout(() => {
-            handleCallClusterData(queryParams, true);
-          }, 2000 * (retryAttempts + 1));
-          
-          return;
-        }
-        
-        setError(`Failed to fetch cluster data: ${error.message}`);
-        handleApiFailure(error, false);
-      } else {
-        setError(`Failed to fetch cluster data: ${error.message}`);
-        handleApiFailure(error, false);
-      }
-      
-      throw error;
-    }
-  }, [retryAttempts, maxRetries]);
-
-  const handleClusterChartData = useCallback(async (queryParams, isRetry = false) => {
-    try {
-      console.log("Calling cluster chart data API with:", queryParams);
-      const res = await ClusterService.getClusterAllocationSummary(queryParams);
-      console.log(res, "2------------------");
-      console.log(res.data, "condition 1------------------");
-
-      // Check API failure flag
-      if (res?.data?.api_failed === true) {
-        console.log("came to condition 1");
-        setServerStatus("down");
-        setConnectionStatus('disconnected');
-        setIsAutoRefreshPaused(true);
-        console.warn("API reported failure:", res.data);
-
-        // Still process data if available despite API failure
-        if (res?.data?.data?.sets?.[0]?.allocations) {
-          // Process cached data...
+        if (res?.api_failed) {
+          setServerStatus("down");
+          setConnectionStatus("disconnected");
+          setIsAutoRefreshPaused(true);
+          console.warn("API reported failure:", res.data);
+          if (!res?.data) throw new Error("No data available and API failed");
         } else {
-          throw new Error("No data available and API failed");
+          setServerStatus("live");
+          setConnectionStatus("connected");
+          setRetryAttempts(0);
+          setError(null);
+          setIsAutoRefreshPaused(false);
         }
-      } else {
-        setServerStatus("live");
-        setConnectionStatus('connected');
-        setRetryAttempts(0);
-        setError(null);
-        setIsAutoRefreshPaused(false);
-      }
 
-      const allocations = res?.data?.data?.sets?.[0]?.allocations || {};
+        const allocations = res?.data || [];
+        console.log(allocations, "------");
 
-      // CPU usage data
-      const cpuChartData = Object.entries(allocations)
-        .filter(([name]) => name !== "__idle__")
-        .map(([name, cluster]) => ({
-          name,
-          used: parseFloat(
-            (cluster as ClusterAllocation).cpuCoreUsageAverage?.toFixed(2) ||
-              "0"
-          ),
-          requested: parseFloat(
-            (cluster as ClusterAllocation).cpuCoreRequestAverage?.toFixed(2) ||
-              "0"
-          ),
+        // Separate idle and active clusters
+        const idleEntry =
+          allocations.find((a) => a.cluster_name === "__idle__") || {};
+        const activeClusters = allocations.filter(
+          (a) =>
+            a.cluster_name !== "__idle__" && a.cluster_name !== "cluster-total"
+        );
+
+        // Calculate "cluster-total" by summing idle + all active
+        const totalEntry = activeClusters.concat(idleEntry).reduce(
+          (acc, cur) => {
+            acc.cpu_cost += cur.cpu_cost || 0;
+            acc.ram_cost += cur.ram_cost || 0;
+            acc.pv_cost += cur.pv_cost || 0;
+            acc.cpu_core_usage_average += cur.cpu_core_usage_average || 0;
+            acc.ram_byte_usage_average += cur.ram_byte_usage_average || 0;
+            return acc;
+          },
+          {
+            cpu_cost: 0,
+            ram_cost: 0,
+            pv_cost: 0,
+            cpu_core_usage_average: 0,
+            ram_byte_usage_average: 0,
+          }
+        );
+
+        // Prepare cluster list for UI (active only)
+        const clusterList = activeClusters.map((c) => ({
+          name: c.cluster_name,
+          cpu: c.cpu_usage_percent
+            ? `${c.cpu_usage_percent.toFixed(0)}%`
+            : "0%",
+          memory: c.memory_usage_percent
+            ? `${c.memory_usage_percent.toFixed(0)}%`
+            : "0%",
+          cost: `$${(c.total_cost || 0).toFixed(2)}`,
+          cpuCores: c.cpu_core_usage_average?.toFixed(2) || "0",
+          memoryGB: bytesToGB(c.ram_byte_usage_average || 0),
+          efficiency: c.efficiency_percent
+            ? `${c.efficiency_percent.toFixed(1)}%`
+            : "N/A",
+          version: c.cluster_version ?? "N/A",
+          nodes: c.node_count || 0,
+          pods: c.pod_count || 0,
+          status: c.cluster_status ?? "running",
         }));
 
-      // Memory usage data
-      const memoryChartData = Object.entries(allocations)
-        .filter(([name]) => name !== "__idle__")
-        .map(([name, cluster]) => {
+        setClusters(clusterList);
+
+        // Set cluster stats using computed totalEntry (active + idle)
+        setClusterStats([
+          {
+            title: "Active Clusters",
+            value: activeClusters.length,
+            subtitle: "Running clusters",
+            icon: <Server className="w-4 h-4" />,
+            status: "healthy",
+          },
+          {
+            title: "CPU Cost",
+            value: `$${(totalEntry.cpu_cost || 0).toFixed(2)}`,
+            subtitle: "This period",
+            icon: <Cpu className="w-4 h-4" />,
+            status: "info",
+          },
+          {
+            title: "Memory Cost",
+            value: `$${(totalEntry.ram_cost || 0).toFixed(2)}`,
+            subtitle: "This period",
+            icon: <Activity className="w-4 h-4" />,
+            status: "healthy",
+          },
+          {
+            title: "Storage Cost",
+            value: `$${(totalEntry.pv_cost || 0).toFixed(2)}`,
+            subtitle: "This period",
+            icon: <HardDrive className="w-4 h-4" />,
+            status: "info",
+          },
+          {
+            title: "Total CPU Cores",
+            value: (totalEntry.cpu_core_usage_average || 0).toFixed(1),
+            subtitle: "In use",
+            icon: <Zap className="w-4 h-4" />,
+            status: "healthy",
+          },
+          {
+            title: "Total Memory",
+            value: `${bytesToGB(totalEntry.ram_byte_usage_average || 0)} GB`,
+            subtitle: "In use",
+            icon: <Database className="w-4 h-4" />,
+            status: "info",
+          },
+        ]);
+      } catch (error) {
+        console.error("Failed to fetch cluster summary", error);
+
+        if (isConnectionError(error)) {
+          setConnectionStatus("disconnected");
+          setServerStatus("down");
+
+          if (!isRetry && retryAttempts < maxRetries) {
+            console.log(
+              `Connection failed, retrying cluster data... (${
+                retryAttempts + 1
+              }/${maxRetries})`
+            );
+            setRetryAttempts((prev) => prev + 1);
+
+            setTimeout(() => {
+              handleCallClusterData(queryParams, true);
+            }, 2000 * (retryAttempts + 1));
+
+            return;
+          }
+
+          setError(`Failed to fetch cluster data: ${error.message}`);
+          handleApiFailure(error, false);
+        } else {
+          setError(`Failed to fetch cluster data: ${error.message}`);
+          handleApiFailure(error, false);
+        }
+
+        throw error;
+      }
+    },
+    [retryAttempts, maxRetries]
+  );
+
+  const handleClusterChartData = useCallback(
+    async (queryParams, isRetry = false) => {
+      try {
+        console.log("Calling cluster chart data API with:", queryParams);
+        const res = await ClusterService.getClusterAllocationSummary(
+          queryParams
+        );
+        console.log(res, "2------------------");
+        console.log(res.data, "condition 1------------------");
+
+        // Check API failure flag
+        if (res?.data?.api_failed === true) {
+          console.log("came to condition 1");
+          setServerStatus("down");
+          setConnectionStatus("disconnected");
+          setIsAutoRefreshPaused(true);
+          console.warn("API reported failure:", res.data);
+
+          // Still process data if available despite API failure
+          if (res?.data?.data?.sets?.[0]?.allocations) {
+            // Process cached data...
+          } else {
+            throw new Error("No data available and API failed");
+          }
+        } else {
+          setServerStatus("live");
+          setConnectionStatus("connected");
+          setRetryAttempts(0);
+          setError(null);
+          setIsAutoRefreshPaused(false);
+        }
+
+        const allocations = res?.data?.data?.sets?.[0]?.allocations || {};
+
+        // CPU usage data
+        const cpuChartData = Object.entries(allocations)
+          .filter(([name]) => name !== "__idle__")
+          .map(([name, cluster]) => ({
+            name,
+            used: parseFloat(
+              (cluster as ClusterAllocation).cpuCoreUsageAverage?.toFixed(2) ||
+                "0"
+            ),
+            requested: parseFloat(
+              (cluster as ClusterAllocation).cpuCoreRequestAverage?.toFixed(
+                2
+              ) || "0"
+            ),
+          }));
+
+        // Memory usage data
+        const memoryChartData = Object.entries(allocations)
+          .filter(([name]) => name !== "__idle__")
+          .map(([name, cluster]) => {
+            const c = cluster as ClusterAllocation;
+            return {
+              name,
+              used: parseFloat(bytesToGB(c.ramByteUsageAverage || 0)),
+              requested: parseFloat(bytesToGB(c.ramByteRequestAverage || 0)),
+            };
+          });
+
+        // Cost breakdown
+        const totalClusterCost: any = Object.values(allocations).reduce(
+          (sum: number, item: unknown) =>
+            sum + ((item as ClusterAllocation).totalCost || 0),
+          0
+        );
+
+        const costData = Object.entries(allocations).map(([name, cluster]) => {
           const c = cluster as ClusterAllocation;
           return {
-            name,
-            used: parseFloat(bytesToGB(c.ramByteUsageAverage || 0)),
-            requested: parseFloat(bytesToGB(c.ramByteRequestAverage || 0)),
+            name: name === "__idle__" ? "Idle Resources" : name,
+            value: parseFloat(c.totalCost?.toFixed(2) || "0"),
+            label: "Cost ($)",
+            percentage:
+              totalClusterCost > 0
+                ? ((c.totalCost / totalClusterCost) * 100).toFixed(1)
+                : "0.0",
           };
         });
 
-      // Cost breakdown
-      const totalClusterCost: any = Object.values(allocations).reduce(
-        (sum: number, item: unknown) =>
-          sum + ((item as ClusterAllocation).totalCost || 0),
-        0
-      );
+        setLastUpdated(new Date());
+        setChartData({
+          cpuData: cpuChartData,
+          memoryData: memoryChartData,
+          costBreakdown: costData,
+        });
+      } catch (error) {
+        console.error("Failed to fetch cluster chart data", error);
 
-      const costData = Object.entries(allocations).map(([name, cluster]) => {
-        const c = cluster as ClusterAllocation;
-        return {
-          name: name === "__idle__" ? "Idle Resources" : name,
-          value: parseFloat(c.totalCost?.toFixed(2) || "0"),
-          label: "Cost ($)",
-          percentage:
-            totalClusterCost > 0
-              ? ((c.totalCost / totalClusterCost) * 100).toFixed(1)
-              : "0.0",
-        };
-      });
-      
-      setLastUpdated(new Date());
-      setChartData({
-        cpuData: cpuChartData,
-        memoryData: memoryChartData,
-        costBreakdown: costData,
-      });
-    } catch (error) {
-      console.error("Failed to fetch cluster chart data", error);
-      
-      if (isConnectionError(error)) {
-        setConnectionStatus('disconnected');
-        setServerStatus('down');
-        
-        if (!isRetry && retryAttempts < maxRetries) {
-          console.log(`Connection failed, retrying chart data... (${retryAttempts + 1}/${maxRetries})`);
-          setRetryAttempts(prev => prev + 1);
-          
-          setTimeout(() => {
-            handleClusterChartData(queryParams, true);
-          }, 2000 * (retryAttempts + 1));
-          
-          return;
+        if (isConnectionError(error)) {
+          setConnectionStatus("disconnected");
+          setServerStatus("down");
+
+          if (!isRetry && retryAttempts < maxRetries) {
+            console.log(
+              `Connection failed, retrying chart data... (${
+                retryAttempts + 1
+              }/${maxRetries})`
+            );
+            setRetryAttempts((prev) => prev + 1);
+
+            setTimeout(() => {
+              handleClusterChartData(queryParams, true);
+            }, 2000 * (retryAttempts + 1));
+
+            return;
+          }
+
+          setError(`Failed to fetch cluster chart data: ${error.message}`);
+          handleApiFailure(error, false);
+        } else {
+          setError(`Failed to fetch cluster chart data: ${error.message}`);
+          handleApiFailure(error, false);
         }
-        
-        setError(`Failed to fetch cluster chart data: ${error.message}`);
-        handleApiFailure(error, false);
-      } else {
-        setError(`Failed to fetch cluster chart data: ${error.message}`);
-        handleApiFailure(error, false);
+
+        throw error;
       }
-      
-      throw error;
-    }
-  }, [retryAttempts, maxRetries]);
+    },
+    [retryAttempts, maxRetries]
+  );
 
   // Consolidated data fetching function that accepts explicit parameters
   const fetchAllData = useCallback(
@@ -456,7 +481,14 @@ export default function ClusterMetrics() {
         setIsInitialLoading(false);
       }
     },
-    [isLoadingData, handleCallClusterData, handleClusterChartData, serverStatus, retryAttempts, maxRetries]
+    [
+      isLoadingData,
+      handleCallClusterData,
+      handleClusterChartData,
+      serverStatus,
+      retryAttempts,
+      maxRetries,
+    ]
   );
 
   // Handle retry function
@@ -654,7 +686,12 @@ export default function ClusterMetrics() {
   );
 
   // Error Display Component - similar to NodeMetrics
-  if (error && !isInitialLoading && serverStatus === 'down' && retryAttempts >= maxRetries) {
+  if (
+    error &&
+    !isInitialLoading &&
+    serverStatus === "down" &&
+    retryAttempts >= maxRetries
+  ) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <div className="bg-white rounded-xl p-8 border border-red-200 max-w-md text-center">
@@ -666,7 +703,7 @@ export default function ClusterMetrics() {
           <p className="text-sm text-gray-500 mb-6">
             Please check your internet connection and try again.
           </p>
-          <button 
+          <button
             onClick={handleRetry}
             className="w-full bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md font-medium flex items-center justify-center gap-2"
           >
@@ -686,7 +723,7 @@ export default function ClusterMetrics() {
       />
     );
   }
-  
+
   const resourceMetrics = getResourceMetrics();
   const efficiencyStats = getEfficiencyStats();
 
@@ -728,9 +765,7 @@ export default function ClusterMetrics() {
       </div>
 
       {/* Loading Banner */}
-      {isLoadingData && (
-        <LoadingBanner message="Loading cluster data..." />
-      )}
+      {isLoadingData && <LoadingBanner message="Loading cluster data..." />}
 
       <div className="space-y-6">
         {/* Enhanced Metric Cards Grid */}
@@ -755,7 +790,7 @@ export default function ClusterMetrics() {
                   <div>
                     <CardTitle className="text-xl font-bold text-gray-900">
                       Active Clusters
-                      {serverStatus === 'down' && (
+                      {serverStatus === "down" && (
                         <span className="ml-2 text-sm text-red-600 font-normal">
                           (Offline Mode)
                         </span>
@@ -763,7 +798,7 @@ export default function ClusterMetrics() {
                     </CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
                       {clusters.length} clusters running
-                      {serverStatus === 'down' && (
+                      {serverStatus === "down" && (
                         <span className="text-red-600 ml-2">
                           - Showing cached data
                         </span>

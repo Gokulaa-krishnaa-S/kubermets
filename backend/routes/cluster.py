@@ -375,7 +375,6 @@ def dashboard_summary():
         aggregated_clusters = {}
         idle_cost_from_clusters = 0.0
 
-
         for row in rows:
             # Skip __idle__ clusters but track their cost separately
             if row.cluster_name == "__idle__":
@@ -391,7 +390,6 @@ def dashboard_summary():
                     "cpu_usage_percent_vals": [],
                     "memory_usage_percent_vals": [],
                     "total_efficiency_vals": [],
-                    
                 }
 
             agg = aggregated_clusters[key]
@@ -487,9 +485,8 @@ def dashboard_summary():
         aggregated_global["idleCost"] = (
             aggregated_global.get("idleCost", 0.0) + idle_cost_from_clusters
         )
-        aggregated_global["totalCost"]+=aggregated_global["idleCost"]
+        aggregated_global["totalCost"] += aggregated_global["idleCost"]
 
-        
         finalize_aggregated(aggregated_global)
 
         return (
@@ -533,7 +530,7 @@ def fetch_metrics():
         snapshots = data.get("snapshots", [])
         user_id = data.get("user_id")
         cluster_id = data.get("cluster_id")
-
+        print("kjhghjkl;'-------------------------cluster_i", cluster_id)
         for snapshot in snapshots:
             allocations = snapshot.get("allocations", {})
             window_info = snapshot.get("window", {})
@@ -639,7 +636,7 @@ def fetch_metrics():
                                     try:
                                         # Create NodeMetrics entry with cluster_id foreign key
                                         node_entry = {
-                                            "cluster_id": cluster_obj.id,  # Foreign key to cluster
+                                            "cluster_id": cluster_id,  # Foreign key to cluster
                                             "node_name": node_allocation.get(
                                                 "node_name"
                                             ),
@@ -763,6 +760,10 @@ def fetch_metrics():
                                             "cluster_id": cluster_id,
                                             "user_id": user_id,
                                         }
+                                        print(
+                                            "within node'-------------------------cluster_i",
+                                            cluster_id,
+                                        )
 
                                         node_obj = NodeMetrics(**node_entry)
                                         session.add(node_obj)
@@ -773,6 +774,10 @@ def fetch_metrics():
                                         pod_data = node_allocation.get("pod_data", {})
                                         if pod_data and pod_data.get("data"):
                                             pod_sets = pod_data["data"].get("sets", [])
+                                            print(
+                                                "within node'-------------------------cluster_i",
+                                                cluster_id,
+                                            )
 
                                             for pod_set in pod_sets:
                                                 pod_allocations = pod_set.get(
@@ -1084,8 +1089,8 @@ def aggregate_node_metrics(nodes):
     for node in nodes:
         print(node.node_name)
 
-        if node.node_name == "__idle__" or node.node_name=="__unallocated__":
-            mismatchCount+=1
+        if node.node_name == "__idle__" or node.node_name == "__unallocated__":
+            mismatchCount += 1
             continue
         data["totalCost"] += node.total_cost
         eff_sum += node.total_efficiency
@@ -1097,9 +1102,9 @@ def aggregate_node_metrics(nodes):
             cpu_sum += (
                 node.cpu_core_usage_average / node.cpu_core_request_average
             ) * 100
-    print("mismatchCountmismatchCountmismatchCount",mismatchCount)
-    data["avgEfficiency"] = eff_sum / (len(nodes)-mismatchCount)
-    data["avgCpuUsage"] = cpu_sum / (len(nodes)-mismatchCount)
+    print("mismatchCountmismatchCountmismatchCount", mismatchCount)
+    data["avgEfficiency"] = eff_sum / (len(nodes) - mismatchCount)
+    data["avgCpuUsage"] = cpu_sum / (len(nodes) - mismatchCount)
     return data
 
 
@@ -1109,17 +1114,21 @@ def aggregate_pod_metrics(pods):
     data = {"totalPods": 0, "runningPods": 0, "idlePods": 0, "totalCost": 0}
     for pod in pods:
         if pod.name == "__idle__":
-            idle_pods+=1
+            idle_pods += 1
             continue
-        data["totalPods"]+=1
+        data["totalPods"] += 1
         data["totalCost"] += pod.total_cost
         if pod.total_cost > 0:
             data["runningPods"] += 1
         else:
             data["idlePods"] += 1
-    print("******************************************************************************")
+    print(
+        "******************************************************************************"
+    )
     print(idle_pods)
-    print("******************************************************************************")
+    print(
+        "******************************************************************************"
+    )
     return data
 
 

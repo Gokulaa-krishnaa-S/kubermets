@@ -21,10 +21,13 @@ import sys
 import time
 import signal
 import logging
+import base64
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 import requests
+
+requests.packages.urllib3.disable_warnings()
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor
 from apscheduler.jobstores.memory import MemoryJobStore
@@ -472,6 +475,7 @@ def format_kubecost_response(
         "snapshots": formatted_snapshots,
     }
 
+
 # -------------------- Time Window Management --------------------
 def get_latest_timestamp(cluster_id: int) -> Optional[datetime]:
     """
@@ -484,17 +488,22 @@ def get_latest_timestamp(cluster_id: int) -> Optional[datetime]:
         resp = requests.get(url, params=params, timeout=REQUEST_TIMEOUT_SEC)
         resp.raise_for_status()
         data = resp.json()
-        print(data , "----------data")
+        print(data, "----------data")
         # Handle different possible response formats
         if data.get("latest_timestamp"):
             timestamp_str = data["latest_timestamp"]
             # Parse ISO format timestamp
             return datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
         else:
-            log.info("No latest timestamp found for cluster_id=%d, will start from 24h ago", cluster_id)
+            log.info(
+                "r cluster_id=%d, will start from 24h ago",
+                cluster_id,
+            )
             return None
     except Exception as e:
-        log.warning("Failed to get latest timestamp for cluster_id=%d: %s", cluster_id, e)
+        log.warning(
+            "Failed to get latest timestamp for cluster_id=%d: %s", cluster_id, e
+        )
         return None
 
 
@@ -504,7 +513,7 @@ def calculate_next_window(cluster_id: int) -> tuple[datetime, datetime]:
     Returns (start_time, end_time) tuple.
     """
     latest_timestamp = get_latest_timestamp(cluster_id)
-    
+
     if latest_timestamp is None:
         # First run - start from 24h ago
         end_time = datetime.utcnow()
@@ -513,13 +522,13 @@ def calculate_next_window(cluster_id: int) -> tuple[datetime, datetime]:
         # Next window starts where the last one ended
         start_time = latest_timestamp
         end_time = start_time + timedelta(hours=COLLECTION_WINDOW_HOURS)
-    
+
     # Ensure we don't try to collect future data
     now = datetime.utcnow()
     if end_time > now:
         end_time = now
         start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
-    
+
     return start_time, end_time
 
 
@@ -532,34 +541,34 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     latest_timestamp = get_latest_timestamp(cluster_id)
     print(latest_timestamp)
     now = datetime.utcnow()
-    
+
     if latest_timestamp is None:
         # First run - collect last 24h
         end_time = now
         start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
         windows.append((start_time, end_time))
         return windows
-    
+
     # Calculate how many windows we're missing
     time_gap = now - latest_timestamp
     missing_hours = time_gap.total_seconds() / 3600
     missing_windows = int(missing_hours / COLLECTION_WINDOW_HOURS)
-    
+
     # Limit backfill to prevent overwhelming the system
     missing_windows = min(missing_windows, MAX_BACKFILL_WINDOWS)
-    
+
     # Generate windows to backfill
     current_start = latest_timestamp
     for _ in range(missing_windows):
         current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
         if current_end > now:
             current_end = now
-        
+
         if current_start < current_end:  # Only add valid windows
             windows.append((current_start, current_end))
-        
+
         current_start = current_end
-    
+
     return windows
 
 
@@ -575,9 +584,11 @@ def get_active_clusters() -> List[Dict]:
             {
                 "cluster_id": 1,
                 "user_id": 1,
-                "cluster_name": "cluster-one",
+                "cluster_name": "cluster-two",
                 "kubecost_api_url": "http://172.16.20.110/kubecost",
-                "username": "john",
+                # "kubecost_api_url": "https://34.100.251.207",
+                # "password": "Admin@12#$",
+                # "username": "admin",
             }
         ]
         data = resp
@@ -590,13 +601,20 @@ def get_active_clusters() -> List[Dict]:
         return []
 
 
-def fetchPodData(kubecost_url: str, cluster: str, node: str, start_time: datetime, end_time: datetime) -> Dict:
+def fetchPodData(
+    kubecost_url: str,
+    cluster: str,
+    node: str,
+    start_time: datetime,
+    end_time: datetime,
+    headers: Any,
+) -> Dict:
     """
     Fetch pod data for a specific cluster and node within a time window.
     """
     # Convert to Kubecost time format
     window_param = format_kubecost_window(start_time, end_time)
-    
+
     podParams = {
         "accumulate": "true",
         "aggregate": "pod",
@@ -621,6 +639,8 @@ def fetchPodData(kubecost_url: str, cluster: str, node: str, start_time: datetim
             f"{kubecost_url}/model/allocation/summary",
             params=podParams,
             timeout=REQUEST_TIMEOUT_SEC,
+            headers=headers,
+            verify=False,
         )
         r.raise_for_status()
         pod_data = r.json()
@@ -629,13 +649,19 @@ def fetchPodData(kubecost_url: str, cluster: str, node: str, start_time: datetim
         raise RuntimeError(f"Kubecost pod fetch failed: {e}")
 
 
-def fetchNodeData(kubecost_url: str, cluster: str, start_time: datetime, end_time: datetime) -> Dict:
+def fetchNodeData(
+    kubecost_url: str,
+    cluster: str,
+    start_time: datetime,
+    end_time: datetime,
+    headers: Any,
+) -> Dict:
     """
     Fetch node data for a specific cluster within a time window.
     """
     # Convert to Kubecost time format
     window_param = format_kubecost_window(start_time, end_time)
-    
+
     nodeParams = {
         "accumulate": "true",
         "aggregate": "node",
@@ -660,6 +686,8 @@ def fetchNodeData(kubecost_url: str, cluster: str, start_time: datetime, end_tim
             f"{kubecost_url}/model/allocation/summary",
             params=nodeParams,
             timeout=REQUEST_TIMEOUT_SEC,
+            headers=headers,
+            verify=False,
         )
         r.raise_for_status()
         nodeData = r.json()
@@ -670,7 +698,14 @@ def fetchNodeData(kubecost_url: str, cluster: str, start_time: datetime, end_tim
             for node_name in i["allocations"]:
                 if node_name not in exclude:
                     try:
-                        pod_data = fetchPodData(kubecost_url, cluster, node_name, start_time, end_time)
+                        pod_data = fetchPodData(
+                            kubecost_url,
+                            cluster,
+                            node_name,
+                            start_time,
+                            end_time,
+                            headers,
+                        )
                         # Append pod data to the node allocation
                         i["allocations"][node_name]["pod_data"] = pod_data
                     except Exception as e:
@@ -686,21 +721,27 @@ def fetchNodeData(kubecost_url: str, cluster: str, start_time: datetime, end_tim
 
 def format_kubecost_window(start_time: datetime, end_time: datetime) -> str:
     """
-    Convert datetime objects to Kubecost absolute window format: 
+    Convert datetime objects to Kubecost absolute window format:
     <start_iso>Z,<end_iso>Z
     """
     return f"{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')},{end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}"
 
 
-
-def fetch_kubecost_window(kubecost_url: str, start_time: datetime, end_time: datetime) -> Dict:
+def fetch_kubecost_window(
+    kubecost_url: str,
+    start_time: datetime,
+    end_time: datetime,
+    username: str = None,
+    password: str = None,
+) -> Dict:
     """
     Call Kubecost allocation summary for a specific time window.
+    Adds Basic Auth header if username and password are provided.
     """
+    print("==========================================")
+    print(start_time, end_time, "------------------")
+    print("==========================================")
 
-    print("==========================================")
-    print(start_time , end_time , "------------------")
-    print("==========================================")
     window_param = format_kubecost_window(start_time, end_time)
 
     params = {
@@ -722,25 +763,49 @@ def fetch_kubecost_window(kubecost_url: str, start_time: datetime, end_time: dat
         "window": window_param,
     }
 
-    log.info("Fetching kubecost data | window=%s start=%s end=%s", 
-             window_param, start_time.isoformat(), end_time.isoformat())
+    log.info(
+        "Fetching kubecost data | window=%s start=%s end=%s",
+        window_param,
+        start_time.isoformat(),
+        end_time.isoformat(),
+    )
+
+    headers = {}
+    if username and password:
+        auth_string = f"{username}:{password}"
+        encoded_auth = base64.b64encode(auth_string.encode()).decode()
+        headers["Authorization"] = f"Basic {encoded_auth}"
 
     try:
         r = requests.get(
             f"{kubecost_url}/model/allocation/summary",
             params=params,
+            headers=headers,
             timeout=REQUEST_TIMEOUT_SEC,
+            verify=False,
         )
         r.raise_for_status()
         cluster_data = r.json()
-        
+        print(
+            "===========================after cluster data===============", cluster_data
+        )
         # Fetch node and pod data for each cluster and append to cluster data
         for i in cluster_data.get("data", {}).get("sets", []):
             for cluster_name in i.get("allocations", {}):
+                print(
+                    "{{{{{{{{{{{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}}}}}}}}}}}",
+                    cluster_name,
+                )
                 if cluster_name != "__idle__":
                     try:
-                        node_data = fetchNodeData(kubecost_url, cluster_name, start_time, end_time)
-                        # Append node data (which includes pod data) to the cluster allocation
+                        print("========================inside the nodeo data fprmat")
+                        node_data = fetchNodeData(
+                            kubecost_url,
+                            cluster_name,
+                            start_time,
+                            end_time,
+                            headers=headers,
+                        )
                         i["allocations"][cluster_name]["node_data"] = node_data
                     except Exception as e:
                         log.error(
@@ -751,12 +816,17 @@ def fetch_kubecost_window(kubecost_url: str, start_time: datetime, end_time: dat
                         i["allocations"][cluster_name]["node_data"] = {"error": str(e)}
 
         return cluster_data
+
     except Exception as e:
         raise RuntimeError(f"Kubecost fetch failed: {e}")
 
 
 def send_snapshots_to_backend(
-    user_id: int, cluster_id: int, kubecost_data: Dict, window_start: datetime, window_end: datetime
+    user_id: int,
+    cluster_id: int,
+    kubecost_data: Dict,
+    window_start: datetime,
+    window_end: datetime,
 ) -> None:
     """
     Format and POST snapshots to App 1 ingestion endpoint with window metadata.
@@ -765,22 +835,26 @@ def send_snapshots_to_backend(
 
     # Format the data according to schema
     formatted_payload = format_kubecost_response(kubecost_data, user_id, cluster_id)
-    
+
     # Add window metadata to payload
     formatted_payload["window_metadata"] = {
         "start_time": window_start.isoformat() + "Z",
         "end_time": window_end.isoformat() + "Z",
         "window_hours": COLLECTION_WINDOW_HOURS,
-        "collection_timestamp": datetime.utcnow().isoformat() + "Z"
+        "collection_timestamp": datetime.utcnow().isoformat() + "Z",
     }
 
-    log.debug("Sending to backend | payload_size=%d bytes", len(str(formatted_payload)))
+    log.info("Sending to backend | payload_size=%d bytes", len(str(formatted_payload)))
 
     try:
         r = requests.post(url, json=formatted_payload, timeout=REQUEST_TIMEOUT_SEC)
         r.raise_for_status()
-        log.info("Successfully sent data to backend | cluster_id=%d window=%s-%s", 
-                cluster_id, window_start.isoformat(), window_end.isoformat())
+        log.info(
+            "Successfully sent data to backend | cluster_id=%d window=%s-%s",
+            cluster_id,
+            window_start.isoformat(),
+            window_end.isoformat(),
+        )
     except Exception as e:
         raise RuntimeError(f"Backend API failed: {e}")
 
@@ -794,42 +868,62 @@ def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime) 
     cluster_id = cluster_cfg["cluster_id"]
     cluster_name = cluster_cfg.get("cluster_name", f"id-{cluster_id}")
     kubecost_url = cluster_cfg["kubecost_api_url"]
-
+    username = cluster_cfg.get("username", "")
+    password = cluster_cfg.get("password", "")
     for attempt in range(1, RETRY_ATTEMPTS + 1):
         try:
-            log.info("Collecting window | cluster=%s attempt=%d/%d start=%s end=%s", 
-                    cluster_name, attempt, RETRY_ATTEMPTS,
-                    start_time.strftime('%Y-%m-%d %H:%M:%S'),
-                    end_time.strftime('%Y-%m-%d %H:%M:%S'))
-            
+            log.info(
+                "Collecting window | cluster=%s attempt=%d/%d start=%s end=%s",
+                cluster_name,
+                attempt,
+                RETRY_ATTEMPTS,
+                start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            )
+
             # Fetch data from Kubecost
-            data = fetch_kubecost_window(kubecost_url, start_time, end_time)
+            data = fetch_kubecost_window(
+                kubecost_url, start_time, end_time, username, password
+            )
 
             if not data.get("data", {}).get("sets", []):
-                log.warning("No allocation sets returned | cluster=%s window=%s-%s", 
-                           cluster_name, start_time.isoformat(), end_time.isoformat())
+                log.warning(
+                    "No allocation sets returned | cluster=%s window=%s-%s",
+                    cluster_name,
+                    start_time.isoformat(),
+                    end_time.isoformat(),
+                )
                 return True  # Consider empty data as success to avoid infinite retries
 
             # Send to backend
             send_snapshots_to_backend(user_id, cluster_id, data, start_time, end_time)
-            log.info("Window collection success | cluster=%s window=%s-%s", 
-                    cluster_name, start_time.strftime('%Y-%m-%d %H:%M:%S'),
-                    end_time.strftime('%Y-%m-%d %H:%M:%S'))
+            log.info(
+                "Window collection success | cluster=%s window=%s-%s",
+                cluster_name,
+                start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            )
             return True
 
         except Exception as e:
             log.warning(
                 "Window collection failed (attempt %d/%d) | cluster=%s | window=%s-%s | err=%s",
-                attempt, RETRY_ATTEMPTS, cluster_name,
-                start_time.strftime('%Y-%m-%d %H:%M:%S'),
-                end_time.strftime('%Y-%m-%d %H:%M:%S'), e
+                attempt,
+                RETRY_ATTEMPTS,
+                cluster_name,
+                start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                e,
             )
             if attempt < RETRY_ATTEMPTS:
                 time.sleep(RETRY_DELAY_SEC)
             else:
-                log.error("Window collection permanently failed | cluster=%s window=%s-%s", 
-                         cluster_name, start_time.strftime('%Y-%m-%d %H:%M:%S'),
-                         end_time.strftime('%Y-%m-%d %H:%M:%S'))
+                log.error(
+                    "Window collection permanently failed | cluster=%s window=%s-%s",
+                    cluster_name,
+                    start_time.strftime("%Y-%m-%d %H:%M:%S"),
+                    end_time.strftime("%Y-%m-%d %H:%M:%S"),
+                )
                 return False
 
 
@@ -839,19 +933,22 @@ def collect_cluster_data(cluster_cfg: Dict) -> None:
     """
     cluster_id = cluster_cfg["cluster_id"]
     cluster_name = cluster_cfg.get("cluster_name", f"id-{cluster_id}")
-    
+
     try:
         # Get all missing windows that need to be collected
         missing_windows = get_missing_windows(cluster_id)
-        print(missing_windows , "------------missing windows")
-        
+        print(missing_windows, "------------missing windows")
+
         if not missing_windows:
             log.info("No missing windows | cluster=%s", cluster_name)
             return
-        
-        log.info("Found %d missing windows to collect | cluster=%s", 
-                len(missing_windows), cluster_name)
-        
+
+        log.info(
+            "Found %d missing windows to collect | cluster=%s",
+            len(missing_windows),
+            cluster_name,
+        )
+
         # Collect each missing window
         success_count = 0
         for start_time, end_time in missing_windows:
@@ -859,12 +956,19 @@ def collect_cluster_data(cluster_cfg: Dict) -> None:
                 success_count += 1
             else:
                 # Stop on first failure to maintain data continuity
-                log.error("Stopping collection due to failed window | cluster=%s", cluster_name)
+                log.error(
+                    "Stopping collection due to failed window | cluster=%s",
+                    cluster_name,
+                )
                 break
-        
-        log.info("Collected %d/%d windows | cluster=%s", 
-                success_count, len(missing_windows), cluster_name)
-        
+
+        log.info(
+            "Collected %d/%d windows | cluster=%s",
+            success_count,
+            len(missing_windows),
+            cluster_name,
+        )
+
     except Exception as e:
         log.error("Cluster collection failed | cluster=%s err=%s", cluster_name, e)
 
@@ -890,7 +994,11 @@ def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: List[Dict]):
             misfire_grace_time=COLLECTION_INTERVAL_MIN * 60 // 2,
             replace_existing=True,
         )
-        log.info("Scheduled smart collection job | %s every %d min", job_id, COLLECTION_INTERVAL_MIN)
+        log.info(
+            "Scheduled smart collection job | %s every %d min",
+            job_id,
+            COLLECTION_INTERVAL_MIN,
+        )
 
 
 def initial_collect_all(scheduler: BackgroundScheduler):
@@ -899,7 +1007,7 @@ def initial_collect_all(scheduler: BackgroundScheduler):
     """
     clusters = get_active_clusters()
     log.info("Starting initial collection for %d clusters", len(clusters))
-    
+
     for cfg in clusters:
         try:
             collect_cluster_data(cfg)
@@ -909,7 +1017,7 @@ def initial_collect_all(scheduler: BackgroundScheduler):
                 cfg.get("cluster_id"),
                 e,
             )
-    
+
     # Schedule ongoing jobs
     schedule_cluster_jobs(scheduler, clusters)
 
@@ -950,6 +1058,7 @@ def main():
             time.sleep(1)
     except KeyboardInterrupt:
         shutdown("KeyboardInterrupt", None)
+
 
 if __name__ == "__main__":
     main()
