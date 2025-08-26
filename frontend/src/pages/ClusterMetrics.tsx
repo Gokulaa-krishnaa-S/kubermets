@@ -795,10 +795,10 @@ export default function ClusterMetrics() {
                     clusters.map((cluster, index) => (
                       <div
                         key={`${cluster.name}-${index}`}
-                        // onClick={() => {
-                        //   setSelectedCluster(cluster.name);
-                        //   setShowClusterModal(true);
-                        // }}
+                        onClick={() => {
+                          setSelectedCluster(cluster.name);
+                          setShowClusterModal(true);
+                        }}
                         className="group p-6 border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-lg transition-all duration-300 cursor-pointer bg-white hover:bg-blue-50/30"
                       >
                         <div className="flex items-start justify-between mb-6">
@@ -1110,6 +1110,7 @@ export default function ClusterMetrics() {
             >
               <ClusterDetailModal
                 clusterName={selectedCluster}
+                clusterId={1}
                 onClose={() => {
                   setShowClusterModal(false);
                   setSelectedCluster(null);
