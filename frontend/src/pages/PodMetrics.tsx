@@ -196,7 +196,7 @@ const KubecostDashboard = () => {
     }
   };
 
-  // Enhanced fetchData with retry logic (based on NodeMetrics pattern)
+  // Enhanced fetchData with retry logic 
   const fetchData = useCallback(
     async (showToast = false, isRetry = false) => {
       try {
@@ -544,11 +544,12 @@ const KubecostDashboard = () => {
       }
       totalCost += allocation.totalCost;
     });
-
+    console.log(pods)
     return { pods, idle, totalCost };
   }, [data]);
 
   const filteredAndSortedPods = useMemo(() => {
+    console.log(processedData)
     const filtered = processedData.pods.filter((pod) => {
       if (!searchTerm) return true;
       const searchLower = searchTerm.toLowerCase();
