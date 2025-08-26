@@ -337,7 +337,7 @@ def dashboard_summary():
 
     session = db_manager.get_session()
     try:
-        # 1️⃣ Parse window duration
+        # 1️ Parse window duration
         end_time = datetime.utcnow()
         if window.endswith("h"):
             start_time = end_time - timedelta(hours=int(window[:-1]))
@@ -348,7 +348,7 @@ def dashboard_summary():
         else:
             return jsonify({"error": "Invalid window format"}), 400
 
-        # 2️⃣ Fetch and aggregate ClusterMetrics by (cluster_id, cluster_name)
+        # 2️ Fetch and aggregate ClusterMetrics by (cluster_id, cluster_name)
         rows = (
             session.query(ClusterMetrics)
             .filter(
@@ -375,12 +375,12 @@ def dashboard_summary():
         aggregated_clusters = {}
         idle_cost_from_clusters = 0.0
 
+
         for row in rows:
             # Skip __idle__ clusters but track their cost separately
             if row.cluster_name == "__idle__":
                 idle_cost_from_clusters += row.total_cost
                 continue
-
             key = (row.cluster_id, row.cluster_name)
             if key not in aggregated_clusters:
                 aggregated_clusters[key] = {
@@ -391,6 +391,7 @@ def dashboard_summary():
                     "cpu_usage_percent_vals": [],
                     "memory_usage_percent_vals": [],
                     "total_efficiency_vals": [],
+                    
                 }
 
             agg = aggregated_clusters[key]
@@ -403,6 +404,9 @@ def dashboard_summary():
         for agg in aggregated_clusters.values():
 
             def avg(values):
+                print("==========================================")
+                print(values)
+                print("==========================================")
                 return sum(values) / len(values) if values else 0.0
 
             agg["cpu_usage_percent"] = avg(agg.pop("cpu_usage_percent_vals"))
@@ -412,7 +416,7 @@ def dashboard_summary():
         results = []
         aggregated_global = init_aggregated()
 
-        # 3️⃣ Process each aggregated cluster (fetch node & pod metrics)
+        # Process each aggregated cluster (fetch node & pod metrics)
         for cluster_data in aggregated_clusters.values():
             cluster_id = cluster_data["id"]
 
@@ -420,6 +424,7 @@ def dashboard_summary():
             node_metrics = (
                 session.query(NodeMetrics)
                 .filter(
+                    NodeMetrics.user_id == user_id,
                     NodeMetrics.cluster_id == cluster_id,
                     NodeMetrics.timestamp >= start_time,
                     NodeMetrics.timestamp <= end_time,
@@ -431,6 +436,7 @@ def dashboard_summary():
             pod_metrics = (
                 session.query(PodMetrics)
                 .filter(
+                    PodMetrics.user_id == user_id,
                     PodMetrics.cluster_id == cluster_id,
                     PodMetrics.timestamp >= start_time,
                     PodMetrics.timestamp <= end_time,
@@ -481,7 +487,9 @@ def dashboard_summary():
         aggregated_global["idleCost"] = (
             aggregated_global.get("idleCost", 0.0) + idle_cost_from_clusters
         )
+        aggregated_global["totalCost"]+=aggregated_global["idleCost"]
 
+        
         finalize_aggregated(aggregated_global)
 
         return (
@@ -1072,7 +1080,13 @@ def aggregate_node_metrics(nodes):
         return data
 
     eff_sum, cpu_sum = 0, 0
+    mismatchCount = 0
     for node in nodes:
+        print(node.node_name)
+
+        if node.node_name == "__idle__" or node.node_name=="__unallocated__":
+            mismatchCount+=1
+            continue
         data["totalCost"] += node.total_cost
         eff_sum += node.total_efficiency
         if node.total_efficiency > 0.2:
@@ -1083,20 +1097,29 @@ def aggregate_node_metrics(nodes):
             cpu_sum += (
                 node.cpu_core_usage_average / node.cpu_core_request_average
             ) * 100
-
-    data["avgEfficiency"] = eff_sum / len(nodes)
-    data["avgCpuUsage"] = cpu_sum / len(nodes)
+    print("mismatchCountmismatchCountmismatchCount",mismatchCount)
+    data["avgEfficiency"] = eff_sum / (len(nodes)-mismatchCount)
+    data["avgCpuUsage"] = cpu_sum / (len(nodes)-mismatchCount)
     return data
 
 
 def aggregate_pod_metrics(pods):
-    data = {"totalPods": len(pods), "runningPods": 0, "idlePods": 0, "totalCost": 0}
+
+    idle_pods = 0
+    data = {"totalPods": 0, "runningPods": 0, "idlePods": 0, "totalCost": 0}
     for pod in pods:
+        if pod.name == "__idle__":
+            idle_pods+=1
+            continue
+        data["totalPods"]+=1
         data["totalCost"] += pod.total_cost
         if pod.total_cost > 0:
             data["runningPods"] += 1
         else:
             data["idlePods"] += 1
+    print("******************************************************************************")
+    print(idle_pods)
+    print("******************************************************************************")
     return data
 
 
