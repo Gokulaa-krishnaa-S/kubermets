@@ -13,6 +13,9 @@ import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
 
+// Import the standardized connection status components
+import { ConnectionStatusBanner, NetworkStatusIndicator, LoadingBanner } from "./ConnectionStatusBanner";
+
 import {
   Server,
   Cpu,
@@ -31,6 +34,7 @@ import {
   Gauge,
   ChevronRight,
   Coins,
+  WifiOff,
 } from "lucide-react";
 
 export default function ClusterMetrics() {
@@ -47,35 +51,54 @@ export default function ClusterMetrics() {
   const [refreshInterval, setRefreshInterval] = useState(30000);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
-  // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const intervalRef = useRef(null);
   const [selectedCluster, setSelectedCluster] = useState(null);
   const [showClusterModal, setShowClusterModal] = useState(false);
-  // const [selectedHash, setSelectedHash] = useState<string>("");
-  const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Standardized connection status states
+  const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('connected');
+  const [retryAttempts, setRetryAttempts] = useState(0);
+  const [maxRetries, setMaxRetries] = useState(3);
+  const [error, setError] = useState<string | null>(null);
+  
   // Add loading state to prevent multiple simultaneous calls
   const [isLoadingData, setIsLoadingData] = useState(false);
 
   // Helper function to convert bytes to GB
   const bytesToGB = (bytes) => (bytes / 1024 ** 3).toFixed(2);
 
-  const getServerStatusDisplay = (status: "live" | "down") => {
-    return {
-      text: status === "live" ? "Live" : "Server Down",
-      bgClass:
-        status === "live"
-          ? "bg-green-100 border-green-200"
-          : "bg-red-100 border-red-200",
-      dotClass: status === "live" ? "bg-green-500" : "bg-red-500",
-      textClass: status === "live" ? "text-green-800" : "text-red-800",
-    };
+  // Connection error detection function
+  const isConnectionError = (error) => {
+    if (!error) return false;
+    
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorCode = error.code || error.status;
+    
+    return (
+      errorMessage.includes('network') ||
+      errorMessage.includes('connection') ||
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('fetch') ||
+      errorMessage.includes('cors') ||
+      errorMessage.includes('enotfound') ||
+      errorMessage.includes('econnrefused') ||
+      errorCode === 'NETWORK_ERROR' ||
+      errorCode === 'ERR_NETWORK' ||
+      errorCode === 0 ||
+      errorCode === 502 ||
+      errorCode === 503 ||
+      errorCode === 504
+    );
   };
 
   const handleApiFailure = (error: any, showToast = true) => {
     setServerStatus("down");
+    setConnectionStatus('disconnected');
+    setIsAutoRefreshPaused(true);
 
     if (showToast) {
       toast({
@@ -102,20 +125,24 @@ export default function ClusterMetrics() {
     [key: string]: any;
   };
 
-  // Memoized function to handle cluster data API call
-
-  const handleCallClusterData = useCallback(async (queryParams) => {
+  // Enhanced cluster data API call with retry logic
+  const handleCallClusterData = useCallback(async (queryParams, isRetry = false) => {
     try {
       console.log("Calling cluster data API with:", queryParams);
       const res = await ClusterService.getClusterDetails(queryParams);
 
       if (res?.api_failed) {
         setServerStatus("down");
+        setConnectionStatus('disconnected');
         setIsAutoRefreshPaused(true);
         console.warn("API reported failure:", res.data);
         if (!res?.data) throw new Error("No data available and API failed");
       } else {
         setServerStatus("live");
+        setConnectionStatus('connected');
+        setRetryAttempts(0);
+        setError(null);
+        setIsAutoRefreshPaused(false);
       }
 
       const allocations = res?.data || [];
@@ -216,38 +243,45 @@ export default function ClusterMetrics() {
       ]);
     } catch (error) {
       console.error("Failed to fetch cluster summary", error);
-      setServerStatus("down");
-      setIsAutoRefreshPaused(true);
-      handleApiFailure(error);
+      
+      if (isConnectionError(error)) {
+        setConnectionStatus('disconnected');
+        setServerStatus('down');
+        
+        if (!isRetry && retryAttempts < maxRetries) {
+          console.log(`Connection failed, retrying cluster data... (${retryAttempts + 1}/${maxRetries})`);
+          setRetryAttempts(prev => prev + 1);
+          
+          setTimeout(() => {
+            handleCallClusterData(queryParams, true);
+          }, 2000 * (retryAttempts + 1));
+          
+          return;
+        }
+        
+        setError(`Failed to fetch cluster data: ${error.message}`);
+        handleApiFailure(error, false);
+      } else {
+        setError(`Failed to fetch cluster data: ${error.message}`);
+        handleApiFailure(error, false);
+      }
+      
       throw error;
     }
-  }, []);
+  }, [retryAttempts, maxRetries]);
 
-  const handleClusterChartData = useCallback(async (queryParams) => {
+  const handleClusterChartData = useCallback(async (queryParams, isRetry = false) => {
     try {
       console.log("Calling cluster chart data API with:", queryParams);
       const res = await ClusterService.getClusterAllocationSummary(queryParams);
       console.log(res, "2------------------");
       console.log(res.data, "condition 1------------------");
-      // setLastUpdated(new Date());
-
-      // Handle cache timestamp for last updated
-      // if (res?.cached === true && res?.cache_timestamp) {
-      //   const cacheDate = new Date(res.cache_timestamp);
-      //   const formattedTime = cacheDate.toLocaleTimeString();
-      //   setLastUpdated(cacheDate); // Set the actual Date object
-      //   setLastUpdatedDisplay(`Cached at ${formattedTime}`); // Set the display string
-      // } else {
-      //   const currentDate = new Date();
-      //   const formattedTime = currentDate.toLocaleTimeString();
-      //   setLastUpdated(currentDate); // Set the actual Date object
-      //   setLastUpdatedDisplay(`Updated at ${formattedTime}`); // Set the display string
-      // }
 
       // Check API failure flag
       if (res?.data?.api_failed === true) {
-        console.log("came to conditon 1");
+        console.log("came to condition 1");
         setServerStatus("down");
+        setConnectionStatus('disconnected');
         setIsAutoRefreshPaused(true);
         console.warn("API reported failure:", res.data);
 
@@ -259,11 +293,14 @@ export default function ClusterMetrics() {
         }
       } else {
         setServerStatus("live");
+        setConnectionStatus('connected');
+        setRetryAttempts(0);
+        setError(null);
+        setIsAutoRefreshPaused(false);
       }
 
       const allocations = res?.data?.data?.sets?.[0]?.allocations || {};
 
-      // ... rest of the chart data processing remains the same
       // CPU usage data
       const cpuChartData = Object.entries(allocations)
         .filter(([name]) => name !== "__idle__")
@@ -310,6 +347,7 @@ export default function ClusterMetrics() {
               : "0.0",
         };
       });
+      
       setLastUpdated(new Date());
       setChartData({
         cpuData: cpuChartData,
@@ -317,12 +355,33 @@ export default function ClusterMetrics() {
         costBreakdown: costData,
       });
     } catch (error) {
-      setServerStatus("down");
-      setIsAutoRefreshPaused(true); // Pause auto-refresh on error
       console.error("Failed to fetch cluster chart data", error);
+      
+      if (isConnectionError(error)) {
+        setConnectionStatus('disconnected');
+        setServerStatus('down');
+        
+        if (!isRetry && retryAttempts < maxRetries) {
+          console.log(`Connection failed, retrying chart data... (${retryAttempts + 1}/${maxRetries})`);
+          setRetryAttempts(prev => prev + 1);
+          
+          setTimeout(() => {
+            handleClusterChartData(queryParams, true);
+          }, 2000 * (retryAttempts + 1));
+          
+          return;
+        }
+        
+        setError(`Failed to fetch cluster chart data: ${error.message}`);
+        handleApiFailure(error, false);
+      } else {
+        setError(`Failed to fetch cluster chart data: ${error.message}`);
+        handleApiFailure(error, false);
+      }
+      
       throw error;
     }
-  }, []);
+  }, [retryAttempts, maxRetries]);
 
   // Consolidated data fetching function that accepts explicit parameters
   const fetchAllData = useCallback(
@@ -338,8 +397,9 @@ export default function ClusterMetrics() {
         return;
       }
 
-      setIsLoadingData(true);
+      // setIsLoadingData(true);
       setIsRefreshing(true);
+      setError(null);
 
       try {
         const queryParams = {
@@ -357,9 +417,6 @@ export default function ClusterMetrics() {
         ]);
 
         setLastUpdated(new Date());
-
-        // Note: setLastUpdated is now handled within individual functions
-        // based on cache status, so we don't need to set it here
 
         // If this was a manual refresh and server is back online, resume auto-refresh
         if (isManualRefresh && serverStatus === "live") {
@@ -399,19 +456,15 @@ export default function ClusterMetrics() {
         setIsInitialLoading(false);
       }
     },
-    [isLoadingData, handleCallClusterData, handleClusterChartData, serverStatus]
+    [isLoadingData, handleCallClusterData, handleClusterChartData, serverStatus, retryAttempts, maxRetries]
   );
 
-  // Handle domain change from div component
-  // const handleDomainChange = useCallback(
-  //   (hash: string) => {
-  //     console.log("Domain changed in ClusterMetrics:", hash);
-  //     setSelectedHash(hash);
-  //     // Immediately fetch data with the new domain hash
-  //     fetchAllData(timeRange, hash, true);
-  //   },
-  //   [timeRange, fetchAllData]
-  // );
+  // Handle retry function
+  const handleRetry = () => {
+    setRetryAttempts(0);
+    setError(null);
+    refreshAllData(false);
+  };
 
   // Handle time range changes - immediately fetch data with new time range
   const handleTimeRangeChange = useCallback(
@@ -564,82 +617,6 @@ export default function ClusterMetrics() {
 
     return { high, medium, low };
   };
-  const NetworkStatusIndicator = ({
-    serverStatus,
-  }: {
-    serverStatus: "live" | "down";
-  }) => {
-    const statusInfo = getServerStatusDisplay(serverStatus);
-
-    return (
-      <div
-        className={`flex items-center gap-3 px-4 py-2 rounded-lg border-2 ${statusInfo.bgClass}`}
-      >
-        <div className="relative">
-          <div className={`w-3 h-3 rounded-full ${statusInfo.dotClass}`}>
-            {serverStatus === "live" && (
-              <div className="absolute inset-0 w-3 h-3 rounded-full bg-green-500 animate-ping opacity-75"></div>
-            )}
-          </div>
-        </div>
-        <div>
-          <span className={`text-sm font-semibold ${statusInfo.textClass}`}>
-            {statusInfo.text}
-          </span>
-          <p className="text-xs text-gray-500">
-            {serverStatus === "live" ? "Connected" : "Connection Lost"}
-          </p>
-        </div>
-        {serverStatus === "down" && (
-          <div className="ml-auto">
-            <AlertCircle className="w-4 h-4 text-red-500" />
-          </div>
-        )}
-      </div>
-    );
-  };
-  const retryApiCall = async (apiFunction: Function, maxRetries = 3) => {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        return await apiFunction();
-      } catch (error) {
-        console.log(`API call attempt ${attempt} failed:`, error);
-
-        if (attempt === maxRetries) {
-          setServerStatus("down");
-          throw error;
-        }
-
-        // Wait before retry (exponential backoff)
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, attempt) * 1000)
-        );
-      }
-    }
-  };
-
-  // 6. Enhanced status message based on cached data
-  const getStatusMessage = (apiResponse: any) => {
-    if (apiResponse?.api_failed) {
-      if (apiResponse?.cached) {
-        return {
-          type: "warning",
-          message: `Server Down - Showing cached data from ${new Date(
-            apiResponse.cache_timestamp
-          ).toLocaleString()}`,
-        };
-      } else {
-        return {
-          type: "error",
-          message: "Server Down - No data available",
-        };
-      }
-    }
-    return {
-      type: "success",
-      message: "Live connection established",
-    };
-  };
 
   // Enhanced Progress Bar Component
   const ProgressBar = ({ label, value, max, color, unit }) => (
@@ -675,6 +652,32 @@ export default function ClusterMetrics() {
       </div>
     </div>
   );
+
+  // Error Display Component - similar to NodeMetrics
+  if (error && !isInitialLoading && serverStatus === 'down' && retryAttempts >= maxRetries) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 border border-red-200 max-w-md text-center">
+          <WifiOff className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Connection Lost
+          </h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-sm text-gray-500 mb-6">
+            Please check your internet connection and try again.
+          </p>
+          <button 
+            onClick={handleRetry}
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md font-medium flex items-center justify-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isInitialLoading) {
     return (
       <ClusterLayoutLoader
@@ -683,43 +686,53 @@ export default function ClusterMetrics() {
       />
     );
   }
+  
   const resourceMetrics = getResourceMetrics();
   const efficiencyStats = getEfficiencyStats();
 
   return (
-    <div
-      className="p-4 lg:p-6"
-      // title="Cluster Metrics"
-      // subtitle="Comprehensive monitoring and resource analytics"
-      // onDomainChange={handleDomainChange}
-    >
-      {/* <ServerStatusBanner /> */}
-      {/* Loading indicator */}
-      {/* {isLoadingData ? (
-        <LoadingBanner message="Loading cluster data..." />
-      ) : ( */}
-      <FilterBar
-        selectedTimeRange={timeRange}
-        onTimeRangeChange={handleTimeRangeChange}
-        timeRangeVariant="select"
-        // timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
-        timeRangeOptions={["24h", "7d", "30d"]}
-        onFilterClick={handleFilterClick}
-        showFilter={false}
-        onRefresh={refreshAllData}
-        refreshInterval={refreshInterval}
-        onRefreshIntervalChange={handleRefreshIntervalChange}
+    <div className="p-4 lg:p-6">
+      {/* Standardized Connection Status Banner */}
+      <ConnectionStatusBanner
+        connectionStatus={connectionStatus}
+        error={error}
+        retryAttempts={retryAttempts}
+        maxRetries={maxRetries}
+        isLoadingData={isLoadingData}
         isRefreshing={isRefreshing}
-        lastUpdated={lastUpdated}
-        showRefresh
-        className="mb-6"
+        onRetry={handleRetry}
       />
-      {/* )} */}
+
+      {/* Filter Bar with Network Status Indicator */}
+      <div className="mb-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <FilterBar
+            selectedTimeRange={timeRange}
+            onTimeRangeChange={handleTimeRangeChange}
+            timeRangeVariant="select"
+            timeRangeOptions={["24h", "7d", "30d"]}
+            onFilterClick={handleFilterClick}
+            showFilter={false}
+            onRefresh={refreshAllData}
+            refreshInterval={refreshInterval}
+            onRefreshIntervalChange={handleRefreshIntervalChange}
+            isRefreshing={isRefreshing}
+            lastUpdated={lastUpdated}
+            showRefresh
+            className="flex-1"
+          />
+          <div className="ml-4">
+            <NetworkStatusIndicator serverStatus={serverStatus} />
+          </div>
+        </div>
+      </div>
+
+      {/* Loading Banner */}
+      {isLoadingData && (
+        <LoadingBanner message="Loading cluster data..." />
+      )}
 
       <div className="space-y-6">
-        {/* Remove the DomainDropdown section completely */}
-        {/* Display selected domain info if available */}
-
         {/* Enhanced Metric Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {clusterStats.map((stat, index) => (
@@ -731,7 +744,7 @@ export default function ClusterMetrics() {
           ))}
         </div>
 
-        {/* Three Column div */}
+        {/* Three Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Enhanced Cluster Overview */}
           <div className="lg:col-span-2 space-y-6">
@@ -742,14 +755,24 @@ export default function ClusterMetrics() {
                   <div>
                     <CardTitle className="text-xl font-bold text-gray-900">
                       Active Clusters
+                      {serverStatus === 'down' && (
+                        <span className="ml-2 text-sm text-red-600 font-normal">
+                          (Offline Mode)
+                        </span>
+                      )}
                     </CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
                       {clusters.length} clusters running
+                      {serverStatus === 'down' && (
+                        <span className="text-red-600 ml-2">
+                          - Showing cached data
+                        </span>
+                      )}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  {/* <div className="flex items-center gap-3">
                     <NetworkStatusIndicator serverStatus={serverStatus} />
-                  </div>
+                  </div> */}
                 </div>
               </CardHeader>
               <CardContent>

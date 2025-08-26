@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   TrendingUp,
   Server,
@@ -12,6 +12,8 @@ import {
   Search,
   X,
   User,
+  WifiOff,
+  RefreshCw,
 } from "lucide-react";
 import {
   XAxis,
@@ -36,6 +38,8 @@ import { toast } from "@/components/ui/use-toast";
 
 import { PodMetricsLoader } from "@/components/loader/podloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
+import { ConnectionStatusBanner, NetworkStatusIndicator, LoadingBanner } from "./ConnectionStatusBanner";
+
 // Search Component
 interface SearchProps {
   searchTerm: string;
@@ -99,20 +103,20 @@ const KubecostDashboard = () => {
   const [selectedPod, setSelectedPod] = useState(null);
   const [podDetails, setPodDetails] = useState([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  // Refresh states
+  
+  // Enhanced connection status states (matching NodeMetrics)
   const [refreshInterval, setRefreshInterval] = useState(30000);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
-  // const [selectedHash, setSelectedHash] = useState<string>("");
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState(null);
-  // const [selectedHash, setSelectedHash] = useState<string>("");
+  // Standardized connection status tracking (from NodeMetrics)
+  const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
+  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('connected');
+  const [retryAttempts, setRetryAttempts] = useState(0);
+  const [maxRetries, setMaxRetries] = useState(3);
+  const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
 
-  // const handleDomainSelect = (hash: string) => {
-  //   console.log("Selected Unique Hash:", hash);
-  //   setSelectedHash(hash);
-  //   // fetchData(true);
-  // };
   const getWindowFromSelectedTimeRange = (range: string): string => {
     switch (range) {
       case "1h":
@@ -142,280 +146,335 @@ const KubecostDashboard = () => {
           const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
           return `${diffInDays}d`;
         }
-        return "1d"; // fallback
+        return "1d";
     }
   };
 
-const fetchData = async (showToast = false) => {
-  setIsRefreshing(true);
-  if (!showToast) setLoading(true);
-
-  try {
-    // Get cluster ID - make sure this returns a valid value
-    // const clusterId = selectedInstance?.cluster_id || selectedInstance?.id || "1";
-    // const clusterId =  "1";
-
-
+  // Connection error detection (from NodeMetrics)
+  const isConnectionError = (error) => {
+    if (!error) return false;
     
-    const queryParams = {
-      cluster_id: 1,
-      user_id: 1,
-      duration: selectedTimeRange, 
-      ...(searchTerm && { search: searchTerm })
-    };
-
-    console.log("API Query params:", queryParams);
+    const errorMessage = error.message?.toLowerCase() || '';
+    const errorCode = error.code || error.status;
     
-    const response = await podService.getPodMetrics(queryParams);
-    console.log("API Response:", response);
-    
-    // Transform the database response to match your frontend format
-    const transformedData = {
-      sets: [{
-        allocations: {}
-      }]
-    };
+    return (
+      errorMessage.includes('network') ||
+      errorMessage.includes('connection') ||
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('fetch') ||
+      errorMessage.includes('cors') ||
+      errorMessage.includes('enotfound') ||
+      errorMessage.includes('econnrefused') ||
+      errorCode === 'NETWORK_ERROR' ||
+      errorCode === 'ERR_NETWORK' ||
+      errorCode === 0 ||
+      errorCode === 502 ||
+      errorCode === 503 ||
+      errorCode === 504
+    );
+  };
 
-    // Check if response has data
-    if (response && response.data && Array.isArray(response.data)) {
-      // Transform each pod from database format to frontend format
-      response.data.forEach(pod => {
-        const podKey = pod.id || `${pod.namespace}/${pod.name}`;
-        transformedData.sets[0].allocations[podKey] = {
-          name: pod.name,
-          namespace: pod.namespace,
-          totalCost: pod.totalCost || 0,
-          cpuCost: pod.cpuCost || 0,
-          ramCost: pod.ramCost || 0,
-          pvCost: pod.pvCost || 0,
-          gpuCost: pod.gpuCost || 0,
-          networkCost: pod.networkCost || 0,
-          loadBalancerCost: pod.loadBalancerCost || 0,
-          externalCost: pod.externalCost || 0,
-          sharedCost: pod.sharedCost || 0,
-          cpuCoreUsageAverage: pod.cpuCoreUsageAverage || 0,
-          cpuCoreRequestAverage: pod.cpuCoreRequestAverage || 0,
-          ramByteUsageAverage: pod.ramByteUsageAverage || 0,
-          ramByteRequestAverage: pod.ramByteRequestAverage || 0,
-          gpuUsageAverage: pod.gpuUsageAverage || 0,
-          gpuRequestAverage: pod.gpuRequestAverage || 0,
-          pvBytes: pod.pvBytes || 0,
-          totalEfficiency: pod.totalEfficiency || 0,
-          cpuEfficiency: pod.cpuEfficiency || 0,
-          ramEfficiency: pod.ramEfficiency || 0,
-          isIdle: pod.isIdle || false
-        };
-      });
-    }
-
-    setData(transformedData);
-    setLastUpdated(new Date());
+  // API failure handler (from NodeMetrics)
+  const handleApiFailure = (error: any, showToast = true) => {
+    setServerStatus("down");
+    setConnectionStatus('disconnected');
+    setIsAutoRefreshPaused(true);
 
     if (showToast) {
-      console.log("Data refreshed successfully");
       toast({
-        title: "Data Refreshed",
-        description: "Metrics have been updated successfully."
+        title: "Connection Issues",
+        description: "Server connection failed. Data may be outdated.",
+        variant: "destructive",
       });
     }
-  } catch (err) {
-    console.error("Error fetching pod metrics:", err);
-    setError(`Failed to fetch pod metrics from database: ${err.message}`);
-  } finally {
-    setLoading(false);
-    setIsRefreshing(false);
-    setIsInitialLoading(false);
-  }
-};
-useEffect(() => {
-  console.log("Time range changed, fetching data...");
-  setSearchParams({ window: selectedTimeRange });
-  
-  // Always fetch data when component mounts or time range changes
-  if (selectedInstance) {
-    setIsInitialLoading(true);
-    fetchData();
-  }
-}, [selectedTimeRange, selectedInstance?.cluster_id]); // Use cluster_id instead of selectedHash
+  };
 
-// Fixed refresh interval effect
-useEffect(() => {
-  let intervalId;
-  
-  if (refreshInterval && refreshInterval > 0 && selectedInstance) {
-    intervalId = setInterval(() => {
-      fetchData();
+  // Enhanced fetchData with retry logic (based on NodeMetrics pattern)
+  const fetchData = useCallback(async (showToast = false, isRetry = false) => {
+    try {
+      if (!isRetry) {
+        setIsRefreshing(showToast);
+        // setIsLoadingData(true);
+        if (!showToast) setLoading(true);
+        setError(null);
+      }
+
+      const queryParams = {
+        cluster_id: 1,
+        user_id: 1,
+        duration: selectedTimeRange, 
+        ...(searchTerm && { search: searchTerm })
+      };
+
+      console.log("API Query params:", queryParams);
+      
+      const response = await podService.getPodMetrics(queryParams);
+      console.log("API Response:", response);
+      
+      // Transform the database response to match your frontend format
+      const transformedData = {
+        sets: [{
+          allocations: {}
+        }]
+      };
+
+      if (response && response.data && Array.isArray(response.data)) {
+        response.data.forEach(pod => {
+          const podKey = pod.id || `${pod.namespace}/${pod.name}`;
+          transformedData.sets[0].allocations[podKey] = {
+            name: pod.name,
+            namespace: pod.namespace,
+            totalCost: pod.totalCost || 0,
+            cpuCost: pod.cpuCost || 0,
+            ramCost: pod.ramCost || 0,
+            pvCost: pod.pvCost || 0,
+            gpuCost: pod.gpuCost || 0,
+            networkCost: pod.networkCost || 0,
+            loadBalancerCost: pod.loadBalancerCost || 0,
+            externalCost: pod.externalCost || 0,
+            sharedCost: pod.sharedCost || 0,
+            cpuCoreUsageAverage: pod.cpuCoreUsageAverage || 0,
+            cpuCoreRequestAverage: pod.cpuCoreRequestAverage || 0,
+            ramByteUsageAverage: pod.ramByteUsageAverage || 0,
+            ramByteRequestAverage: pod.ramByteRequestAverage || 0,
+            gpuUsageAverage: pod.gpuUsageAverage || 0,
+            gpuRequestAverage: pod.gpuRequestAverage || 0,
+            pvBytes: pod.pvBytes || 0,
+            totalEfficiency: pod.totalEfficiency || 0,
+            cpuEfficiency: pod.cpuEfficiency || 0,
+            ramEfficiency: pod.ramEfficiency || 0,
+            isIdle: pod.isIdle || false
+          };
+        });
+      }
+
+      setData(transformedData);
       setLastUpdated(new Date());
-    }, refreshInterval * 1000);
-  }
 
-  return () => {
-    if (intervalId) {
-      clearInterval(intervalId);
+      // Reset connection status and retry attempts on success
+      setServerStatus('live');
+      setConnectionStatus('connected');
+      setRetryAttempts(0);
+      setError(null);
+      setIsAutoRefreshPaused(false);
+
+      if (showToast) {
+        console.log("Data refreshed successfully");
+        toast({
+          title: "Data Refreshed",
+          description: "Pod metrics have been updated successfully.",
+          variant: "default",
+        });
+      }
+
+    } catch (err) {
+      console.error("Error fetching pod metrics:", err);
+      
+      if (isConnectionError(err)) {
+        setConnectionStatus('disconnected');
+        setServerStatus('down');
+        
+        if (!isRetry && retryAttempts < maxRetries) {
+          console.log(`Connection failed, retrying... (${retryAttempts + 1}/${maxRetries})`);
+          setRetryAttempts(prev => prev + 1);
+          
+          // Retry after a delay with exponential backoff
+          setTimeout(() => {
+            fetchData(showToast, true);
+          }, 2000 * (retryAttempts + 1));
+          
+          return;
+        }
+        
+        setError(`Failed to fetch pod metrics: ${err.message || 'Connection failed'}`);
+        handleApiFailure(err, false);
+      } else {
+        setError(`Failed to fetch pod metrics: ${err.message}`);
+        handleApiFailure(err, false);
+      }
+      
+      // Don't clear data on error to show cached data
+      if (!data) {
+        setData({ sets: [{ allocations: {} }] });
+      }
+
+    } finally {
+      setLoading(false);
+      setIsLoadingData(false);
+      setIsInitialLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [selectedTimeRange, searchTerm, retryAttempts, maxRetries, data]);
+
+  // Retry handler (from NodeMetrics)
+  const handleRetry = () => {
+    setRetryAttempts(0);
+    setError(null);
+    fetchData(false);
+  };
+
+  // Enhanced refresh handler (from NodeMetrics)
+  const refreshAllData = async (showToast = true) => {
+    setIsRefreshing(true);
+    try {
+      await fetchData(showToast);
+
+      // If this was a manual refresh and server is back online, resume auto-refresh
+      if (serverStatus === 'live') {
+        setIsAutoRefreshPaused(false);
+        console.log("Server is back online - resuming auto-refresh");
+      }
+
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      if (showToast) {
+        toast({
+          title: "Refresh Failed",
+          description: "Failed to update pod metrics. Auto-refresh paused until manual retry.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsRefreshing(false);
     }
   };
-}, [refreshInterval, selectedInstance?.cluster_id]);
 
-const handlePodDetails = async (name) => {
-  setSelectedPod(name);
-  setShowPodModal(true);
-
-  try {
-    const queryParams = {
-      cluster_id: "1",
-      user_id: "1",
-      duration: "7d",
-      ...(selectedHash && { domain: selectedHash })
-    };
-
-    console.log("Fetching pod details with params:", queryParams);
+  // Enhanced useEffect with connection status handling
+  useEffect(() => {
+    const rangeFromUrl = searchParams.get("window") || "24h";
+    setIsInitialLoading(true);
+    setSelectedTimeRange(rangeFromUrl);
+    setSearchParams({ window: rangeFromUrl });
     
-    const response = await podService.getPodDetails(name, queryParams);
-    console.log("Pod details response:", response);
-    
-    // Check if response has the new streamlined structure
-    if (!response || !response.data) {
-      console.warn("No pod details data received");
-      setPodDetails([]);
-      return [];
+    if (selectedInstance) {
+      fetchData();
     }
-    const podData = response.data;
-    const totalHours = podData.timeInfo?.totalRuntimeHours || 0;
-    const container = {
-      containerName: podData.podInfo?.name || name,
-      cpu: {
-        amount: podData.resourceUsage?.cpu?.averageRequest || 0,
-        hourlyRate: "$0.031611",
-        cost: podData.costSummary?.breakdown?.cpu || 0,
-        usage: podData.resourceUsage?.cpu?.averageUsage || 0,
-        efficiency: podData.resourceUsage?.cpu?.efficiency || 0
-      },
-      ram: {
-        amount: (podData.resourceUsage?.memory?.averageRequestGB || 0).toFixed(2),
-        hourlyRate: "$0.004237", 
-        cost: podData.costSummary?.breakdown?.memory || 0,
-        usageGB: (podData.resourceUsage?.memory?.averageUsageGB || 0).toFixed(2),
-        efficiency: podData.resourceUsage?.memory?.efficiency || 0
-      },
-      pv: {
-        amount: (podData.resourceUsage?.storage?.averageGB || 0).toFixed(0),
-        hourlyRate: "$0.000055",
-        cost: podData.costSummary?.breakdown?.storage || 0,
-        adjustment: 0
-      },
-      totalHours: totalHours.toFixed(2),
-      totalCost: (podData.costSummary?.totalCost || 0).toFixed(2),
-      efficiency: {
-        total: podData.performance?.totalEfficiency || 0,
-        cpu: podData.resourceUsage?.cpu?.efficiency || 0,
-        memory: podData.resourceUsage?.memory?.efficiency || 0
-      },
-      window: podData.timeInfo?.queryRange?.duration || "7d",
-      namespace: podData.podInfo?.namespace || "default",
-      
-      avgCostPerHour: podData.costSummary?.avgCostPerHour || 0,
-      firstSeen: podData.timeInfo?.firstSeen,
-      lastSeen: podData.timeInfo?.lastSeen,
-      hasIdlePeriods: podData.performance?.hasIdlePeriods || false,
-      totalRecords: podData.timeInfo?.totalRecords || 0,
+  }, [selectedInstance?.cluster_id]);
 
-      costBreakdown: {
-        cpu: podData.costSummary?.breakdown?.cpu || 0,
-        memory: podData.costSummary?.breakdown?.memory || 0,
-        storage: podData.costSummary?.breakdown?.storage || 0,
-        gpu: podData.costSummary?.breakdown?.gpu || 0,
-        network: podData.costSummary?.breakdown?.network || 0,
-        loadBalancer: podData.costSummary?.breakdown?.loadBalancer || 0,
-        external: podData.costSummary?.breakdown?.external || 0,
-        shared: podData.costSummary?.breakdown?.shared || 0
+  // Enhanced auto-refresh with pause logic
+  useEffect(() => {
+    let intervalId;
+    
+    if (refreshInterval && refreshInterval > 0 && selectedInstance && !isAutoRefreshPaused) {
+      intervalId = setInterval(() => {
+        if (!isAutoRefreshPaused && serverStatus === 'live') {
+          fetchData();
+        }
+      }, refreshInterval * 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
       }
     };
+  }, [refreshInterval, selectedInstance?.cluster_id, isAutoRefreshPaused, serverStatus]);
 
-  
-    const containers = [container];
-    
-    setPodDetails(containers);
-    return containers;
-    
-  } catch (error) {
-    console.error("Error fetching pod details:", error);
-    setPodDetails([]);
-    return [];
-  }
-};
-
-
-useEffect(() => {
-  if (showPodModal && selectedPod) {
-    handlePodDetails(selectedPod).then(setPodDetails);
-  }
-}, [showPodModal, selectedPod]);
-
-
-const handlePodDetailsAlternative = async (name) => {
-  setSelectedPod(name);
-  setShowPodModal(true);
-
-  try {
-    const queryParams = {
-      cluster_id: "1",
-      user_id: "1",
-      duration: "7d",
-      ...(selectedHash && { domain: selectedHash })
-    };
-    
-    const response = await podService.getPodDetails(name, queryParams);
-    
-    if (!response || !response.data) {
-      console.warn("No pod details data received");
-      setPodDetails([]);
-      return [];
+  // Time range change effect
+  useEffect(() => {
+    if (selectedInstance) {
+      setSearchParams({ window: selectedTimeRange });
+      fetchData();
     }
-    
-    const podData = response.data;
-    
+  }, [selectedTimeRange]);
 
-    const containers = [
-   
-      {
+  // Enhanced pod details handler with error handling
+  const handlePodDetails = async (name) => {
+    setSelectedPod(name);
+    setShowPodModal(true);
+
+    try {
+      const queryParams = {
+        cluster_id: "1",
+        user_id: "1",
+        duration: "7d",
+        ...(selectedHash && { domain: selectedHash })
+      };
+
+      console.log("Fetching pod details with params:", queryParams);
+      
+      const response = await podService.getPodDetails(name, queryParams);
+      console.log("Pod details response:", response);
+      
+      if (!response || !response.data) {
+        console.warn("No pod details data received");
+        setPodDetails([]);
+        return [];
+      }
+
+      const podData = response.data;
+      const totalHours = podData.timeInfo?.totalRuntimeHours || 0;
+      const container = {
         containerName: podData.podInfo?.name || name,
-        type: "main",
         cpu: {
           amount: podData.resourceUsage?.cpu?.averageRequest || 0,
+          hourlyRate: "$0.031611",
           cost: podData.costSummary?.breakdown?.cpu || 0,
           usage: podData.resourceUsage?.cpu?.averageUsage || 0,
           efficiency: podData.resourceUsage?.cpu?.efficiency || 0
         },
         ram: {
           amount: (podData.resourceUsage?.memory?.averageRequestGB || 0).toFixed(2),
+          hourlyRate: "$0.004237", 
           cost: podData.costSummary?.breakdown?.memory || 0,
           usageGB: (podData.resourceUsage?.memory?.averageUsageGB || 0).toFixed(2),
           efficiency: podData.resourceUsage?.memory?.efficiency || 0
         },
         pv: {
           amount: (podData.resourceUsage?.storage?.averageGB || 0).toFixed(0),
-          cost: podData.costSummary?.breakdown?.storage || 0
+          hourlyRate: "$0.000055",
+          cost: podData.costSummary?.breakdown?.storage || 0,
+          adjustment: 0
         },
-        totalHours: (podData.timeInfo?.totalRuntimeHours || 0).toFixed(2),
+        totalHours: totalHours.toFixed(2),
         totalCost: (podData.costSummary?.totalCost || 0).toFixed(2),
-        avgCostPerHour: (podData.costSummary?.avgCostPerHour || 0).toFixed(2),
         efficiency: {
           total: podData.performance?.totalEfficiency || 0,
           cpu: podData.resourceUsage?.cpu?.efficiency || 0,
           memory: podData.resourceUsage?.memory?.efficiency || 0
+        },
+        window: podData.timeInfo?.queryRange?.duration || "7d",
+        namespace: podData.podInfo?.namespace || "default",
+        
+        avgCostPerHour: podData.costSummary?.avgCostPerHour || 0,
+        firstSeen: podData.timeInfo?.firstSeen,
+        lastSeen: podData.timeInfo?.lastSeen,
+        hasIdlePeriods: podData.performance?.hasIdlePeriods || false,
+        totalRecords: podData.timeInfo?.totalRecords || 0,
+
+        costBreakdown: {
+          cpu: podData.costSummary?.breakdown?.cpu || 0,
+          memory: podData.costSummary?.breakdown?.memory || 0,
+          storage: podData.costSummary?.breakdown?.storage || 0,
+          gpu: podData.costSummary?.breakdown?.gpu || 0,
+          network: podData.costSummary?.breakdown?.network || 0,
+          loadBalancer: podData.costSummary?.breakdown?.loadBalancer || 0,
+          external: podData.costSummary?.breakdown?.external || 0,
+          shared: podData.costSummary?.breakdown?.shared || 0
         }
+      };
+
+      const containers = [container];
+      setPodDetails(containers);
+      return containers;
+      
+    } catch (error) {
+      console.error("Error fetching pod details:", error);
+      setPodDetails([]);
+      
+      // Handle connection errors for pod details
+      if (isConnectionError(error)) {
+        toast({
+          title: "Connection Error",
+          description: "Failed to load pod details due to connection issues.",
+          variant: "destructive",
+        });
       }
-    ];
-    
-    setPodDetails(containers);
-    return containers;
-    
-  } catch (error) {
-    console.error("Error fetching pod details:", error);
-    setPodDetails([]);
-    return [];
-  }
-};
+      return [];
+    }
+  };
+
+  // Rest of your existing component logic...
   const processedData = useMemo(() => {
     if (!data?.sets?.[0]?.allocations)
       return { pods: [], idle: null, totalCost: 0 };
@@ -461,7 +520,6 @@ const handlePodDetailsAlternative = async (name) => {
   }, [data]);
 
   const filteredAndSortedPods = useMemo(() => {
-    // Filter pods based on search term
     const filtered = processedData.pods.filter((pod) => {
       if (!searchTerm) return true;
       const searchLower = searchTerm.toLowerCase();
@@ -472,7 +530,6 @@ const handlePodDetailsAlternative = async (name) => {
       );
     });
 
-    // Sort filtered pods
     const sorted = filtered.sort((a, b) => {
       const aVal = a[sortField] || 0;
       const bVal = b[sortField] || 0;
@@ -483,12 +540,10 @@ const handlePodDetailsAlternative = async (name) => {
     return sorted;
   }, [processedData.pods, sortField, sortDirection, searchTerm]);
 
-  // Reset pagination when search changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  // Pagination calculations
   const totalItems = filteredAndSortedPods.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -561,6 +616,32 @@ const handlePodDetailsAlternative = async (name) => {
     if (sortField !== field) return "↕️";
     return sortDirection === "asc" ? "↑" : "↓";
   };
+
+  // Error Display Component (from NodeMetrics)
+  if (error && !isInitialLoading && serverStatus === 'down' && retryAttempts >= maxRetries) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
+        <div className="bg-white rounded-xl p-8 border border-red-200 max-w-md text-center">
+          <WifiOff className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Connection Lost
+          </h2>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-sm text-gray-500 mb-6">
+            Please check your internet connection and try again.
+          </p>
+          <Button 
+            onClick={handleRetry}
+            className="w-full"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (isInitialLoading) {
     return (
       <PodMetricsLoader
@@ -570,54 +651,24 @@ const handlePodDetailsAlternative = async (name) => {
     );
   }
 
-  if (loading && !data) {
-    return (
-      <div>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="animate-pulse">
-              <div className="h-8 bg-slate-200 rounded-lg w-64 mb-8"></div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                {[...Array(4)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-xl p-6 h-32 border border-slate-200"
-                  ></div>
-                ))}
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 bg-white rounded-xl p-6 h-96 border border-slate-200"></div>
-                <div className="bg-white rounded-xl p-6 h-96 border border-slate-200"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-8 border border-red-200 max-w-md text-center">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Error Loading Data
-            </h2>
-            <p className="text-gray-600">{error}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="p-2 sm:p-4 md:p-6">
         <div className="min-h-screen p-2 sm:p-4 md:p-6">
           <div className="mx-auto max-w-full">
-            {/* Enhanced Filter Bar with Search */}
+            
+            {/* Standardized Connection Status Banner */}
+            <ConnectionStatusBanner
+              connectionStatus={connectionStatus}
+              error={error}
+              retryAttempts={retryAttempts}
+              maxRetries={maxRetries}
+              isLoadingData={isLoadingData}
+              isRefreshing={isRefreshing}
+              onRetry={handleRetry}
+            />
+
+            {/* Enhanced Filter Bar with Network Status Indicator */}
             <div className="bg-white rounded-xl p-4 sm:p-6 border border-slate-200 shadow-sm mb-6">
               <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
                 {/* Left side - Time Range */}
@@ -638,19 +689,17 @@ const handlePodDetailsAlternative = async (name) => {
                     placeholder="Search pods by pod name"
                   />
                 </div>
-                <div className="flex items-center gap-4">
-                  {/* <DomainDropdown onSelect={handleDomainSelect} /> */}
-                  {/* {selectedHash && <p className="mt-3 text-green-600">Selected: {selectedHash}</p>} */}
-                </div>
-                {/* Right side - Refresh Controls */}
+
+                {/* Right side - Refresh Controls and Network Status */}
                 <div className="flex items-center gap-3">
                   <Refresh
-                    onRefresh={fetchData}
+                    onRefresh={refreshAllData}
                     refreshInterval={refreshInterval}
                     onRefreshIntervalChange={setRefreshInterval}
                     isRefreshing={isRefreshing}
                     lastUpdated={lastUpdated}
                   />
+                  <NetworkStatusIndicator serverStatus={serverStatus} />
                 </div>
               </div>
 
@@ -681,14 +730,22 @@ const handlePodDetailsAlternative = async (name) => {
               )}
             </div>
 
-            {/* Summary Cards - Updated to reflect filtered data */}
+            {/* Loading Banner */}
+            {isLoadingData && (
+              <LoadingBanner message="Loading pod data..." />
+            )}
+
+            {/* Summary Cards - Updated to reflect filtered data and connection status */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-              <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === 'down' ? 'opacity-75' : ''}`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
                       <DollarSign className="w-6 h-10 text-blue-600" />
                       {searchTerm ? "Filtered" : "Total"} Cost
+                      {serverStatus === 'down' && (
+                        <span className="text-red-600 ml-1">(Offline)</span>
+                      )}
                     </p>
                     <p className="text-2xl font-bold text">
                       {formatCurrency(
@@ -700,20 +757,23 @@ const handlePodDetailsAlternative = async (name) => {
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                       Selected period
+                      {serverStatus === 'down' && (
+                        <span className="text-red-600 ml-1"> - Cached data</span>
+                      )}
                     </p>
                   </div>
-                  {/* <div className="p-3 bg-blue-100 rounded-lg">
-                    <DollarSign className="w-6 h-6 text-blue-600" />
-                  </div> */}
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+              <div className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === 'down' ? 'opacity-75' : ''}`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
                       <Server className="w-6 h-10 text-green-600" />
                       {searchTerm ? "Matching" : "Active"} Pods
+                      {serverStatus === 'down' && (
+                        <span className="text-red-600 ml-1">(Offline)</span>
+                      )}
                     </p>
                     <p className="text-2xl font-bold text">
                       {filteredAndSortedPods.length}
