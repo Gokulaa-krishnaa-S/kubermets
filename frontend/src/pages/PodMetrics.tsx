@@ -196,7 +196,7 @@ const KubecostDashboard = () => {
     }
   };
 
-  // Enhanced fetchData with retry logic 
+  // Enhanced fetchData with retry logic
   const fetchData = useCallback(
     async (showToast = false, isRetry = false) => {
       try {
@@ -544,12 +544,12 @@ const KubecostDashboard = () => {
       }
       totalCost += allocation.totalCost;
     });
-    console.log(pods)
+    console.log(pods);
     return { pods, idle, totalCost };
   }, [data]);
 
   const filteredAndSortedPods = useMemo(() => {
-    console.log(processedData)
+    console.log(processedData);
     const filtered = processedData.pods.filter((pod) => {
       if (!searchTerm) return true;
       const searchLower = searchTerm.toLowerCase();
@@ -1341,7 +1341,7 @@ const KubecostDashboard = () => {
                                 : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {(pod.totalEfficiency * 100).toFixed(1)}%
+                            {pod.totalEfficiency.toFixed(3)}%
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
