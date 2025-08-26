@@ -284,11 +284,8 @@ def getPodDetail():
         session.close()
 
 
-
 @clusters_bp.route("/latest-timestamp", methods=["GET"])
-
 def get_latest_timestamp_route():
-
     """
 
     Fetch the most recent record's timestamp for a given cluster_id.
@@ -301,39 +298,25 @@ def get_latest_timestamp_route():
 
         return jsonify({"error": "cluster_id is required"}), 400
 
-
-
     session = db_manager.get_session()
 
     try:
 
         latest_record = (
-
             session.query(ClusterMetrics.timestamp)
-
-            .filter(ClusterMetrics.cluster_id == cluster_id)  
-
+            .filter(ClusterMetrics.cluster_id == cluster_id)
             .order_by(desc(ClusterMetrics.timestamp))
-
             .first()
-
         )
-
-
 
         if not latest_record:
 
-            return jsonify({"message": f"No records found for cluster_id={cluster_id}"}), 404
+            return (
+                jsonify({"message": f"No records found for cluster_id={cluster_id}"}),
+                404,
+            )
 
-
-
-        return jsonify({
-
-            "latest_timestamp": latest_record.timestamp.isoformat()
-
-        }), 200
-
-
+        return jsonify({"latest_timestamp": latest_record.timestamp.isoformat()}), 200
 
     except Exception as e:
 
@@ -342,19 +325,6 @@ def get_latest_timestamp_route():
     finally:
 
         session.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 @clusters_bp.route("/dashboard/summary", methods=["GET"])
@@ -824,6 +794,9 @@ def fetch_metrics():
                                                             "end_time": pod_allocation.get(
                                                                 "end_time"
                                                             ),
+                                                            "timestamp": node_allocation.get(
+                                                                "timestamp"
+                                                            ),
                                                             "window": pod_allocation.get(
                                                                 "window"
                                                             ),
@@ -1049,7 +1022,7 @@ def get_instance():
                 "terraform_file": "terraform_123.tfvars",
                 "updated_at": "2025-08-12T11:40:47.650507",
                 "user_id": 1,
-            },  
+            },
         ]
         return jsonify({"message": "Metrics ingested", "data": data}), 200
     except Exception as e:
