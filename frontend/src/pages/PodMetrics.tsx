@@ -38,7 +38,11 @@ import { toast } from "@/components/ui/use-toast";
 
 import { PodMetricsLoader } from "@/components/loader/podloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
-import { ConnectionStatusBanner, NetworkStatusIndicator, LoadingBanner } from "./ConnectionStatusBanner";
+import {
+  ConnectionStatusBanner,
+  NetworkStatusIndicator,
+  LoadingBanner,
+} from "./ConnectionStatusBanner";
 
 // Search Component
 interface SearchProps {
@@ -81,8 +85,9 @@ const SearchInput: React.FC<SearchProps> = ({
 };
 
 const KubecostDashboard = () => {
-  const { selectedInstance } = useCluster();
-  let selectedHash = selectedInstance?.unique_hash;
+  let { selectedInstance }: any = useCluster();
+  selectedInstance = selectedInstance ? selectedInstance : "-";
+  let selectedHash = selectedInstance?.unique_hash || "-";
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -103,7 +108,7 @@ const KubecostDashboard = () => {
   const [selectedPod, setSelectedPod] = useState(null);
   const [podDetails, setPodDetails] = useState([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  
+
   // Enhanced connection status states (matching NodeMetrics)
   const [refreshInterval, setRefreshInterval] = useState(30000);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -112,7 +117,9 @@ const KubecostDashboard = () => {
 
   // Standardized connection status tracking (from NodeMetrics)
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('connected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connected" | "disconnected"
+  >("connected");
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [maxRetries, setMaxRetries] = useState(3);
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
@@ -153,20 +160,20 @@ const KubecostDashboard = () => {
   // Connection error detection (from NodeMetrics)
   const isConnectionError = (error) => {
     if (!error) return false;
-    
-    const errorMessage = error.message?.toLowerCase() || '';
+
+    const errorMessage = error.message?.toLowerCase() || "";
     const errorCode = error.code || error.status;
-    
+
     return (
-      errorMessage.includes('network') ||
-      errorMessage.includes('connection') ||
-      errorMessage.includes('timeout') ||
-      errorMessage.includes('fetch') ||
-      errorMessage.includes('cors') ||
-      errorMessage.includes('enotfound') ||
-      errorMessage.includes('econnrefused') ||
-      errorCode === 'NETWORK_ERROR' ||
-      errorCode === 'ERR_NETWORK' ||
+      errorMessage.includes("network") ||
+      errorMessage.includes("connection") ||
+      errorMessage.includes("timeout") ||
+      errorMessage.includes("fetch") ||
+      errorMessage.includes("cors") ||
+      errorMessage.includes("enotfound") ||
+      errorMessage.includes("econnrefused") ||
+      errorCode === "NETWORK_ERROR" ||
+      errorCode === "ERR_NETWORK" ||
       errorCode === 0 ||
       errorCode === 502 ||
       errorCode === 503 ||
@@ -177,7 +184,7 @@ const KubecostDashboard = () => {
   // API failure handler (from NodeMetrics)
   const handleApiFailure = (error: any, showToast = true) => {
     setServerStatus("down");
-    setConnectionStatus('disconnected');
+    setConnectionStatus("disconnected");
     setIsAutoRefreshPaused(true);
 
     if (showToast) {
@@ -190,121 +197,130 @@ const KubecostDashboard = () => {
   };
 
   // Enhanced fetchData with retry logic (based on NodeMetrics pattern)
-  const fetchData = useCallback(async (showToast = false, isRetry = false) => {
-    try {
-      if (!isRetry) {
-        setIsRefreshing(showToast);
-        // setIsLoadingData(true);
-        if (!showToast) setLoading(true);
-        setError(null);
-      }
-
-      const queryParams = {
-        cluster_id: 1,
-        user_id: 1,
-        duration: selectedTimeRange, 
-        ...(searchTerm && { search: searchTerm })
-      };
-
-      console.log("API Query params:", queryParams);
-      
-      const response = await podService.getPodMetrics(queryParams);
-      console.log("API Response:", response);
-      
-      // Transform the database response to match your frontend format
-      const transformedData = {
-        sets: [{
-          allocations: {}
-        }]
-      };
-
-      if (response && response.data && Array.isArray(response.data)) {
-        response.data.forEach(pod => {
-          const podKey = pod.id || `${pod.namespace}/${pod.name}`;
-          transformedData.sets[0].allocations[podKey] = {
-            name: pod.name,
-            namespace: pod.namespace,
-            totalCost: pod.totalCost || 0,
-            cpuCost: pod.cpuCost || 0,
-            ramCost: pod.ramCost || 0,
-            pvCost: pod.pvCost || 0,
-            gpuCost: pod.gpuCost || 0,
-            networkCost: pod.networkCost || 0,
-            loadBalancerCost: pod.loadBalancerCost || 0,
-            externalCost: pod.externalCost || 0,
-            sharedCost: pod.sharedCost || 0,
-            cpuCoreUsageAverage: pod.cpuCoreUsageAverage || 0,
-            cpuCoreRequestAverage: pod.cpuCoreRequestAverage || 0,
-            ramByteUsageAverage: pod.ramByteUsageAverage || 0,
-            ramByteRequestAverage: pod.ramByteRequestAverage || 0,
-            gpuUsageAverage: pod.gpuUsageAverage || 0,
-            gpuRequestAverage: pod.gpuRequestAverage || 0,
-            pvBytes: pod.pvBytes || 0,
-            totalEfficiency: pod.totalEfficiency || 0,
-            cpuEfficiency: pod.cpuEfficiency || 0,
-            ramEfficiency: pod.ramEfficiency || 0,
-            isIdle: pod.isIdle || false
-          };
-        });
-      }
-
-      setData(transformedData);
-      setLastUpdated(new Date());
-
-      // Reset connection status and retry attempts on success
-      setServerStatus('live');
-      setConnectionStatus('connected');
-      setRetryAttempts(0);
-      setError(null);
-      setIsAutoRefreshPaused(false);
-
-      if (showToast) {
-        console.log("Data refreshed successfully");
-        toast({
-          title: "Data Refreshed",
-          description: "Pod metrics have been updated successfully.",
-          variant: "default",
-        });
-      }
-
-    } catch (err) {
-      console.error("Error fetching pod metrics:", err);
-      
-      if (isConnectionError(err)) {
-        setConnectionStatus('disconnected');
-        setServerStatus('down');
-        
-        if (!isRetry && retryAttempts < maxRetries) {
-          console.log(`Connection failed, retrying... (${retryAttempts + 1}/${maxRetries})`);
-          setRetryAttempts(prev => prev + 1);
-          
-          // Retry after a delay with exponential backoff
-          setTimeout(() => {
-            fetchData(showToast, true);
-          }, 2000 * (retryAttempts + 1));
-          
-          return;
+  const fetchData = useCallback(
+    async (showToast = false, isRetry = false) => {
+      try {
+        if (!isRetry) {
+          setIsRefreshing(showToast);
+          // setIsLoadingData(true);
+          if (!showToast) setLoading(true);
+          setError(null);
         }
-        
-        setError(`Failed to fetch pod metrics: ${err.message || 'Connection failed'}`);
-        handleApiFailure(err, false);
-      } else {
-        setError(`Failed to fetch pod metrics: ${err.message}`);
-        handleApiFailure(err, false);
-      }
-      
-      // Don't clear data on error to show cached data
-      if (!data) {
-        setData({ sets: [{ allocations: {} }] });
-      }
 
-    } finally {
-      setLoading(false);
-      setIsLoadingData(false);
-      setIsInitialLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [selectedTimeRange, searchTerm, retryAttempts, maxRetries, data]);
+        const queryParams = {
+          cluster_id: 1,
+          user_id: 1,
+          duration: selectedTimeRange,
+          ...(searchTerm && { search: searchTerm }),
+        };
+
+        console.log("API Query params:", queryParams);
+
+        const response = await podService.getPodMetrics(queryParams);
+        console.log("API Response:", response);
+
+        // Transform the database response to match your frontend format
+        const transformedData = {
+          sets: [
+            {
+              allocations: {},
+            },
+          ],
+        };
+
+        if (response && response.data && Array.isArray(response.data)) {
+          response.data.forEach((pod) => {
+            const podKey = pod.id || `${pod.namespace}/${pod.name}`;
+            transformedData.sets[0].allocations[podKey] = {
+              name: pod.name,
+              namespace: pod.namespace,
+              totalCost: pod.totalCost || 0,
+              cpuCost: pod.cpuCost || 0,
+              ramCost: pod.ramCost || 0,
+              pvCost: pod.pvCost || 0,
+              gpuCost: pod.gpuCost || 0,
+              networkCost: pod.networkCost || 0,
+              loadBalancerCost: pod.loadBalancerCost || 0,
+              externalCost: pod.externalCost || 0,
+              sharedCost: pod.sharedCost || 0,
+              cpuCoreUsageAverage: pod.cpuCoreUsageAverage || 0,
+              cpuCoreRequestAverage: pod.cpuCoreRequestAverage || 0,
+              ramByteUsageAverage: pod.ramByteUsageAverage || 0,
+              ramByteRequestAverage: pod.ramByteRequestAverage || 0,
+              gpuUsageAverage: pod.gpuUsageAverage || 0,
+              gpuRequestAverage: pod.gpuRequestAverage || 0,
+              pvBytes: pod.pvBytes || 0,
+              totalEfficiency: pod.totalEfficiency || 0,
+              cpuEfficiency: pod.cpuEfficiency || 0,
+              ramEfficiency: pod.ramEfficiency || 0,
+              isIdle: pod.isIdle || false,
+            };
+          });
+        }
+
+        setData(transformedData);
+        setLastUpdated(new Date());
+
+        // Reset connection status and retry attempts on success
+        setServerStatus("live");
+        setConnectionStatus("connected");
+        setRetryAttempts(0);
+        setError(null);
+        setIsAutoRefreshPaused(false);
+
+        if (showToast) {
+          console.log("Data refreshed successfully");
+          toast({
+            title: "Data Refreshed",
+            description: "Pod metrics have been updated successfully.",
+            variant: "default",
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching pod metrics:", err);
+
+        if (isConnectionError(err)) {
+          setConnectionStatus("disconnected");
+          setServerStatus("down");
+
+          if (!isRetry && retryAttempts < maxRetries) {
+            console.log(
+              `Connection failed, retrying... (${
+                retryAttempts + 1
+              }/${maxRetries})`
+            );
+            setRetryAttempts((prev) => prev + 1);
+
+            // Retry after a delay with exponential backoff
+            setTimeout(() => {
+              fetchData(showToast, true);
+            }, 2000 * (retryAttempts + 1));
+
+            return;
+          }
+
+          setError(
+            `Failed to fetch pod metrics: ${err.message || "Connection failed"}`
+          );
+          handleApiFailure(err, false);
+        } else {
+          setError(`Failed to fetch pod metrics: ${err.message}`);
+          handleApiFailure(err, false);
+        }
+
+        // Don't clear data on error to show cached data
+        if (!data) {
+          setData({ sets: [{ allocations: {} }] });
+        }
+      } finally {
+        setLoading(false);
+        setIsLoadingData(false);
+        setIsInitialLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [selectedTimeRange, searchTerm, retryAttempts, maxRetries, data]
+  );
 
   // Retry handler (from NodeMetrics)
   const handleRetry = () => {
@@ -320,17 +336,17 @@ const KubecostDashboard = () => {
       await fetchData(showToast);
 
       // If this was a manual refresh and server is back online, resume auto-refresh
-      if (serverStatus === 'live') {
+      if (serverStatus === "live") {
         setIsAutoRefreshPaused(false);
         console.log("Server is back online - resuming auto-refresh");
       }
-
     } catch (error) {
       console.error("Error refreshing data:", error);
       if (showToast) {
         toast({
           title: "Refresh Failed",
-          description: "Failed to update pod metrics. Auto-refresh paused until manual retry.",
+          description:
+            "Failed to update pod metrics. Auto-refresh paused until manual retry.",
           variant: "destructive",
         });
       }
@@ -345,7 +361,7 @@ const KubecostDashboard = () => {
     setIsInitialLoading(true);
     setSelectedTimeRange(rangeFromUrl);
     setSearchParams({ window: rangeFromUrl });
-    
+
     if (selectedInstance) {
       fetchData();
     }
@@ -354,10 +370,15 @@ const KubecostDashboard = () => {
   // Enhanced auto-refresh with pause logic
   useEffect(() => {
     let intervalId;
-    
-    if (refreshInterval && refreshInterval > 0 && selectedInstance && !isAutoRefreshPaused) {
+
+    if (
+      refreshInterval &&
+      refreshInterval > 0 &&
+      selectedInstance &&
+      !isAutoRefreshPaused
+    ) {
       intervalId = setInterval(() => {
-        if (!isAutoRefreshPaused && serverStatus === 'live') {
+        if (!isAutoRefreshPaused && serverStatus === "live") {
           fetchData();
         }
       }, refreshInterval * 1000);
@@ -368,7 +389,12 @@ const KubecostDashboard = () => {
         clearInterval(intervalId);
       }
     };
-  }, [refreshInterval, selectedInstance?.cluster_id, isAutoRefreshPaused, serverStatus]);
+  }, [
+    refreshInterval,
+    selectedInstance?.cluster_id,
+    isAutoRefreshPaused,
+    serverStatus,
+  ]);
 
   // Time range change effect
   useEffect(() => {
@@ -388,14 +414,14 @@ const KubecostDashboard = () => {
         cluster_id: "1",
         user_id: "1",
         duration: "7d",
-        ...(selectedHash && { domain: selectedHash })
+        ...(selectedHash && { domain: selectedHash }),
       };
 
       console.log("Fetching pod details with params:", queryParams);
-      
+
       const response = await podService.getPodDetails(name, queryParams);
       console.log("Pod details response:", response);
-      
+
       if (!response || !response.data) {
         console.warn("No pod details data received");
         setPodDetails([]);
@@ -411,31 +437,35 @@ const KubecostDashboard = () => {
           hourlyRate: "$0.031611",
           cost: podData.costSummary?.breakdown?.cpu || 0,
           usage: podData.resourceUsage?.cpu?.averageUsage || 0,
-          efficiency: podData.resourceUsage?.cpu?.efficiency || 0
+          efficiency: podData.resourceUsage?.cpu?.efficiency || 0,
         },
         ram: {
-          amount: (podData.resourceUsage?.memory?.averageRequestGB || 0).toFixed(2),
-          hourlyRate: "$0.004237", 
+          amount: (
+            podData.resourceUsage?.memory?.averageRequestGB || 0
+          ).toFixed(2),
+          hourlyRate: "$0.004237",
           cost: podData.costSummary?.breakdown?.memory || 0,
-          usageGB: (podData.resourceUsage?.memory?.averageUsageGB || 0).toFixed(2),
-          efficiency: podData.resourceUsage?.memory?.efficiency || 0
+          usageGB: (podData.resourceUsage?.memory?.averageUsageGB || 0).toFixed(
+            2
+          ),
+          efficiency: podData.resourceUsage?.memory?.efficiency || 0,
         },
         pv: {
           amount: (podData.resourceUsage?.storage?.averageGB || 0).toFixed(0),
           hourlyRate: "$0.000055",
           cost: podData.costSummary?.breakdown?.storage || 0,
-          adjustment: 0
+          adjustment: 0,
         },
         totalHours: totalHours.toFixed(2),
         totalCost: (podData.costSummary?.totalCost || 0).toFixed(2),
         efficiency: {
           total: podData.performance?.totalEfficiency || 0,
           cpu: podData.resourceUsage?.cpu?.efficiency || 0,
-          memory: podData.resourceUsage?.memory?.efficiency || 0
+          memory: podData.resourceUsage?.memory?.efficiency || 0,
         },
         window: podData.timeInfo?.queryRange?.duration || "7d",
         namespace: podData.podInfo?.namespace || "default",
-        
+
         avgCostPerHour: podData.costSummary?.avgCostPerHour || 0,
         firstSeen: podData.timeInfo?.firstSeen,
         lastSeen: podData.timeInfo?.lastSeen,
@@ -450,18 +480,17 @@ const KubecostDashboard = () => {
           network: podData.costSummary?.breakdown?.network || 0,
           loadBalancer: podData.costSummary?.breakdown?.loadBalancer || 0,
           external: podData.costSummary?.breakdown?.external || 0,
-          shared: podData.costSummary?.breakdown?.shared || 0
-        }
+          shared: podData.costSummary?.breakdown?.shared || 0,
+        },
       };
 
       const containers = [container];
       setPodDetails(containers);
       return containers;
-      
     } catch (error) {
       console.error("Error fetching pod details:", error);
       setPodDetails([]);
-      
+
       // Handle connection errors for pod details
       if (isConnectionError(error)) {
         toast({
@@ -618,7 +647,12 @@ const KubecostDashboard = () => {
   };
 
   // Error Display Component (from NodeMetrics)
-  if (error && !isInitialLoading && serverStatus === 'down' && retryAttempts >= maxRetries) {
+  if (
+    error &&
+    !isInitialLoading &&
+    serverStatus === "down" &&
+    retryAttempts >= maxRetries
+  ) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <div className="bg-white rounded-xl p-8 border border-red-200 max-w-md text-center">
@@ -630,10 +664,7 @@ const KubecostDashboard = () => {
           <p className="text-sm text-gray-500 mb-6">
             Please check your internet connection and try again.
           </p>
-          <Button 
-            onClick={handleRetry}
-            className="w-full"
-          >
+          <Button onClick={handleRetry} className="w-full">
             <RefreshCw className="w-4 h-4 mr-2" />
             Try Again
           </Button>
@@ -656,7 +687,6 @@ const KubecostDashboard = () => {
       <div className=" ">
         <div className="min-h-screen sm:p-4 md:p-6">
           <div className="mx-auto max-w-full">
-            
             {/* Standardized Connection Status Banner */}
             <ConnectionStatusBanner
               connectionStatus={connectionStatus}
@@ -731,19 +761,21 @@ const KubecostDashboard = () => {
             </div>
 
             {/* Loading Banner */}
-            {isLoadingData && (
-              <LoadingBanner message="Loading pod data..." />
-            )}
+            {isLoadingData && <LoadingBanner message="Loading pod data..." />}
 
             {/* Summary Cards - Updated to reflect filtered data and connection status */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-              <div className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === 'down' ? 'opacity-75' : ''}`}>
+              <div
+                className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${
+                  serverStatus === "down" ? "opacity-75" : ""
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
                       <DollarSign className="w-6 h-10 text-blue-600" />
                       {searchTerm ? "Filtered" : "Total"} Cost
-                      {serverStatus === 'down' && (
+                      {serverStatus === "down" && (
                         <span className="text-red-600 ml-1">(Offline)</span>
                       )}
                     </p>
@@ -757,21 +789,28 @@ const KubecostDashboard = () => {
                     </p>
                     <p className="text-xs text-gray-500 mt-1">
                       Selected period
-                      {serverStatus === 'down' && (
-                        <span className="text-red-600 ml-1"> - Cached data</span>
+                      {serverStatus === "down" && (
+                        <span className="text-red-600 ml-1">
+                          {" "}
+                          - Cached data
+                        </span>
                       )}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === 'down' ? 'opacity-75' : ''}`}>
+              <div
+                className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${
+                  serverStatus === "down" ? "opacity-75" : ""
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">
                       <Server className="w-6 h-10 text-green-600" />
                       {searchTerm ? "Matching" : "Active"} Pods
-                      {serverStatus === 'down' && (
+                      {serverStatus === "down" && (
                         <span className="text-red-600 ml-1">(Offline)</span>
                       )}
                     </p>

@@ -301,10 +301,10 @@ def get_pod_timeline(pod_name):
                 PodMetrics.cluster_id == cluster_id,
                 PodMetrics.user_id == user_id,
                 PodMetrics.name == pod_name,
-                PodMetrics.start_time >= start_time,
-                PodMetrics.start_time <= end_time,
+                PodMetrics.timestamp >= start_time,
+                PodMetrics.timestamp <= end_time,
             )
-            .order_by(PodMetrics.start_time)
+            .order_by(PodMetrics.timestamp)
         )
 
         if namespace:
