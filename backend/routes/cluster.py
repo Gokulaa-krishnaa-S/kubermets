@@ -1,4 +1,5 @@
 from flask import Blueprint, jsonify, Response, request
+import requests
 from models.model import ClusterMetrics, NodeMetrics, PodMetrics
 from models.model import db_manager
 from sqlalchemy import desc, asc, func
@@ -36,8 +37,10 @@ def get_cluster_metrics():
     print("=== Fetching cluster metrics ===")
     session = db_manager.get_session()
     try:
+        API_URL = os.getenv("BACKEND_API_URL")
         # 1️⃣ Get cluster_id from request
         cluster_id = request.args.get("cluster_id")
+        user_id = request.args.get("user_id", "1")
         if not cluster_id:
             return jsonify({"error": "cluster_id is required"}), 400
 
@@ -65,6 +68,7 @@ def get_cluster_metrics():
         rows = (
             session.query(ClusterMetrics)
             .filter(
+                ClusterMetrics.user_id == user_id,
                 ClusterMetrics.cluster_id == cluster_id,
                 ClusterMetrics.timestamp >= start_time,
                 ClusterMetrics.timestamp <= end_time,
@@ -286,7 +290,7 @@ def dashboard_summary():
     Dashboard summary: aggregated metrics for all clusters from DB
     """
     window = request.args.get("window", "7d")
-    user_id = request.args.get("user_id")  # Optional multi-user support
+    user_id = request.args.get("user_id", "1")  # Optional multi-user support
 
     session = db_manager.get_session()
     try:
@@ -301,35 +305,75 @@ def dashboard_summary():
         else:
             return jsonify({"error": "Invalid window format"}), 400
 
-        # 2️⃣ Fetch all clusters in the time window
-        cluster_query = session.query(ClusterMetrics).filter(
-            ClusterMetrics.timestamp >= start_time,
-            ClusterMetrics.timestamp <= end_time,
+        # 2️⃣ Fetch and aggregate ClusterMetrics by (cluster_id, cluster_name)
+        rows = (
+            session.query(ClusterMetrics)
+            .filter(
+                ClusterMetrics.user_id == user_id,
+                ClusterMetrics.timestamp >= start_time,
+                ClusterMetrics.timestamp <= end_time,
+            )
+            .all()
         )
-        if user_id:
-            cluster_query = cluster_query.filter(ClusterMetrics.user_id == user_id)
 
-        clusters = cluster_query.all()
-        if not clusters:
+        if not rows:
             return (
                 jsonify(
                     {
                         "status": "success",
                         "data": {"clusters": [], "aggregated": empty_aggregated()},
+                        "start_time": start_time.isoformat(),
+                        "end_time": end_time.isoformat(),
                     }
                 ),
                 200,
             )
 
-        # 3️⃣ Prepare aggregation containers
+        aggregated_clusters = {}
+        idle_cost_from_clusters = 0.0
+
+        for row in rows:
+            # Skip __idle__ clusters but track their cost separately
+            if row.cluster_name == "__idle__":
+                idle_cost_from_clusters += row.total_cost
+                continue
+
+            key = (row.cluster_id, row.cluster_name)
+            if key not in aggregated_clusters:
+                aggregated_clusters[key] = {
+                    "id": row.cluster_id,
+                    "name": row.cluster_name,
+                    "unique_hash": row.unique_id,
+                    "total_cost": 0.0,
+                    "cpu_usage_percent_vals": [],
+                    "memory_usage_percent_vals": [],
+                    "total_efficiency_vals": [],
+                }
+
+            agg = aggregated_clusters[key]
+            agg["total_cost"] += row.total_cost
+            agg["cpu_usage_percent_vals"].append(row.cpu_usage_percent)
+            agg["memory_usage_percent_vals"].append(row.memory_usage_percent)
+            agg["total_efficiency_vals"].append(row.total_efficiency)
+
+        # Finalize cluster averages
+        for agg in aggregated_clusters.values():
+
+            def avg(values):
+                return sum(values) / len(values) if values else 0.0
+
+            agg["cpu_usage_percent"] = avg(agg.pop("cpu_usage_percent_vals"))
+            agg["memory_usage_percent"] = avg(agg.pop("memory_usage_percent_vals"))
+            agg["total_efficiency"] = avg(agg.pop("total_efficiency_vals"))
+
         results = []
-        aggregated = init_aggregated()
+        aggregated_global = init_aggregated()
 
-        # 4️⃣ Process each cluster
-        for cluster in clusters:
-            cluster_id = cluster.id
+        # 3️⃣ Process each aggregated cluster (fetch node & pod metrics)
+        for cluster_data in aggregated_clusters.values():
+            cluster_id = cluster_data["id"]
 
-            # Fetch node metrics
+            # Fetch NodeMetrics for this cluster
             node_metrics = (
                 session.query(NodeMetrics)
                 .filter(
@@ -340,7 +384,7 @@ def dashboard_summary():
                 .all()
             )
 
-            # Fetch pod metrics
+            # Fetch PodMetrics for this cluster
             pod_metrics = (
                 session.query(PodMetrics)
                 .filter(
@@ -351,49 +395,59 @@ def dashboard_summary():
                 .all()
             )
 
-            # === Cluster-Level Computations ===
-            cluster_data = {
-                "totalCost": cluster.total_cost,
-                "efficiency": cluster.total_efficiency,
-                "cpuUsage": cluster.cpu_usage_percent,
-                "memoryUsage": cluster.memory_usage_percent,
-            }
-
-            # === Node-Level Aggregation ===
+            # Aggregate node & pod metrics
             node_data = aggregate_node_metrics(node_metrics)
-
-            # === Pod-Level Aggregation ===
             pod_data = aggregate_pod_metrics(pod_metrics)
 
-            # === Idle Cost ===
-            idle_cost = sum(n.cpu_cost_idle + n.ram_cost_idle for n in node_metrics)
+            # Idle cost = cost from node metrics + "__idle__" cost from clusters
+            cluster_idle_cost = sum(
+                n.cpu_cost_idle + n.ram_cost_idle for n in node_metrics
+            )
 
-            # Append cluster details
             results.append(
                 {
-                    "id": cluster.id,
-                    "name": cluster.cluster_name,
-                    "unique_hash": cluster.unique_id,
-                    "cluster": cluster_data,
+                    "id": cluster_id,
+                    "name": cluster_data["name"],
+                    "unique_hash": cluster_data["unique_hash"],
+                    "cluster": {
+                        "totalCost": cluster_data["total_cost"],
+                        "efficiency": cluster_data["total_efficiency"],
+                        "cpuUsage": cluster_data["cpu_usage_percent"],
+                        "memoryUsage": cluster_data["memory_usage_percent"],
+                    },
                     "node": node_data,
                     "pod": pod_data,
-                    "idleCost": idle_cost,
+                    "idleCost": cluster_idle_cost,
                 }
             )
 
-            # Update global aggregated totals
             update_global_aggregated(
-                aggregated, cluster_data, node_data, pod_data, idle_cost
+                aggregated_global,
+                {
+                    "totalCost": cluster_data["total_cost"],
+                    "efficiency": cluster_data["total_efficiency"],
+                    "cpuUsage": cluster_data["cpu_usage_percent"],
+                    "memoryUsage": cluster_data["memory_usage_percent"],
+                },
+                node_data,
+                pod_data,
+                cluster_idle_cost,
             )
 
-        # Finalize averages
-        finalize_aggregated(aggregated)
+        # Add "__idle__" cluster cost to global idle
+        aggregated_global["idleCost"] = (
+            aggregated_global.get("idleCost", 0.0) + idle_cost_from_clusters
+        )
+
+        finalize_aggregated(aggregated_global)
 
         return (
             jsonify(
                 {
                     "status": "success",
-                    "data": {"clusters": results, "aggregated": aggregated},
+                    "data": {"clusters": results, "aggregated": aggregated_global},
+                    "start_time": start_time.isoformat(),
+                    "end_time": end_time.isoformat(),
                 }
             ),
             200,

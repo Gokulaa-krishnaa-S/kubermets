@@ -77,8 +77,9 @@ const SearchInput: React.FC<SearchProps> = ({
 };
 
 const KubecostDashboard = () => {
-  const { selectedInstance } = useCluster();
-  let selectedHash = selectedInstance?.unique_hash;
+  let { selectedInstance }: any = useCluster();
+  selectedInstance = selectedInstance ? selectedInstance : "-";
+  let selectedHash = selectedInstance?.unique_hash || "-";
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -146,276 +147,277 @@ const KubecostDashboard = () => {
     }
   };
 
-const fetchData = async (showToast = false) => {
-  setIsRefreshing(true);
-  if (!showToast) setLoading(true);
+  const fetchData = async (showToast = false) => {
+    setIsRefreshing(true);
+    if (!showToast) setLoading(true);
 
-  try {
-    // Get cluster ID - make sure this returns a valid value
-    // const clusterId = selectedInstance?.cluster_id || selectedInstance?.id || "1";
-    // const clusterId =  "1";
+    try {
+      // Get cluster ID - make sure this returns a valid value
+      // const clusterId = selectedInstance?.cluster_id || selectedInstance?.id || "1";
+      // const clusterId =  "1";
 
+      const queryParams = {
+        cluster_id: 1,
+        user_id: 1,
+        duration: selectedTimeRange,
+        ...(searchTerm && { search: searchTerm }),
+      };
 
-    
-    const queryParams = {
-      cluster_id: 1,
-      user_id: 1,
-      duration: selectedTimeRange, 
-      ...(searchTerm && { search: searchTerm })
-    };
+      console.log("API Query params:", queryParams);
 
-    console.log("API Query params:", queryParams);
-    
-    const response = await podService.getPodMetrics(queryParams);
-    console.log("API Response:", response);
-    
-    // Transform the database response to match your frontend format
-    const transformedData = {
-      sets: [{
-        allocations: {}
-      }]
-    };
+      const response = await podService.getPodMetrics(queryParams);
+      console.log("API Response:", response);
 
-    // Check if response has data
-    if (response && response.data && Array.isArray(response.data)) {
-      // Transform each pod from database format to frontend format
-      response.data.forEach(pod => {
-        const podKey = pod.id || `${pod.namespace}/${pod.name}`;
-        transformedData.sets[0].allocations[podKey] = {
-          name: pod.name,
-          namespace: pod.namespace,
-          totalCost: pod.totalCost || 0,
-          cpuCost: pod.cpuCost || 0,
-          ramCost: pod.ramCost || 0,
-          pvCost: pod.pvCost || 0,
-          gpuCost: pod.gpuCost || 0,
-          networkCost: pod.networkCost || 0,
-          loadBalancerCost: pod.loadBalancerCost || 0,
-          externalCost: pod.externalCost || 0,
-          sharedCost: pod.sharedCost || 0,
-          cpuCoreUsageAverage: pod.cpuCoreUsageAverage || 0,
-          cpuCoreRequestAverage: pod.cpuCoreRequestAverage || 0,
-          ramByteUsageAverage: pod.ramByteUsageAverage || 0,
-          ramByteRequestAverage: pod.ramByteRequestAverage || 0,
-          gpuUsageAverage: pod.gpuUsageAverage || 0,
-          gpuRequestAverage: pod.gpuRequestAverage || 0,
-          pvBytes: pod.pvBytes || 0,
-          totalEfficiency: pod.totalEfficiency || 0,
-          cpuEfficiency: pod.cpuEfficiency || 0,
-          ramEfficiency: pod.ramEfficiency || 0,
-          isIdle: pod.isIdle || false
-        };
-      });
-    }
+      // Transform the database response to match your frontend format
+      const transformedData = {
+        sets: [
+          {
+            allocations: {},
+          },
+        ],
+      };
 
-    setData(transformedData);
-    setLastUpdated(new Date());
+      // Check if response has data
+      if (response && response.data && Array.isArray(response.data)) {
+        // Transform each pod from database format to frontend format
+        response.data.forEach((pod) => {
+          const podKey = pod.id || `${pod.namespace}/${pod.name}`;
+          transformedData.sets[0].allocations[podKey] = {
+            name: pod.name,
+            namespace: pod.namespace,
+            totalCost: pod.totalCost || 0,
+            cpuCost: pod.cpuCost || 0,
+            ramCost: pod.ramCost || 0,
+            pvCost: pod.pvCost || 0,
+            gpuCost: pod.gpuCost || 0,
+            networkCost: pod.networkCost || 0,
+            loadBalancerCost: pod.loadBalancerCost || 0,
+            externalCost: pod.externalCost || 0,
+            sharedCost: pod.sharedCost || 0,
+            cpuCoreUsageAverage: pod.cpuCoreUsageAverage || 0,
+            cpuCoreRequestAverage: pod.cpuCoreRequestAverage || 0,
+            ramByteUsageAverage: pod.ramByteUsageAverage || 0,
+            ramByteRequestAverage: pod.ramByteRequestAverage || 0,
+            gpuUsageAverage: pod.gpuUsageAverage || 0,
+            gpuRequestAverage: pod.gpuRequestAverage || 0,
+            pvBytes: pod.pvBytes || 0,
+            totalEfficiency: pod.totalEfficiency || 0,
+            cpuEfficiency: pod.cpuEfficiency || 0,
+            ramEfficiency: pod.ramEfficiency || 0,
+            isIdle: pod.isIdle || false,
+          };
+        });
+      }
 
-    if (showToast) {
-      console.log("Data refreshed successfully");
-      toast({
-        title: "Data Refreshed",
-        description: "Metrics have been updated successfully."
-      });
-    }
-  } catch (err) {
-    console.error("Error fetching pod metrics:", err);
-    setError(`Failed to fetch pod metrics from database: ${err.message}`);
-  } finally {
-    setLoading(false);
-    setIsRefreshing(false);
-    setIsInitialLoading(false);
-  }
-};
-useEffect(() => {
-  console.log("Time range changed, fetching data...");
-  setSearchParams({ window: selectedTimeRange });
-  
-  // Always fetch data when component mounts or time range changes
-  if (selectedInstance) {
-    setIsInitialLoading(true);
-    fetchData();
-  }
-}, [selectedTimeRange, selectedInstance?.cluster_id]); 
-
-// Fixed refresh interval effect
-useEffect(() => {
-  let intervalId;
-  
-  if (refreshInterval && refreshInterval > 0 && selectedInstance) {
-    intervalId = setInterval(() => {
-      fetchData();
+      setData(transformedData);
       setLastUpdated(new Date());
-    }, refreshInterval * 1000);
-  }
 
-  return () => {
-    if (intervalId) {
-      clearInterval(intervalId);
+      if (showToast) {
+        console.log("Data refreshed successfully");
+        toast({
+          title: "Data Refreshed",
+          description: "Metrics have been updated successfully.",
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching pod metrics:", err);
+      setError(`Failed to fetch pod metrics from database: ${err.message}`);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+      setIsInitialLoading(false);
     }
   };
-}, [refreshInterval, selectedInstance?.cluster_id]);
+  useEffect(() => {
+    console.log("Time range changed, fetching data...");
+    setSearchParams({ window: selectedTimeRange });
 
-const handlePodDetails = async (name) => {
-  setSelectedPod(name);
-  setShowPodModal(true);
-
-  try {
-    const queryParams = {
-      cluster_id: "1",
-      user_id: "1",
-      duration: "7d",
-      ...(selectedHash && { domain: selectedHash })
-    };
-
-    console.log("Fetching pod details with params:", queryParams);
-    
-    const response = await podService.getPodDetails(name, queryParams);
-    console.log("Pod details response:", response);
-    
-    // Check if response has the new streamlined structure
-    if (!response || !response.data) {
-      console.warn("No pod details data received");
-      setPodDetails([]);
-      return [];
+    // Always fetch data when component mounts or time range changes
+    if (selectedInstance) {
+      setIsInitialLoading(true);
+      fetchData();
     }
-    const podData = response.data;
-    const totalHours = podData.timeInfo?.totalRuntimeHours || 0;
-    const container = {
-      containerName: podData.podInfo?.name || name,
-      cpu: {
-        amount: podData.resourceUsage?.cpu?.averageRequest || 0,
-        hourlyRate: "$0.031611",
-        cost: podData.costSummary?.breakdown?.cpu || 0,
-        usage: podData.resourceUsage?.cpu?.averageUsage || 0,
-        efficiency: podData.resourceUsage?.cpu?.efficiency || 0
-      },
-      ram: {
-        amount: (podData.resourceUsage?.memory?.averageRequestGB || 0).toFixed(2),
-        hourlyRate: "$0.004237", 
-        cost: podData.costSummary?.breakdown?.memory || 0,
-        usageGB: (podData.resourceUsage?.memory?.averageUsageGB || 0).toFixed(2),
-        efficiency: podData.resourceUsage?.memory?.efficiency || 0
-      },
-      pv: {
-        amount: (podData.resourceUsage?.storage?.averageGB || 0).toFixed(0),
-        hourlyRate: "$0.000055",
-        cost: podData.costSummary?.breakdown?.storage || 0,
-        adjustment: 0
-      },
-      totalHours: totalHours.toFixed(2),
-      totalCost: (podData.costSummary?.totalCost || 0).toFixed(2),
-      efficiency: {
-        total: podData.performance?.totalEfficiency || 0,
-        cpu: podData.resourceUsage?.cpu?.efficiency || 0,
-        memory: podData.resourceUsage?.memory?.efficiency || 0
-      },
-      window: podData.timeInfo?.queryRange?.duration || "7d",
-      namespace: podData.podInfo?.namespace || "default",
-      
-      avgCostPerHour: podData.costSummary?.avgCostPerHour || 0,
-      firstSeen: podData.timeInfo?.firstSeen,
-      lastSeen: podData.timeInfo?.lastSeen,
-      hasIdlePeriods: podData.performance?.hasIdlePeriods || false,
-      totalRecords: podData.timeInfo?.totalRecords || 0,
+  }, [selectedTimeRange, selectedInstance?.cluster_id]);
 
-      costBreakdown: {
-        cpu: podData.costSummary?.breakdown?.cpu || 0,
-        memory: podData.costSummary?.breakdown?.memory || 0,
-        storage: podData.costSummary?.breakdown?.storage || 0,
-        gpu: podData.costSummary?.breakdown?.gpu || 0,
-        network: podData.costSummary?.breakdown?.network || 0,
-        loadBalancer: podData.costSummary?.breakdown?.loadBalancer || 0,
-        external: podData.costSummary?.breakdown?.external || 0,
-        shared: podData.costSummary?.breakdown?.shared || 0
+  // Fixed refresh interval effect
+  useEffect(() => {
+    let intervalId;
+
+    if (refreshInterval && refreshInterval > 0 && selectedInstance) {
+      intervalId = setInterval(() => {
+        fetchData();
+        setLastUpdated(new Date());
+      }, refreshInterval * 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
       }
     };
+  }, [refreshInterval, selectedInstance?.cluster_id]);
 
-  
-    const containers = [container];
-    
-    setPodDetails(containers);
-    return containers;
-    
-  } catch (error) {
-    console.error("Error fetching pod details:", error);
-    setPodDetails([]);
-    return [];
-  }
-};
+  const handlePodDetails = async (name) => {
+    setSelectedPod(name);
+    setShowPodModal(true);
 
+    try {
+      const queryParams = {
+        cluster_id: "1",
+        user_id: "1",
+        duration: "7d",
+        ...(selectedHash && { domain: selectedHash }),
+      };
 
-useEffect(() => {
-  if (showPodModal && selectedPod) {
-    handlePodDetails(selectedPod).then(setPodDetails);
-  }
-}, [showPodModal, selectedPod]);
+      console.log("Fetching pod details with params:", queryParams);
 
+      const response = await podService.getPodDetails(name, queryParams);
+      console.log("Pod details response:", response);
 
-const handlePodDetailsAlternative = async (name) => {
-  setSelectedPod(name);
-  setShowPodModal(true);
-
-  try {
-    const queryParams = {
-      cluster_id: "1",
-      user_id: "1",
-      duration: "7d",
-      ...(selectedHash && { domain: selectedHash })
-    };
-    
-    const response = await podService.getPodDetails(name, queryParams);
-    
-    if (!response || !response.data) {
-      console.warn("No pod details data received");
-      setPodDetails([]);
-      return [];
-    }
-    
-    const podData = response.data;
-    
-
-    const containers = [
-   
-      {
+      // Check if response has the new streamlined structure
+      if (!response || !response.data) {
+        console.warn("No pod details data received");
+        setPodDetails([]);
+        return [];
+      }
+      const podData = response.data;
+      const totalHours = podData.timeInfo?.totalRuntimeHours || 0;
+      const container = {
         containerName: podData.podInfo?.name || name,
-        type: "main",
         cpu: {
           amount: podData.resourceUsage?.cpu?.averageRequest || 0,
+          hourlyRate: "$0.031611",
           cost: podData.costSummary?.breakdown?.cpu || 0,
           usage: podData.resourceUsage?.cpu?.averageUsage || 0,
-          efficiency: podData.resourceUsage?.cpu?.efficiency || 0
+          efficiency: podData.resourceUsage?.cpu?.efficiency || 0,
         },
         ram: {
-          amount: (podData.resourceUsage?.memory?.averageRequestGB || 0).toFixed(2),
+          amount: (
+            podData.resourceUsage?.memory?.averageRequestGB || 0
+          ).toFixed(2),
+          hourlyRate: "$0.004237",
           cost: podData.costSummary?.breakdown?.memory || 0,
-          usageGB: (podData.resourceUsage?.memory?.averageUsageGB || 0).toFixed(2),
-          efficiency: podData.resourceUsage?.memory?.efficiency || 0
+          usageGB: (podData.resourceUsage?.memory?.averageUsageGB || 0).toFixed(
+            2
+          ),
+          efficiency: podData.resourceUsage?.memory?.efficiency || 0,
         },
         pv: {
           amount: (podData.resourceUsage?.storage?.averageGB || 0).toFixed(0),
-          cost: podData.costSummary?.breakdown?.storage || 0
+          hourlyRate: "$0.000055",
+          cost: podData.costSummary?.breakdown?.storage || 0,
+          adjustment: 0,
         },
-        totalHours: (podData.timeInfo?.totalRuntimeHours || 0).toFixed(2),
+        totalHours: totalHours.toFixed(2),
         totalCost: (podData.costSummary?.totalCost || 0).toFixed(2),
-        avgCostPerHour: (podData.costSummary?.avgCostPerHour || 0).toFixed(2),
         efficiency: {
           total: podData.performance?.totalEfficiency || 0,
           cpu: podData.resourceUsage?.cpu?.efficiency || 0,
-          memory: podData.resourceUsage?.memory?.efficiency || 0
-        }
+          memory: podData.resourceUsage?.memory?.efficiency || 0,
+        },
+        window: podData.timeInfo?.queryRange?.duration || "7d",
+        namespace: podData.podInfo?.namespace || "default",
+
+        avgCostPerHour: podData.costSummary?.avgCostPerHour || 0,
+        firstSeen: podData.timeInfo?.firstSeen,
+        lastSeen: podData.timeInfo?.lastSeen,
+        hasIdlePeriods: podData.performance?.hasIdlePeriods || false,
+        totalRecords: podData.timeInfo?.totalRecords || 0,
+
+        costBreakdown: {
+          cpu: podData.costSummary?.breakdown?.cpu || 0,
+          memory: podData.costSummary?.breakdown?.memory || 0,
+          storage: podData.costSummary?.breakdown?.storage || 0,
+          gpu: podData.costSummary?.breakdown?.gpu || 0,
+          network: podData.costSummary?.breakdown?.network || 0,
+          loadBalancer: podData.costSummary?.breakdown?.loadBalancer || 0,
+          external: podData.costSummary?.breakdown?.external || 0,
+          shared: podData.costSummary?.breakdown?.shared || 0,
+        },
+      };
+
+      const containers = [container];
+
+      setPodDetails(containers);
+      return containers;
+    } catch (error) {
+      console.error("Error fetching pod details:", error);
+      setPodDetails([]);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    if (showPodModal && selectedPod) {
+      handlePodDetails(selectedPod).then(setPodDetails);
+    }
+  }, [showPodModal, selectedPod]);
+
+  const handlePodDetailsAlternative = async (name) => {
+    setSelectedPod(name);
+    setShowPodModal(true);
+
+    try {
+      const queryParams = {
+        cluster_id: "1",
+        user_id: "1",
+        duration: "7d",
+        ...(selectedHash && { domain: selectedHash }),
+      };
+
+      const response = await podService.getPodDetails(name, queryParams);
+
+      if (!response || !response.data) {
+        console.warn("No pod details data received");
+        setPodDetails([]);
+        return [];
       }
-    ];
-    
-    setPodDetails(containers);
-    return containers;
-    
-  } catch (error) {
-    console.error("Error fetching pod details:", error);
-    setPodDetails([]);
-    return [];
-  }
-};
+
+      const podData = response.data;
+
+      const containers = [
+        {
+          containerName: podData.podInfo?.name || name,
+          type: "main",
+          cpu: {
+            amount: podData.resourceUsage?.cpu?.averageRequest || 0,
+            cost: podData.costSummary?.breakdown?.cpu || 0,
+            usage: podData.resourceUsage?.cpu?.averageUsage || 0,
+            efficiency: podData.resourceUsage?.cpu?.efficiency || 0,
+          },
+          ram: {
+            amount: (
+              podData.resourceUsage?.memory?.averageRequestGB || 0
+            ).toFixed(2),
+            cost: podData.costSummary?.breakdown?.memory || 0,
+            usageGB: (
+              podData.resourceUsage?.memory?.averageUsageGB || 0
+            ).toFixed(2),
+            efficiency: podData.resourceUsage?.memory?.efficiency || 0,
+          },
+          pv: {
+            amount: (podData.resourceUsage?.storage?.averageGB || 0).toFixed(0),
+            cost: podData.costSummary?.breakdown?.storage || 0,
+          },
+          totalHours: (podData.timeInfo?.totalRuntimeHours || 0).toFixed(2),
+          totalCost: (podData.costSummary?.totalCost || 0).toFixed(2),
+          avgCostPerHour: (podData.costSummary?.avgCostPerHour || 0).toFixed(2),
+          efficiency: {
+            total: podData.performance?.totalEfficiency || 0,
+            cpu: podData.resourceUsage?.cpu?.efficiency || 0,
+            memory: podData.resourceUsage?.memory?.efficiency || 0,
+          },
+        },
+      ];
+
+      setPodDetails(containers);
+      return containers;
+    } catch (error) {
+      console.error("Error fetching pod details:", error);
+      setPodDetails([]);
+      return [];
+    }
+  };
   const processedData = useMemo(() => {
     if (!data?.sets?.[0]?.allocations)
       return { pods: [], idle: null, totalCost: 0 };
