@@ -552,8 +552,8 @@ def build_pod_query(
     ).filter(
         PodMetrics.cluster_id == cluster_id,
         PodMetrics.user_id == user_id,
-        PodMetrics.timestamp >= start_time,
-        PodMetrics.timestamp <= end_time,
+        PodMetrics.start_time >= start_time,
+        PodMetrics.end_time <= end_time,
     )
 
     if namespace:
