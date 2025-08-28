@@ -87,7 +87,9 @@ const SearchInput: React.FC<SearchProps> = ({
 const KubecostDashboard = () => {
   let { selectedInstance }: any = useCluster();
   selectedInstance = selectedInstance ? selectedInstance : "-";
-  let selectedHash = selectedInstance?.unique_hash || "-";
+
+  let cluster_id = selectedInstance?.id;
+  let user_id = selectedInstance?.user_id;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -196,7 +198,7 @@ const KubecostDashboard = () => {
     }
   };
 
-  // Enhanced fetchData with retry logic (based on NodeMetrics pattern)
+  // Enhanced fetchData with retry logic
   const fetchData = useCallback(
     async (showToast = false, isRetry = false) => {
       try {
@@ -208,8 +210,8 @@ const KubecostDashboard = () => {
         }
 
         const queryParams = {
-          cluster_id: 1,
-          user_id: 1,
+          cluster_id: cluster_id,
+          user_id: user_id,
           duration: selectedTimeRange,
           ...(searchTerm && { search: searchTerm }),
         };
@@ -365,7 +367,7 @@ const KubecostDashboard = () => {
     if (selectedInstance) {
       fetchData();
     }
-  }, [selectedInstance?.cluster_id]);
+  }, [cluster_id]);
 
   // Enhanced auto-refresh with pause logic
   useEffect(() => {
@@ -389,12 +391,7 @@ const KubecostDashboard = () => {
         clearInterval(intervalId);
       }
     };
-  }, [
-    refreshInterval,
-    selectedInstance?.cluster_id,
-    isAutoRefreshPaused,
-    serverStatus,
-  ]);
+  }, [refreshInterval, cluster_id, isAutoRefreshPaused, serverStatus]);
 
   // Time range change effect
   useEffect(() => {
@@ -411,10 +408,9 @@ const KubecostDashboard = () => {
 
     try {
       const queryParams = {
-        cluster_id: "1",
-        user_id: "1",
+        cluster_id: cluster_id,
+        user_id: user_id,
         duration: "7d",
-        ...(selectedHash && { domain: selectedHash }),
       };
 
       console.log("Fetching pod details with params:", queryParams);
@@ -509,6 +505,7 @@ const KubecostDashboard = () => {
       return { pods: [], idle: null, totalCost: 0 };
 
     const allocations = data.sets[0].allocations;
+    console.log("allocatipns,----------------", allocations);
     const pods = [];
     let idle = null;
     let totalCost = 0;
@@ -535,6 +532,7 @@ const KubecostDashboard = () => {
               allocation.cpuCoreRequestAverage) *
             100
           ).toFixed(1),
+
           ramEfficiency: (
             (allocation.ramByteUsageAverage /
               allocation.ramByteRequestAverage) *
@@ -544,11 +542,12 @@ const KubecostDashboard = () => {
       }
       totalCost += allocation.totalCost;
     });
-
+    console.log(pods);
     return { pods, idle, totalCost };
   }, [data]);
 
   const filteredAndSortedPods = useMemo(() => {
+    console.log(processedData);
     const filtered = processedData.pods.filter((pod) => {
       if (!searchTerm) return true;
       const searchLower = searchTerm.toLowerCase();
@@ -581,7 +580,7 @@ const KubecostDashboard = () => {
 
   const chartData = useMemo(() => {
     return filteredAndSortedPods.map((pod) => ({
-      name: pod.name.split("-")[0],
+      name: pod,
       totalCost: parseFloat(pod.totalCost.toFixed(2)),
       cpuCost: parseFloat(pod.cpuCost.toFixed(2)),
       ramCost: parseFloat(pod.ramCost.toFixed(2)),
@@ -1332,7 +1331,7 @@ const KubecostDashboard = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            className={`... ${
                               pod.totalEfficiency * 100 > 50
                                 ? "bg-green-100 text-green-800"
                                 : pod.totalEfficiency * 100 > 20

@@ -635,7 +635,7 @@ def format_pod_results(results):
     return data
 
 
-# 4️⃣ Main reusable function
+#  Main reusable function
 def get_pod_metrics(
     session, cluster_id, user_id, duration, namespace=None, search=None
 ):
