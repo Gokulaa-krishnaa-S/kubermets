@@ -275,7 +275,7 @@ const NodeMetricsDashboard = () => {
             cpuCost: node.cpu_cost.toFixed(2),
             ramCost: node.ram_cost.toFixed(2),
             pvCost: node.pv_cost.toFixed(2),
-            efficiency: node.total_efficiency.toFixed(2),
+            efficiency: (node.total_efficiency * 100).toFixed(2),
             uptime: calculateUptime(node.first_seen, node.last_seen),
           };
         });
@@ -1230,10 +1230,10 @@ const NodeMetricsDashboard = () => {
                     </div>
                   </div>
 
-                  {/* <div className="flex items-center gap-1 text-xs text-muted-foreground mt-3">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-3">
                     <Clock className="w-3 h-3" />
                     <span>Uptime: {node.uptime}</span>
-                  </div> */}
+                  </div>
                 </Card>
               ))}
 
@@ -1268,7 +1268,7 @@ const NodeMetricsDashboard = () => {
                     <th className="text-left p-4 font-medium">Memory</th>
                     <th className="text-left p-4 font-medium">Cost</th>
                     <th className="text-left p-4 font-medium">Efficiency</th>
-                    {/* <th className="text-left p-4 font-medium">Uptime</th> */}
+                    <th className="text-left p-4 font-medium">Uptime</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1337,12 +1337,12 @@ const NodeMetricsDashboard = () => {
                           {node.efficiency}%
                         </span>
                       </td>
-                      {/* <td className="p-4">
+                      <td className="p-4">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="w-4 h-4" />
                           {node.uptime}
                         </div>
-                      </td> */}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

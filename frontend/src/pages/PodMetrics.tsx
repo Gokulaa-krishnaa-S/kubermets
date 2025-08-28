@@ -86,8 +86,7 @@ const SearchInput: React.FC<SearchProps> = ({
 
 const KubecostDashboard = () => {
   let { selectedInstance }: any = useCluster();
-  selectedInstance = selectedInstance ? selectedInstance : "-";
-
+  console.log(selectedInstance);
   let cluster_id = selectedInstance?.id;
   let user_id = selectedInstance?.user_id;
   const [data, setData] = useState(null);
@@ -217,7 +216,9 @@ const KubecostDashboard = () => {
         };
 
         console.log("API Query params:", queryParams);
-
+        if (!(user_id && cluster_id)) {
+          return;
+        }
         const response = await podService.getPodMetrics(queryParams);
         console.log("API Response:", response);
 
@@ -321,7 +322,15 @@ const KubecostDashboard = () => {
         setIsRefreshing(false);
       }
     },
-    [selectedTimeRange, searchTerm, retryAttempts, maxRetries, data]
+    [
+      selectedTimeRange,
+      searchTerm,
+      retryAttempts,
+      maxRetries,
+      data,
+      cluster_id,
+      user_id,
+    ]
   );
 
   // Retry handler (from NodeMetrics)
@@ -335,7 +344,9 @@ const KubecostDashboard = () => {
   const refreshAllData = async (showToast = true) => {
     setIsRefreshing(true);
     try {
-      await fetchData(showToast);
+      if (cluster_id && user_id) {
+        await fetchData(showToast);
+      }
 
       // If this was a manual refresh and server is back online, resume auto-refresh
       if (serverStatus === "live") {
@@ -364,10 +375,10 @@ const KubecostDashboard = () => {
     setSelectedTimeRange(rangeFromUrl);
     setSearchParams({ window: rangeFromUrl });
 
-    if (selectedInstance) {
+    if (cluster_id && user_id) {
       fetchData();
     }
-  }, [cluster_id]);
+  }, [cluster_id, user_id]);
 
   // Enhanced auto-refresh with pause logic
   useEffect(() => {
@@ -376,7 +387,7 @@ const KubecostDashboard = () => {
     if (
       refreshInterval &&
       refreshInterval > 0 &&
-      selectedInstance &&
+      cluster_id &&
       !isAutoRefreshPaused
     ) {
       intervalId = setInterval(() => {
@@ -395,7 +406,7 @@ const KubecostDashboard = () => {
 
   // Time range change effect
   useEffect(() => {
-    if (selectedInstance) {
+    if (cluster_id) {
       setSearchParams({ window: selectedTimeRange });
       fetchData();
     }
