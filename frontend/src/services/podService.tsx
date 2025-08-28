@@ -96,6 +96,23 @@ class PodService {
       throw error;
     }
   }
+
+  /**
+   * Fetch Pod Active count and idle count from database
+   * @param bodyParams - Parameters for fetching pod metrics
+   */
+  async getActiveIdlePodCount(
+    bodyParams: any
+  ): Promise<any> {
+    try {
+      const response: AxiosResponse = await this.api.post("/pods/getactivepodcounts",bodyParams);
+      console.log("Pod count data response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching pod metrics:", error);
+      throw error;
+    }
+  }
 }
 
 export default new PodService();

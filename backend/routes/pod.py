@@ -1,3 +1,4 @@
+
 from flask import Blueprint, jsonify, request
 from models.model import PodMetrics, db_manager
 from sqlalchemy import func
@@ -256,6 +257,32 @@ def get_pod_details(pod_name):
     finally:
         session.close()
 
+
+# Endpoint: Get active pod counts for a cluster
+@pods_bp.route("/getactivepodcounts", methods=["POST"])
+def get_active_pod_counts():
+    """
+    Returns the count of active pods for a given cluster_id (POST body: {"cluster_id": ...})
+    Uses PodMetrics.key: if "__idle__" then idle, else active.
+    Response: {"active_count": <int>}
+    """
+    data = request.get_json(force=True)
+    cluster_id = data.get("cluster_id")
+    if not cluster_id:
+        return jsonify({"error": "cluster_id is required"}), 400
+    session = db_manager.get_session()
+    try:
+        # Query all pods for the cluster_id
+        pod_keys = session.query(PodMetrics.key).filter(PodMetrics.cluster_id == cluster_id).all()
+        # Count active pods (key != "__idle__")
+        active_count = sum(1 for (key,) in pod_keys if key != "__idle__")
+        idle_count = sum(1 for (key,) in pod_keys if key == "__idle__")
+        return jsonify({"active_count": active_count,"idle_count": idle_count})
+    except Exception as e:
+        print(f"Error in get_active_pod_counts: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        session.close()
 
 @pods_bp.route("/<pod_name>/timeline", methods=["GET"])
 def get_pod_timeline(pod_name):
@@ -661,3 +688,10 @@ def get_pod_metrics(
         }
     except ValueError as e:
         return {"error": str(e)}
+
+
+# Chart data retriver
+def get_idle_active_pod_counts(pod_data):
+    active_count = sum(1 for pod in pod_data if not pod.get("isIdle", False))
+    idle_count = sum(1 for pod in pod_data if pod.get("isIdle", False))
+    return active_count, idle_count
