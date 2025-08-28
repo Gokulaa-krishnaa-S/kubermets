@@ -421,9 +421,7 @@ export default function ClusterDetailModal({
                   colors={["#06b6d4", "#f43f5e"]}
                   dataKeys={["used", "requested"]}
                 />
-                <div className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
-                  Data Not Available
-                </div>
+               
               </div>
             </ChartCard>
 
