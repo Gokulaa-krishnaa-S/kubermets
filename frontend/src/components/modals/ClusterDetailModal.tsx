@@ -196,89 +196,132 @@ export default function ClusterDetailModal({
     }
   };
 
-  // Fetch pod-level metrics for Active vs Idle pods chart
-  const fetchPodData = async () => {
+
+
+  // Synchronous pod count fetcher for Active vs Idle Pods chart
+  const fetchPodCountData = async () => {
+    setLoadingPods(true);
+    setError(null);
     try {
-      setError(null);
-      
-      const res = await podService.getPodMetrics({
-        user_id: 1,
-        cluster_id: clusterId || 1,
-        duration: "60d",
-      });
-
-      console.log("Pod API response:", res);
-      
-      // Access the data array correctly
-      const podData = res?.data || [];
-
-      console.log("pod data:", podData);
-      
-      if (!Array.isArray(podData) || podData.length === 0) {
-        console.warn("No pod data received from API");
+      const response = await podService.getActiveIdlePodCount({ cluster_id: clusterId });
+      console.log("response for pod count", response,!response.active_count,!response.idle_count);
+      if (response && response.active_count  && response.idle_count) {
         setPodCountData([
           {
-            name: clusterName,
+            name: "clusterName",
+            active: response.active_count,
+            idle: response.idle_count,
+          },
+        ]);
+        console.log("pod count data is",podCountData);
+
+      } else {
+        setPodCountData([
+          {
+            name: "clusterName",
             active: 0,
             idle: 0,
           },
         ]);
-        setLoadingPods(false);
-        return;
       }
-      
-      // Count active and idle pods (excluding the __idle__ system entry)
-      let activeCount = 0;
-      let idleCount = 0;
-      
-      podData.forEach((pod) => {
-        // Skip the system __idle__ entry
-        if (pod.name === "__idle__" || pod.id === "__idle__") {
-          return;
-        }
-        
-        if (pod.isIdle) {
-          idleCount++;
-        } else {
-          activeCount++;
-        }
-      });
-
-      setPodCountData([
-        {
-          name: clusterName,
-          active: activeCount,
-          idle: idleCount,
-        },
-      ]);
-
-      console.log("pod data in state is:", podCountData);
-      
-      setLoadingPods(false);
-
     } catch (err) {
-      console.error("Failed to fetch pod data:", err);
-      setError("Failed to load pod data: " + (err.message || "Unknown error"));
+      console.error("Failed to fetch pod counts:", err);
+      setError("Failed to load pod counts: " + (err.message || "Unknown error"));
       setPodCountData([
         {
-          name: clusterName,
+          name: "clusterName",
           active: 0,
           idle: 0,
         },
       ]);
+    } finally {
       setLoadingPods(false);
     }
   };
+
+  // Fetch pod-level metrics for Active vs Idle pods chart
+  // const fetchPodData = async () => {
+  //   try {
+  //     setError(null);
+      
+  //     const res = await podService.getPodMetrics({
+  //       user_id: 1,
+  //       cluster_id: clusterId || 1,
+  //       duration: "60d",
+  //     });
+
+  //     console.log("Pod API response:", res);
+      
+  //     // Access the data array correctly
+  //     const podData = res?.data || [];
+
+  //     console.log("pod data:", podData);
+      
+  //     if (!Array.isArray(podData) || podData.length === 0) {
+  //       console.warn("No pod data received from API");
+  //       setPodCountData([
+  //         {
+  //           name: clusterName,
+  //           active: 0,
+  //           idle: 0,
+  //         },
+  //       ]);
+  //       setLoadingPods(false);
+  //       return;
+  //     }
+      
+  //     // Count active and idle pods (excluding the __idle__ system entry)
+  //     let activeCount = 0;
+  //     let idleCount = 0;
+      
+  //     podData.forEach((pod) => {
+  //       // Skip the system __idle__ entry
+  //       if (pod.name === "__idle__" || pod.id === "__idle__") {
+  //         return;
+  //       }
+        
+  //       if (pod.isIdle) {
+  //         idleCount++;
+  //       } else {
+  //         activeCount++;
+  //       }
+  //     });
+
+  //     setPodCountData([
+  //       {
+  //         name: clusterName,
+  //         active: activeCount,
+  //         idle: idleCount,
+  //       },
+  //     ]);
+
+  //     console.log("pod data in state is:", podCountData);
+      
+  //     setLoadingPods(false);
+
+  //   } catch (err) {
+  //     console.error("Failed to fetch pod data:", err);
+  //     setError("Failed to load pod data: " + (err.message || "Unknown error"));
+  //     setPodCountData([
+  //       {
+  //         name: clusterName,
+  //         active: 0,
+  //         idle: 0,
+  //       },
+  //     ]);
+  //     setLoadingPods(false);
+  //   }
+  // };
 
   useEffect(() => {
     if (!clusterName) {
       setError("Cluster name is required");
       return;
     }
-    
-    // Fetch data from both APIs
+    // Fetch all data synchronously
     fetchClusterStats();
-    fetchPodData();
+    // fetchPodData();
+    fetchPodCountData();
   }, [clusterName, clusterId]);
 
   return (
