@@ -14,11 +14,30 @@ export const GroupedBarChart = ({
   data,
   title,
   yAxisLabel,
-  colors = ["#3b82f6", "#10b981"]
+  colors = ["#3b82f6", "#10b981"],
+  dataKeys ,
+  barNames = null // Optional custom names for the bars
 }) => {
+  // Auto-detect data keys if not provided
+  const detectedKeys = data.length > 0 ? 
+    Object.keys(data[0]).filter(key => key !== "name" && typeof data[0][key] === "number") : 
+    dataKeys;
+
+  // Use provided dataKeys or auto-detected keys
+  const actualDataKeys = dataKeys.length > 0 ? dataKeys : detectedKeys;
+
+  // Generate bar names - use custom names if provided, otherwise capitalize the keys
+  const getBarName = (key, index) => {
+    if (barNames && barNames[index]) {
+      return barNames[index];
+    }
+    // Capitalize first letter and replace underscores with spaces
+    return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
+  };
+
   return (
     <motion.div
-      className="w-full h-80  rounded-xl  p-4 flex flex-col"
+      className="w-full h-80 rounded-xl p-4 flex flex-col"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -68,27 +87,25 @@ export const GroupedBarChart = ({
             }}
             itemStyle={{ color: "#fff" }}
           />
-          <Legend wrapperStyle={{ paddingTop: "8px", borderRadius: "1.5rem", }}  />
+          <Legend wrapperStyle={{ paddingTop: "8px", borderRadius: "1.5rem" }} />
 
-          {/* Animated Bars */}
-          <Bar
-            dataKey="used"
-            fill={colors[0]}
-            name="Used"
-            radius={[6, 6, 0, 0]}
-            shape={(props) => (
-              <AnimatedBar {...props} barColor={colors[0]} />
-            )}
-          />
-          <Bar
-            dataKey="requested"
-            fill={colors[1]}
-            name="Requested"
-            radius={[6, 6, 0, 0]}
-            shape={(props) => (
-              <AnimatedBar {...props} barColor={colors[1]} />
-            )}
-          />
+          {/* Dynamic Animated Bars */}
+          {actualDataKeys.map((key, index) => (
+            <Bar
+              key={key}
+              dataKey={key}
+              fill={colors[index % colors.length]} // Cycle through colors if more bars than colors
+              name={getBarName(key, index)}
+              radius={[6, 6, 0, 0]}
+              shape={(props) => (
+                <AnimatedBar 
+                  {...props} 
+                  barColor={colors[index % colors.length]}
+                  delay={index * 0.1} // Stagger animation for multiple bars
+                />
+              )}
+            />
+          ))}
         </BarChart>
       </ResponsiveContainer>
     </motion.div>
@@ -98,7 +115,7 @@ export const GroupedBarChart = ({
 /**
  * Custom bar component with Framer Motion animation
  */
-const AnimatedBar = ({ x, y, width, height, barColor }) => {
+const AnimatedBar = ({ x, y, width, height, barColor, delay = 0 }) => {
   return (
     <motion.rect
       x={x}
@@ -109,11 +126,13 @@ const AnimatedBar = ({ x, y, width, height, barColor }) => {
       fill={barColor}
       initial={{ scaleY: 0 }}
       animate={{ scaleY: 1 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
+      transition={{ 
+        duration: 0.5, 
+        ease: "easeOut",
+        delay: delay // Add staggered delay for multiple bars
+      }}
       style={{
-        transformOrigin: "bottom center",
-        // borderTopRightRadius: "0.5rem",
-        // borderTopLeftRadius: "0.5rem"
+        transformOrigin: "bottom center"
       }}
     />
   );

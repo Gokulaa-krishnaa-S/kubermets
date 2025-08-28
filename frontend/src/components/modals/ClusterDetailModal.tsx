@@ -10,6 +10,7 @@ import ClusterService from "@/services/ClusterService";
 import podService from "@/services/podService";
 import { useSelectedHash } from "@/hooks/selected-hash";
 import ChartCard from "../ui/chartCard";
+import { request } from "http";
 
 const chartDetails = {
   cpu: {
@@ -196,31 +197,34 @@ export default function ClusterDetailModal({
     }
   };
 
-
-
-  // Synchronous pod count fetcher for Active vs Idle Pods chart
+  // Fixed fetchPodCountData function
   const fetchPodCountData = async () => {
     setLoadingPods(true);
     setError(null);
     try {
       const response = await podService.getActiveIdlePodCount({ cluster_id: clusterId });
-      console.log("response for pod count", response,!response.active_count,!response.idle_count);
-      if (response && response.active_count  && response.idle_count) {
-        setPodCountData([
+      console.log("response for pod count", response);
+      
+      // Fix: Check if response exists and has the required properties (allowing 0 values)
+      if (response && typeof response.active_count === 'number' && typeof response.idle_count === 'number') {
+        const newPodData = [
           {
-            name: "clusterName",
+            name: clusterName, // Use clusterName instead of hardcoded string
             active: response.active_count,
             idle: response.idle_count,
           },
-        ]);
-        console.log("pod count data is",podCountData);
-
+        ];
+        
+        console.log("Setting pod count data:", newPodData);
+        setPodCountData(newPodData);
+        console.log("pod count data set successfully - state will update on next render");
       } else {
+        console.warn("Invalid response format for pod count:", response);
         setPodCountData([
           {
-            name: "clusterName",
-            active: 0,
-            idle: 0,
+            name: clusterName,
+            used: 0,
+            requested: 0,
           },
         ]);
       }
@@ -229,9 +233,9 @@ export default function ClusterDetailModal({
       setError("Failed to load pod counts: " + (err.message || "Unknown error"));
       setPodCountData([
         {
-          name: "clusterName",
-          active: 0,
-          idle: 0,
+          name: clusterName,
+          used: 0,
+          requested: 0,
         },
       ]);
     } finally {
@@ -324,6 +328,11 @@ export default function ClusterDetailModal({
     fetchPodCountData();
   }, [clusterName, clusterId]);
 
+  // Debug effect to log podCountData changes
+  useEffect(() => {
+    console.log("podCountData state updated:", podCountData);
+  }, [podCountData]);
+
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
@@ -376,7 +385,7 @@ export default function ClusterDetailModal({
                 title="CPU Usage per Cluster"
                 yAxisLabel="Cores"
                 colors={["#3b82f6", "#10b981"]}
-                // dataKeys={["used", "requested"]}
+                dataKeys={["used", "requested"]}
               />
             </ChartCard>
 
@@ -387,7 +396,7 @@ export default function ClusterDetailModal({
                 title="Memory Usage per Cluster"
                 yAxisLabel="GB"
                 colors={["#f59e0b", "#84cc16"]}
-                // dataKeys={["used", "requested"]}
+                dataKeys={["used", "requested"]}
               />
             </ChartCard>
 
@@ -398,7 +407,7 @@ export default function ClusterDetailModal({
                 title="GPU Usage per Cluster"
                 yAxisLabel="GPUs"
                 colors={["#8b5cf6", "#ec4899"]}
-                // dataKeys={["used", "requested"]}
+                dataKeys={["used", "requested"]}
               />
             </ChartCard>
 
@@ -410,7 +419,7 @@ export default function ClusterDetailModal({
                   title="GPU Memory Usage per Cluster"
                   yAxisLabel="GB"
                   colors={["#06b6d4", "#f43f5e"]}
-                  // dataKeys={["used", "requested"]}
+                  dataKeys={["used", "requested"]}
                 />
                 <div className="absolute top-2 right-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
                   Data Not Available
@@ -421,11 +430,12 @@ export default function ClusterDetailModal({
             {/* Active vs Idle Pods Chart - PodService */}
             <ChartCard loading={loadingPods} details={chartDetails.pods}>
               <GroupedBarChart
+                // data={{clusterName:"GCP",active:10,idle:5}}
                 data={podCountData}
                 title="Active vs Idle Pods"
                 yAxisLabel="Pod Count"
                 colors={["#10b981", "#ef4444"]}
-                // dataKeys={["active", "idle"]}
+                dataKeys={["active", "idle"]}
               />
             </ChartCard>
 
@@ -433,10 +443,11 @@ export default function ClusterDetailModal({
             <ChartCard loading={loadingVolume} details={chartDetails.volume}>
               <GroupedBarChart
                 data={volumeData}
+                
                 title="Volume Cost per Cluster"
                 yAxisLabel="Cost ($)"
                 colors={["#3b82f6"]}
-                // dataKeys={["used"]}
+                dataKeys={["used","requested"]}
               />
             </ChartCard>
 
