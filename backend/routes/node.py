@@ -3,7 +3,7 @@ from models.model import NodeMetrics, db_manager
 from sqlalchemy import func
 from datetime import datetime, timedelta
 
-nodes_bp = Blueprint("nodes", __name__, url_prefix="/v1/nodes")
+nodes_bp = Blueprint("nodes", __name__, url_prefix="/v1")
 
 
 def parse_duration(duration: str, end_time=None):
@@ -96,7 +96,7 @@ def get_node_data(
     }
 
 
-@nodes_bp.route("/", methods=["GET"])
+@nodes_bp.route("/nodes", methods=["GET"])
 def get_node_metrics():
     session = db_manager.get_session()
     try:
