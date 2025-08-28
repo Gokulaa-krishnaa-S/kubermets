@@ -697,7 +697,7 @@ export default function ClusterMetrics() {
   return (
     <div className="p-4 lg:p-6">
       {/* Standardized Connection Status Banner */}
-      <ConnectionStatusBanner
+      {/* <ConnectionStatusBanner
         connectionStatus={connectionStatus}
         error={error}
         retryAttempts={retryAttempts}
@@ -705,7 +705,7 @@ export default function ClusterMetrics() {
         isLoadingData={isLoadingData}
         isRefreshing={isRefreshing}
         onRetry={handleRetry}
-      />
+      /> */}
 
       {/* Filter Bar with Network Status Indicator */}
       <div className="mb-6 space-y-4">
@@ -726,7 +726,7 @@ export default function ClusterMetrics() {
             className="flex-1"
           />
           <div className="ml-4">
-            <NetworkStatusIndicator serverStatus={serverStatus} />
+            {/* <NetworkStatusIndicator serverStatus={serverStatus} /> */}
           </div>
         </div>
       </div>

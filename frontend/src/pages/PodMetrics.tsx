@@ -698,18 +698,18 @@ const KubecostDashboard = () => {
         <div className="min-h-screen sm:p-4 md:p-6">
           <div className="mx-auto max-w-full">
             {/* Standardized Connection Status Banner */}
-            <ConnectionStatusBanner
+            {/* <ConnectionStatusBanner
               connectionStatus={connectionStatus}
               error={error}
               retryAttempts={retryAttempts}
-              maxRetries={maxRetries}
+              maxRetries={maxRetries}fi
               isLoadingData={isLoadingData}
               isRefreshing={isRefreshing}
               onRetry={handleRetry}
-            />
+            /> */}
 
             {/* Enhanced Filter Bar with Network Status Indicator */}
-            <div className="bg-white rounded-xl p-4 sm:p-6 border border-slate-200 shadow-sm mb-6">
+            <div className="bg-white rounded-xl shadow-sm mb-6">
               <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
                 {/* Left side - Time Range */}
                 <div className="flex items-center gap-4">
@@ -739,7 +739,7 @@ const KubecostDashboard = () => {
                     isRefreshing={isRefreshing}
                     lastUpdated={lastUpdated}
                   />
-                  <NetworkStatusIndicator serverStatus={serverStatus} />
+                  {/* <NetworkStatusIndicator serverStatus={serverStatus} /> */}
                 </div>
               </div>
 

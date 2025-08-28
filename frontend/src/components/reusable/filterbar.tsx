@@ -477,12 +477,12 @@ export const Refresh: React.FC<RefreshProps> = ({
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
-      {lastUpdated && (
+      {/* {lastUpdated && (
         <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500 order-3 sm:order-1 w-full sm:w-auto">
           <Clock className="w-3 h-3" />
           <span>Updated {formatLastUpdated(lastUpdated)}</span>
         </div>
-      )}
+      )} */}
 
       <Button
         variant="outline"
@@ -497,7 +497,7 @@ export const Refresh: React.FC<RefreshProps> = ({
         <span className="hidden sm:inline">Refresh</span>
       </Button>
 
-      <DropdownMenu>
+      {/* <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
@@ -525,7 +525,7 @@ export const Refresh: React.FC<RefreshProps> = ({
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
-      </DropdownMenu>
+      </DropdownMenu> */}
     </div>
   );
 };
@@ -594,7 +594,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                 <span className="hidden sm:inline">Refresh</span>
               </Button>
 
-              <DropdownMenu>
+              {/* <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
@@ -608,7 +608,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                         : "Off"
                       }
                     </span>
-                    {/* <span className="sm:hidden">auto</span> */}
+                     <span className="sm:hidden">auto</span> 
                     <ChevronDown className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -625,18 +625,18 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </DropdownMenu> */}
             </div>
           )}
         </div>
 
         {/* Last updated info */}
-        {lastUpdated && showRefresh && (
+        {/* {lastUpdated && showRefresh && (
           <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
             <Clock className="w-3 h-3" />
             <span>Updated {formatLastUpdated(lastUpdated)}</span>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

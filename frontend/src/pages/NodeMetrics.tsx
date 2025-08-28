@@ -806,7 +806,7 @@ const NodeMetricsDashboard = () => {
     <div className="min-h-screen bg-background">
       <div className=" mx-auto p-4 lg:p-6">
         {/* Standardized Connection Status Banner */}
-        <ConnectionStatusBanner
+        {/* <ConnectionStatusBanner
           connectionStatus={connectionStatus}
           error={error}
           retryAttempts={retryAttempts}
@@ -814,7 +814,7 @@ const NodeMetricsDashboard = () => {
           isLoadingData={isLoadingData}
           isRefreshing={isRefreshing}
           onRetry={handleRetry}
-        />
+        /> */}
 
         {/* Filter Bar with Network Status Indicator */}
         <div className="mb-6 space-y-4">
@@ -835,7 +835,7 @@ const NodeMetricsDashboard = () => {
               className="flex-1"
             />
             <div className="ml-4">
-              <NetworkStatusIndicator serverStatus={serverStatus} />
+              {/* <NetworkStatusIndicator serverStatus={serverStatus} /> */}
             </div>
           </div>
         </div>
