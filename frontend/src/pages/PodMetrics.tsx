@@ -87,7 +87,9 @@ const SearchInput: React.FC<SearchProps> = ({
 const KubecostDashboard = () => {
   let { selectedInstance }: any = useCluster();
   selectedInstance = selectedInstance ? selectedInstance : "-";
-  let selectedHash = selectedInstance?.unique_hash || "-";
+
+  let cluster_id = selectedInstance?.id;
+  let user_id = selectedInstance?.user_id;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -208,8 +210,8 @@ const KubecostDashboard = () => {
         }
 
         const queryParams = {
-          cluster_id: 1,
-          user_id: 1,
+          cluster_id: cluster_id,
+          user_id: user_id,
           duration: selectedTimeRange,
           ...(searchTerm && { search: searchTerm }),
         };
@@ -365,7 +367,7 @@ const KubecostDashboard = () => {
     if (selectedInstance) {
       fetchData();
     }
-  }, [selectedInstance?.cluster_id]);
+  }, [cluster_id]);
 
   // Enhanced auto-refresh with pause logic
   useEffect(() => {
@@ -389,12 +391,7 @@ const KubecostDashboard = () => {
         clearInterval(intervalId);
       }
     };
-  }, [
-    refreshInterval,
-    selectedInstance?.cluster_id,
-    isAutoRefreshPaused,
-    serverStatus,
-  ]);
+  }, [refreshInterval, cluster_id, isAutoRefreshPaused, serverStatus]);
 
   // Time range change effect
   useEffect(() => {
@@ -411,10 +408,9 @@ const KubecostDashboard = () => {
 
     try {
       const queryParams = {
-        cluster_id: "1",
-        user_id: "1",
+        cluster_id: cluster_id,
+        user_id: user_id,
         duration: "7d",
-        ...(selectedHash && { domain: selectedHash }),
       };
 
       console.log("Fetching pod details with params:", queryParams);

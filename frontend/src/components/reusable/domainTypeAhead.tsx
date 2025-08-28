@@ -92,7 +92,7 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
     setSelectedInstance(instance);
     setSearchTerm("");
     setOpen(false);
-    onSelect?.(instance.unique_hash);
+    onSelect?.(instance.id);
   };
 
   const filteredInstances = instances.filter((instance: any) =>

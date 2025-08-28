@@ -582,13 +582,13 @@ def get_active_clusters() -> List[Dict]:
         # For now, using hardcoded data as in original
         resp = [
             {
-                "cluster_id": 1,
+                "cluster_id": 2,
                 "user_id": 1,
                 "cluster_name": "cluster-two",
-                "kubecost_api_url": "http://172.16.20.110/kubecost",
-                # "kubecost_api_url": "https://34.100.251.207",
-                # "password": "Admin@12#$",
-                # "username": "admin",
+                # "kubecost_api_url": "http://172.16.20.110/kubecost",
+                "kubecost_api_url": "https://34.100.251.207",
+                "password": "Admin@12#$",
+                "username": "admin",
             }
         ]
         data = resp

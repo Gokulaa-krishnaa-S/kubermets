@@ -39,7 +39,11 @@ import { useCluster } from "../../src/components/context/ClusterContext";
 import NodeService from "@/services/NodeService";
 
 // Import the standardized connection status components
-import { ConnectionStatusBanner, NetworkStatusIndicator, LoadingBanner } from "./ConnectionStatusBanner";
+import {
+  ConnectionStatusBanner,
+  NetworkStatusIndicator,
+  LoadingBanner,
+} from "./ConnectionStatusBanner";
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
@@ -56,11 +60,12 @@ const NodeMetricsDashboard = () => {
     avgCpuUsage: 0,
     avgEfficiency: 0,
   });
-  
-  const { selectedInstance } = useCluster();
+
+  const { selectedInstance }: any = useCluster();
   console.log(selectedInstance);
-  let selectedHash = selectedInstance?.unique_hash;
-  
+
+  let cluster_id = selectedInstance?.id;
+  let user_id = selectedInstance?.user_id;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState("24h");
@@ -71,7 +76,9 @@ const NodeMetricsDashboard = () => {
 
   // Standardized connection status tracking
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('connected');
+  const [connectionStatus, setConnectionStatus] = useState<
+    "connected" | "disconnected"
+  >("connected");
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [maxRetries, setMaxRetries] = useState(3);
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
@@ -95,8 +102,8 @@ const NodeMetricsDashboard = () => {
   const handleCallNodeData = async (params) => {
     try {
       const queryParams = {
-        cluster_id: 1,
-        user_id: 1,
+        cluster_id: cluster_id,
+        user_id: user_id,
         duration: timeRange,
       };
 
@@ -110,21 +117,21 @@ const NodeMetricsDashboard = () => {
 
   const isConnectionError = (error) => {
     if (!error) return false;
-    
-    const errorMessage = error.message?.toLowerCase() || '';
+
+    const errorMessage = error.message?.toLowerCase() || "";
     const errorCode = error.code || error.status;
-    
+
     // Check for common connection error patterns
     return (
-      errorMessage.includes('network') ||
-      errorMessage.includes('connection') ||
-      errorMessage.includes('timeout') ||
-      errorMessage.includes('fetch') ||
-      errorMessage.includes('cors') ||
-      errorMessage.includes('enotfound') ||
-      errorMessage.includes('econnrefused') ||
-      errorCode === 'NETWORK_ERROR' ||
-      errorCode === 'ERR_NETWORK' ||
+      errorMessage.includes("network") ||
+      errorMessage.includes("connection") ||
+      errorMessage.includes("timeout") ||
+      errorMessage.includes("fetch") ||
+      errorMessage.includes("cors") ||
+      errorMessage.includes("enotfound") ||
+      errorMessage.includes("econnrefused") ||
+      errorCode === "NETWORK_ERROR" ||
+      errorCode === "ERR_NETWORK" ||
       errorCode === 0 ||
       errorCode === 502 ||
       errorCode === 503 ||
@@ -134,7 +141,7 @@ const NodeMetricsDashboard = () => {
 
   const handleApiFailure = (error: any, showToast = true) => {
     setServerStatus("down");
-    setConnectionStatus('disconnected');
+    setConnectionStatus("disconnected");
     setIsAutoRefreshPaused(true);
 
     if (showToast) {
@@ -238,40 +245,45 @@ const NodeMetricsDashboard = () => {
         });
 
         setNodeData(processedNodes);
-        
+
         // Reset connection status and retry attempts on success
-        setServerStatus('live');
-        setConnectionStatus('connected');
+        setServerStatus("live");
+        setConnectionStatus("connected");
         setRetryAttempts(0);
         setError(null);
         setIsAutoRefreshPaused(false);
-
       } catch (err) {
         console.error("Failed to fetch node data:", err);
-        
+
         if (isConnectionError(err)) {
-          setConnectionStatus('disconnected');
-          setServerStatus('down');
-          
+          setConnectionStatus("disconnected");
+          setServerStatus("down");
+
           if (!isRetry && retryAttempts < maxRetries) {
-            console.log(`Connection failed, retrying... (${retryAttempts + 1}/${maxRetries})`);
-            setRetryAttempts(prev => prev + 1);
-            
+            console.log(
+              `Connection failed, retrying... (${
+                retryAttempts + 1
+              }/${maxRetries})`
+            );
+            setRetryAttempts((prev) => prev + 1);
+
             // Retry after a delay
             setTimeout(() => {
               fetchNodeData(queryParams, true);
             }, 2000 * (retryAttempts + 1)); // Exponential backoff
-            
+
             return;
           }
-          
-          setError("Failed to fetch node metrics: Request failed with status code 500");
+
+          setError(
+            "Failed to fetch node metrics: Request failed with status code 500"
+          );
           handleApiFailure(err, false);
         } else {
           setError(`Failed to fetch node metrics: ${err.message}`);
           handleApiFailure(err, false);
         }
-        
+
         setNodeData([]);
       } finally {
         setLoading(false);
@@ -285,39 +297,18 @@ const NodeMetricsDashboard = () => {
   const refreshAllData = async (showToast = true) => {
     setIsRefreshing(true);
     try {
-      const queryParams = {
-        accumulate: true,
-        aggregate: "node",
-        chartType: "costovertime",
-        costUnit: "cumulative",
-        external: false,
-        filter: "",
-        idle: true,
-        idleByNode: false,
-        includeSharedCostBreakdown: true,
-        shareCost: 0,
-        shareIdle: false,
-        shareLabels: "",
-        shareNamespaces: "",
-        shareSplit: "weighted",
-        shareTenancyCosts: true,
-        window: timeRange,
-        offset: 0,
-        limit: 2000000000000000000005,
-        force_refresh: true,
-        domain: selectedHash,
-      };
+      const queryParams = {};
 
       await fetchNodeData(queryParams);
       setLastUpdated(new Date());
 
       // If this was a manual refresh and server is back online, resume auto-refresh
-      if (serverStatus === 'live') {
+      if (serverStatus === "live") {
         setIsAutoRefreshPaused(false);
         console.log("Server is back online - resuming auto-refresh");
       }
 
-      if (showToast && serverStatus === 'live') {
+      if (showToast && serverStatus === "live") {
         toast({
           title: "Data Refreshed",
           description: "Node metrics have been updated successfully.",
@@ -329,7 +320,8 @@ const NodeMetricsDashboard = () => {
       if (showToast) {
         toast({
           title: "Refresh Failed",
-          description: "Failed to update node metrics. Auto-refresh paused until manual retry.",
+          description:
+            "Failed to update node metrics. Auto-refresh paused until manual retry.",
           variant: "destructive",
         });
       }
@@ -348,7 +340,7 @@ const NodeMetricsDashboard = () => {
     const rangeFromUrl = searchParams.get("window") || "24h";
     setIsInitialLoading(true);
 
-    console.log(selectedHash, "selectedHash in NodeMetrics");
+    console.log(cluster_id, "cluster_id in NodeMetrics");
     setTimeRange(rangeFromUrl);
 
     const queryParams = {
@@ -370,7 +362,7 @@ const NodeMetricsDashboard = () => {
       window: rangeFromUrl,
       offset: 0,
       limit: 2000000000000000000005,
-      domain: selectedHash,
+      domain: cluster_id,
       force_refesh: false,
     };
 
@@ -390,10 +382,10 @@ const NodeMetricsDashboard = () => {
   }, [searchParams, refreshInterval, isAutoRefreshPaused]);
 
   useEffect(() => {
-    if (selectedHash) {
+    if (cluster_id) {
       refreshAllData(false);
     }
-  }, [selectedHash]);
+  }, [cluster_id]);
 
   const handleTimeRangeChange = (range) => {
     try {
@@ -419,7 +411,7 @@ const NodeMetricsDashboard = () => {
         window: range,
         offset: 0,
         limit: 2000000000000000000005,
-        domain: selectedHash,
+        domain: cluster_id,
       };
 
       fetchNodeData(queryParams);
@@ -539,8 +531,9 @@ const NodeMetricsDashboard = () => {
 
     return (
       <Card
-        className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${statusColors[status] || statusColors.info
-          } ${serverStatus === 'down' ? 'opacity-75' : ''}`}
+        className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${
+          statusColors[status] || statusColors.info
+        } ${serverStatus === "down" ? "opacity-75" : ""}`}
       >
         <CardContent className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-3">
@@ -569,7 +562,7 @@ const NodeMetricsDashboard = () => {
             </div>
             <p className="text-xs text-muted-foreground">
               {subtitle}
-              {serverStatus === 'down' && (
+              {serverStatus === "down" && (
                 <span className="text-red-600 ml-1">(Offline)</span>
               )}
             </p>
@@ -670,7 +663,7 @@ const NodeMetricsDashboard = () => {
     };
 
     return (
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>
             Showing {startIndex + 1} to {Math.min(endIndex, totalItems)} of{" "}
@@ -738,7 +731,12 @@ const NodeMetricsDashboard = () => {
   };
 
   // Error Display Component
-  if (error && !isInitialLoading && serverStatus === 'down' && retryAttempts >= maxRetries) {
+  if (
+    error &&
+    !isInitialLoading &&
+    serverStatus === "down" &&
+    retryAttempts >= maxRetries
+  ) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6 flex items-center justify-center">
         <div className="bg-white rounded-xl p-8 border border-red-200 max-w-md text-center">
@@ -750,10 +748,7 @@ const NodeMetricsDashboard = () => {
           <p className="text-sm text-gray-500 mb-6">
             Please check your internet connection and try again.
           </p>
-          <Button 
-            onClick={handleRetry}
-            className="w-full"
-          >
+          <Button onClick={handleRetry} className="w-full">
             <RefreshCw className="w-4 h-4 mr-2" />
             Try Again
           </Button>
@@ -810,15 +805,13 @@ const NodeMetricsDashboard = () => {
         </div>
 
         {/* Loading Banner */}
-        {isLoadingData && (
-          <LoadingBanner message="Loading node data..." />
-        )}
+        {isLoadingData && <LoadingBanner message="Loading node data..." />}
 
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
             Node Metrics Dashboard
-            {serverStatus === 'down' && (
+            {serverStatus === "down" && (
               <span className="ml-2 text-sm text-red-600 font-normal">
                 (Offline Mode)
               </span>
@@ -826,10 +819,8 @@ const NodeMetricsDashboard = () => {
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
             Monitor cluster performance and resource utilization
-            {serverStatus === 'down' && (
-              <span className="text-red-600 ml-2">
-                - Showing cached data
-              </span>
+            {serverStatus === "down" && (
+              <span className="text-red-600 ml-2">- Showing cached data</span>
             )}
           </p>
         </div>
@@ -893,7 +884,7 @@ const NodeMetricsDashboard = () => {
                   <Activity className="w-4 h-4 text-primary" />
                 </div>
                 Node Status Distribution
-                {serverStatus === 'down' && (
+                {serverStatus === "down" && (
                   <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
                     Offline Data
                   </span>
@@ -944,7 +935,7 @@ const NodeMetricsDashboard = () => {
                   <DollarSign className="w-4 h-4 text-emerald-600" />
                 </div>
                 Cost Breakdown by Node
-                {serverStatus === 'down' && (
+                {serverStatus === "down" && (
                   <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
                     Offline Data
                   </span>
@@ -1020,7 +1011,7 @@ const NodeMetricsDashboard = () => {
                 </div>
                 Resource Utilization Trends
               </div>
-              {serverStatus === 'down' && (
+              {serverStatus === "down" && (
                 <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
                   Offline Data
                 </span>
@@ -1124,7 +1115,7 @@ const NodeMetricsDashboard = () => {
                   <Server className="w-4 h-4 text-purple-600" />
                 </div>
                 Node Details
-                {serverStatus === 'down' && (
+                {serverStatus === "down" && (
                   <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded ml-2">
                     Offline Data
                   </span>
@@ -1139,7 +1130,12 @@ const NodeMetricsDashboard = () => {
             {/* Mobile View */}
             <div className="block lg:hidden space-y-4">
               {currentNodes.map((node, index) => (
-                <Card key={startIndex + index} className={`p-4 bg-muted/30 ${serverStatus === 'down' ? 'opacity-75' : ''}`}>
+                <Card
+                  key={startIndex + index}
+                  className={`p-4 bg-muted/30 ${
+                    serverStatus === "down" ? "opacity-75" : ""
+                  }`}
+                >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Server className="w-4 h-4 text-muted-foreground" />
@@ -1209,7 +1205,7 @@ const NodeMetricsDashboard = () => {
                 <div className="text-center py-8 text-muted-foreground">
                   <Server className="w-12 h-12 mx-auto mb-2 opacity-50" />
                   <p>No nodes found</p>
-                  {serverStatus === 'down' && (
+                  {serverStatus === "down" && (
                     <p className="text-sm text-red-600 mt-2">
                       Connection lost - showing cached data
                     </p>
@@ -1220,7 +1216,11 @@ const NodeMetricsDashboard = () => {
 
             {/* Desktop Table View */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className={`w-full ${serverStatus === 'down' ? 'opacity-75' : ''}`}>
+              <table
+                className={`w-full ${
+                  serverStatus === "down" ? "opacity-75" : ""
+                }`}
+              >
                 <thead>
                   <tr
                     className="border-b"
@@ -1317,10 +1317,9 @@ const NodeMetricsDashboard = () => {
                   <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
                   <p className="text-lg font-medium mb-2">No nodes found</p>
                   <p className="text-sm">
-                    {serverStatus === 'down' 
-                      ? 'Connection lost - unable to load node data'
-                      : 'Try adjusting your filters or refresh the data'
-                    }
+                    {serverStatus === "down"
+                      ? "Connection lost - unable to load node data"
+                      : "Try adjusting your filters or refresh the data"}
                   </p>
                 </div>
               )}

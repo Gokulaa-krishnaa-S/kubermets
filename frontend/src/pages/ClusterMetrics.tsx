@@ -42,8 +42,10 @@ import {
 } from "lucide-react";
 
 export default function ClusterMetrics() {
-  const { selectedInstance } = useCluster();
-  let selectedHash = selectedInstance?.unique_hash || "-";
+  const { selectedInstance }: any = useCluster();
+  console.log(selectedInstance?.id, "-------------");
+  let cluster_id = selectedInstance?.id;
+  let user_id = selectedInstance?.user_id;
   const [clusterStats, setClusterStats] = useState([]);
   const [clusters, setClusters] = useState([]);
   const [chartData, setChartData] = useState({
@@ -416,65 +418,29 @@ export default function ClusterMetrics() {
       showToast = false,
       isManualRefresh = false
     ) => {
-      // Prevent multiple simultaneous calls
-      if (isLoadingData) {
-        console.log("Data loading already in progress, skipping...");
-        return;
-      }
+      if (isLoadingData) return;
 
-      // setIsLoadingData(true);
       setIsRefreshing(true);
       setError(null);
 
       try {
         const queryParams = {
-          user_id: 1,
-          cluster_id: 1,
-          window: window,
+          user_id,
+          cluster_id,
+          window,
         };
-
         console.log("Fetching all data with params:", queryParams);
 
-        // Call both APIs concurrently with the same params
         await Promise.all([
           handleCallClusterData(queryParams),
           handleClusterChartData(queryParams),
         ]);
 
         setLastUpdated(new Date());
-
-        // If this was a manual refresh and server is back online, resume auto-refresh
-        if (isManualRefresh && serverStatus === "live") {
+        if (isManualRefresh && serverStatus === "live")
           setIsAutoRefreshPaused(false);
-          console.log("Server is back online - resuming auto-refresh");
-        }
-
-        if (showToast) {
-          toast({
-            title:
-              serverStatus === "live" ? "Data Refreshed" : "Data Retrieved",
-            description:
-              serverStatus === "live"
-                ? "Cluster metrics have been updated successfully."
-                : "Retrieved cached data. Server connection issues detected.",
-            variant: serverStatus === "live" ? "default" : "destructive",
-          });
-        }
       } catch (error) {
-        console.error("Error fetching data:", error);
-
-        // Pause auto-refresh when there's an error
         setIsAutoRefreshPaused(true);
-        console.log("Auto-refresh paused due to error");
-
-        if (showToast) {
-          toast({
-            title: "Refresh Failed",
-            description:
-              "Failed to update cluster metrics. Auto-refresh paused until manual retry.",
-            variant: "destructive",
-          });
-        }
       } finally {
         setIsLoadingData(false);
         setIsRefreshing(false);
@@ -482,12 +448,12 @@ export default function ClusterMetrics() {
       }
     },
     [
+      cluster_id,
+      user_id,
       isLoadingData,
       handleCallClusterData,
       handleClusterChartData,
       serverStatus,
-      retryAttempts,
-      maxRetries,
     ]
   );
 
@@ -505,18 +471,18 @@ export default function ClusterMetrics() {
       setTimeRange(range);
       setSearchParams({ window: range });
       // Immediately fetch data with the new time range
-      fetchAllData(range, selectedHash, false);
+      fetchAllData(range, cluster_id, false);
     },
-    [selectedHash, fetchAllData, setSearchParams]
+    [cluster_id, fetchAllData, setSearchParams]
   );
 
   // Manual refresh function - uses current state values
   const refreshAllData = useCallback(
     (showToast?: boolean) => {
       console.log("Manual refresh triggered");
-      return fetchAllData(timeRange, selectedHash, showToast ?? true, true); // Pass isManualRefresh = true
+      return fetchAllData(timeRange, cluster_id, showToast ?? true, true); // Pass isManualRefresh = true
     },
-    [fetchAllData, timeRange, selectedHash]
+    [fetchAllData, timeRange, cluster_id]
   );
 
   const handleRefreshIntervalChange = useCallback((interval: number) => {
@@ -540,8 +506,8 @@ export default function ClusterMetrics() {
     }
 
     // Load initial data
-    if (selectedHash) {
-      fetchAllData(rangeFromUrl, selectedHash);
+    if (cluster_id) {
+      fetchAllData(rangeFromUrl, cluster_id);
     }
   }, []); // Empty dependency array for initial load only
 
@@ -554,7 +520,7 @@ export default function ClusterMetrics() {
         // Double-check the pause state before auto-refreshing
         if (!isAutoRefreshPaused) {
           console.log("Auto-refresh triggered");
-          fetchAllData(timeRange, selectedHash, false, false); // isManualRefresh = false
+          fetchAllData(timeRange, cluster_id, false, false); // isManualRefresh = false
         } else {
           console.log("Auto-refresh skipped - paused due to server issues");
         }
@@ -572,7 +538,7 @@ export default function ClusterMetrics() {
   }, [
     refreshInterval,
     timeRange,
-    selectedHash,
+    cluster_id,
     fetchAllData,
     isAutoRefreshPaused,
   ]);
@@ -587,10 +553,10 @@ export default function ClusterMetrics() {
   }, []);
 
   useEffect(() => {
-    if (selectedHash) {
+    if (cluster_id) {
       refreshAllData(false); // No toast, force refresh
     }
-  }, [selectedHash]);
+  }, [cluster_id]);
 
   // Calculate resource metrics from clusters data
   const getResourceMetrics = () => {
@@ -821,7 +787,7 @@ export default function ClusterMetrics() {
                         No clusters found
                       </p>
                       <p className="text-sm text-gray-400">
-                        {selectedHash
+                        {cluster_id
                           ? "No clusters for selected domain"
                           : "Check your configuration"}
                       </p>
