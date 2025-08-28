@@ -607,9 +607,10 @@ export default function ClusterMetrics() {
       medium = 0,
       low = 0;
     clusters.forEach((cluster) => {
-      const cpuPercent = parseFloat(cluster.cpu.replace("%", "")) || 0;
-      if (cpuPercent >= 70) high++;
-      else if (cpuPercent >= 30) medium++;
+      if (cluster.efficiency === "N/A") return;
+      const eff = parseFloat(cluster.efficiency.replace("%", "")) || 0;
+      if (eff >= 70) high++;
+      else if (eff >= 30) medium++;
       else low++;
     });
 

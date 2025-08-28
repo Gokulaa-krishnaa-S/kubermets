@@ -292,12 +292,30 @@ def format_pod_metrics(
     namespace, name = extract_namespace_and_name(pod_key)
 
     # Calculate efficiency metrics
+    # cpu_efficiency = (
+    #     calculate_percentage(
+    #         allocation_data.get("cpuCoreUsageAverage", 0),
+    #         allocation_data.get("cpuCoreRequestAverage", 0),
+    #     )
+    #     / 100
+    #     if allocation_data.get("cpuCoreRequestAverage", 0) > 0
+    #     else 0.0
+    # )
+
+    # ram_efficiency = (
+    #     calculate_percentage(
+    #         allocation_data.get("ramByteUsageAverage", 0),
+    #         allocation_data.get("ramByteRequestAverage", 0),
+    #     )
+    #     / 100
+    #     if allocation_data.get("ramByteRequestAverage", 0) > 0
+    #     else 0.0
+    # )
     cpu_efficiency = (
         calculate_percentage(
             allocation_data.get("cpuCoreUsageAverage", 0),
             allocation_data.get("cpuCoreRequestAverage", 0),
         )
-        / 100
         if allocation_data.get("cpuCoreRequestAverage", 0) > 0
         else 0.0
     )
@@ -307,7 +325,6 @@ def format_pod_metrics(
             allocation_data.get("ramByteUsageAverage", 0),
             allocation_data.get("ramByteRequestAverage", 0),
         )
-        / 100
         if allocation_data.get("ramByteRequestAverage", 0) > 0
         else 0.0
     )

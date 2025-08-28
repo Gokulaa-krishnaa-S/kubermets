@@ -167,32 +167,68 @@ const NodeMetricsDashboard = () => {
           throw new Error("Invalid response format");
         }
 
+        //
+        console.log(response);
         const allocations = response;
-        const activeNodes = allocations.filter(
-          (node) =>
-            !node.node_name.startsWith("__") &&
-            node.cpu_core_request_average !== undefined
+
+        const totalNodes = response.length;
+
+        //
+        const activeNodes = response.filter(
+          (node) => !node.node_name.startsWith("__")
         );
 
-        const totalNodes = activeNodes.length;
         const totalCost = activeNodes.reduce(
           (sum, node) => sum + (node.total_cost || 0),
           0
         );
 
         const avgCpuUsage =
-          activeNodes.reduce((sum, node) => {
-            const usage =
-              (node.cpu_core_usage_average || 0) /
-              (node.cpu_core_request_average || 1);
-            return sum + (isNaN(usage) ? 0 : usage);
-          }, 0) / totalNodes;
+          activeNodes.reduce(
+            (sum, node) => sum + (node.cpu_usage_percent || 0),
+            0
+          ) / (activeNodes.length || 1);
+
+        const avgMemoryUsage =
+          activeNodes.reduce(
+            (sum, node) => sum + (node.memory_usage_percent || 0),
+            0
+          ) / (activeNodes.length || 1);
 
         const avgEfficiency =
           activeNodes.reduce(
-            (sum, node) => sum + (node.total_efficiency * 100 || 0),
+            (sum, node) => sum + (node.efficiency_percent || 0),
             0
-          ) / totalNodes;
+          ) / (activeNodes.length || 1);
+
+        //
+
+        // const allocations = response;
+        // const activeNodes = allocations.filter(
+        //   (node) =>
+        //     !node.node_name.startsWith("__") &&
+        //     node.cpu_core_request_average !== undefined
+        // );
+
+        // const totalNodes = activeNodes.length;
+        // const totalCost = activeNodes.reduce(
+        //   (sum, node) => sum + (node.total_cost || 0),
+        //   0
+        // );
+
+        // const avgCpuUsage =
+        //   activeNodes.reduce((sum, node) => {
+        //     const usage =
+        //       (node.cpu_core_usage_average || 0) /
+        //       (node.cpu_core_request_average || 1);
+        //     return sum + (isNaN(usage) ? 0 : usage);
+        //   }, 0) / totalNodes;
+
+        // const avgEfficiency =
+        //   activeNodes.reduce(
+        //     (sum, node) => sum + (node.total_efficiency * 100 || 0),
+        //     0
+        //   ) / totalNodes;
 
         setSummaryStats({
           totalNodes,
@@ -239,7 +275,7 @@ const NodeMetricsDashboard = () => {
             cpuCost: node.cpu_cost.toFixed(2),
             ramCost: node.ram_cost.toFixed(2),
             pvCost: node.pv_cost.toFixed(2),
-            efficiency: (node.total_efficiency * 100).toFixed(2),
+            efficiency: node.total_efficiency.toFixed(2),
             uptime: calculateUptime(node.first_seen, node.last_seen),
           };
         });
@@ -1194,10 +1230,10 @@ const NodeMetricsDashboard = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-3">
+                  {/* <div className="flex items-center gap-1 text-xs text-muted-foreground mt-3">
                     <Clock className="w-3 h-3" />
                     <span>Uptime: {node.uptime}</span>
-                  </div>
+                  </div> */}
                 </Card>
               ))}
 
@@ -1232,7 +1268,7 @@ const NodeMetricsDashboard = () => {
                     <th className="text-left p-4 font-medium">Memory</th>
                     <th className="text-left p-4 font-medium">Cost</th>
                     <th className="text-left p-4 font-medium">Efficiency</th>
-                    <th className="text-left p-4 font-medium">Uptime</th>
+                    {/* <th className="text-left p-4 font-medium">Uptime</th> */}
                   </tr>
                 </thead>
                 <tbody>
@@ -1301,12 +1337,12 @@ const NodeMetricsDashboard = () => {
                           {node.efficiency}%
                         </span>
                       </td>
-                      <td className="p-4">
+                      {/* <td className="p-4">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="w-4 h-4" />
                           {node.uptime}
                         </div>
-                      </td>
+                      </td> */}
                     </tr>
                   ))}
                 </tbody>

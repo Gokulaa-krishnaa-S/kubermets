@@ -505,6 +505,7 @@ const KubecostDashboard = () => {
       return { pods: [], idle: null, totalCost: 0 };
 
     const allocations = data.sets[0].allocations;
+    console.log("allocatipns,----------------", allocations);
     const pods = [];
     let idle = null;
     let totalCost = 0;
@@ -531,6 +532,7 @@ const KubecostDashboard = () => {
               allocation.cpuCoreRequestAverage) *
             100
           ).toFixed(1),
+
           ramEfficiency: (
             (allocation.ramByteUsageAverage /
               allocation.ramByteRequestAverage) *
@@ -578,7 +580,7 @@ const KubecostDashboard = () => {
 
   const chartData = useMemo(() => {
     return filteredAndSortedPods.map((pod) => ({
-      name: pod.name.split("-")[0],
+      name: pod,
       totalCost: parseFloat(pod.totalCost.toFixed(2)),
       cpuCost: parseFloat(pod.cpuCost.toFixed(2)),
       ramCost: parseFloat(pod.ramCost.toFixed(2)),
@@ -1329,7 +1331,7 @@ const KubecostDashboard = () => {
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            className={`... ${
                               pod.totalEfficiency * 100 > 50
                                 ? "bg-green-100 text-green-800"
                                 : pod.totalEfficiency * 100 > 20
@@ -1337,7 +1339,7 @@ const KubecostDashboard = () => {
                                 : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {pod.totalEfficiency.toFixed(3)}%
+                            {(pod.totalEfficiency * 100).toFixed(1)}%
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
