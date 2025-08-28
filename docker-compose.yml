@@ -14,7 +14,7 @@ services:
 
   backend:
     build:
-      context: ./backend_inProgress
+      context: ./backend
     image: sanjaysify/backend:latest
 
     environment:
