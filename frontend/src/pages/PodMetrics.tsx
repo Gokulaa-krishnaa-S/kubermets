@@ -728,7 +728,7 @@ const KubecostDashboard = () => {
                   <SearchInput
                     searchTerm={searchTerm}
                     onSearchChange={setSearchTerm}
-                    placeholder="Search pods by pod name"
+                    placeholder="Search pods by pod name and namespace"
                   />
                 </div>
 
