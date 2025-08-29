@@ -942,53 +942,53 @@ def get_instance():
     try:
 
         data = [
-            # {
-            #     "cluster_type": "gcp",
-            #     "config": {
-            #         "availabilityZones": ["asia-south1-a", "asia-south1-b"],
-            #         "bucketConfig": {
-            #             "gcsBucketName": "bkt-ai-platform-gke-test",
-            #             "prefixPath": "july291",
-            #         },
-            #         "clusterName": "gcp-cls2-sify-testt",
-            #         "cpuPools": [
-            #             {
-            #                 "cpu_np_capacity_type": "on-demand",
-            #                 "cpu_np_instance_type": "e2medium",
-            #                 "cpu_np_max_node_count": "2",
-            #                 "cpu_np_min_node_count": "0",
-            #                 "cpu_np_name": "cpu2x",
-            #             }
-            #         ],
-            #         "gcpProjectId": "sify-ai-poc",
-            #         "gcpRegion": "asia-south1",
-            #         "gpuPools": [
-            #             {
-            #                 "gpu_np_capacity_type": "on-demand",
-            #                 "gpu_np_instance_type": "e2medium",
-            #                 "gpu_np_max_node_count": "2",
-            #                 "gpu_np_min_node_count": "0",
-            #                 "gpu_np_name": "gpu2x",
-            #             }
-            #         ],
-            #         "ipv4CidrBlock": "10.3.0.0/28",
-            #         "ipv4CidrPods": "10.1.0.0/21",
-            #         "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-            #         "ipv4CidrServices": "10.2.0.0/21",
-            #         "kubernetesVersion": "1.31",
-            #         "networkConfig": "create-new",
-            #         "platformFeatures": ["blobStorage", "clusterIntegration"],
-            #         "podRangeName": "kubernetes-pod-range",
-            #         "serviceRangeName": "kubernetes-services-range",
-            #         "user_id": 1,
-            #     },
-            #     "created_at": "2025-08-12T11:55:18.884023",
-            #     "id": 1,
-            #     "status": 1,
-            #     "terraform_file": "terraform_123.tfvars",
-            #     "updated_at": "2025-08-12T11:55:18.884028",
-            #     "user_id": 1,
-            # },
+            {
+                "cluster_type": "gcp",
+                "config": {
+                    "availabilityZones": ["asia-south1-a", "asia-south1-b"],
+                    "bucketConfig": {
+                        "gcsBucketName": "bkt-ai-platform-gke-test",
+                        "prefixPath": "july291",
+                    },
+                    "clusterName": "gcp-cls2-sify-testt",
+                    "cpuPools": [
+                        {
+                            "cpu_np_capacity_type": "on-demand",
+                            "cpu_np_instance_type": "e2medium",
+                            "cpu_np_max_node_count": "2",
+                            "cpu_np_min_node_count": "0",
+                            "cpu_np_name": "cpu2x",
+                        }
+                    ],
+                    "gcpProjectId": "sify-ai-poc",
+                    "gcpRegion": "asia-south1",
+                    "gpuPools": [
+                        {
+                            "gpu_np_capacity_type": "on-demand",
+                            "gpu_np_instance_type": "e2medium",
+                            "gpu_np_max_node_count": "2",
+                            "gpu_np_min_node_count": "0",
+                            "gpu_np_name": "gpu2x",
+                        }
+                    ],
+                    "ipv4CidrBlock": "10.3.0.0/28",
+                    "ipv4CidrPods": "10.1.0.0/21",
+                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
+                    "ipv4CidrServices": "10.2.0.0/21",
+                    "kubernetesVersion": "1.31",
+                    "networkConfig": "create-new",
+                    "platformFeatures": ["blobStorage", "clusterIntegration"],
+                    "podRangeName": "kubernetes-pod-range",
+                    "serviceRangeName": "kubernetes-services-range",
+                    "user_id": 1,
+                },
+                "created_at": "2025-08-12T11:55:18.884023",
+                "id": 1,
+                "status": 1,
+                "terraform_file": "terraform_123.tfvars",
+                "updated_at": "2025-08-12T11:55:18.884028",
+                "user_id": 1,
+            },
             {
                 "cluster_type": "gcp",
                 "config": {
