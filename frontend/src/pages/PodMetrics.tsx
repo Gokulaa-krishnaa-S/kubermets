@@ -254,7 +254,7 @@ const KubecostDashboard = () => {
               gpuRequestAverage: pod.gpuRequestAverage || 0,
               pvBytes: pod.pvBytes || 0,
               totalEfficiency: pod.totalEfficiency || 0,
-              cpuEfficiency: pod.cpuEfficiency || 0,
+              cpuEfficiency: pod?.cpuEfficiency || 0,
               ramEfficiency: pod.ramEfficiency || 0,
               isIdle: pod.isIdle || false,
             };
@@ -523,6 +523,7 @@ const KubecostDashboard = () => {
 
     Object.entries(allocations).forEach(([key, allocationRaw]) => {
       const allocation = allocationRaw as any;
+      console.log(allocation);
       if (key === "__idle__") {
         idle = allocation;
       } else {
@@ -538,11 +539,12 @@ const KubecostDashboard = () => {
             allocation.ramByteRequestAverage /
             (1024 * 1024 * 1024)
           ).toFixed(2),
-          cpuEfficiency: (
-            (allocation.cpuCoreUsageAverage /
-              allocation.cpuCoreRequestAverage) *
-            100
-          ).toFixed(1),
+          cpuEfficiency:
+            (
+              (allocation?.cpuCoreUsageAverage /
+                allocation?.cpuCoreRequestAverage) *
+              100
+            ).toFixed(1) || 0,
 
           ramEfficiency: (
             (allocation.ramByteUsageAverage /
@@ -1324,7 +1326,10 @@ const KubecostDashboard = () => {
                             {formatCurrency(pod.cpuCost)}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {pod.cpuEfficiency}% used
+                            {typeof pod?.cpuEfficiency === "number"
+                              ? pod.cpuEfficiency
+                              : 0.0}
+                            % used
                           </div>
                         </td>
                         <td className="px-6 py-4 text-right">
