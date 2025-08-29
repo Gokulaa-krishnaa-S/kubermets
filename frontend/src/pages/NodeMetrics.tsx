@@ -598,9 +598,7 @@ const NodeMetricsDashboard = () => {
             </div>
             <p className="text-xs text-muted-foreground">
               {subtitle}
-              {serverStatus === "down" && (
-                <span className="text-red-600 ml-1">(Offline)</span>
-              )}
+
             </p>
           </div>
         </CardContent>
@@ -847,17 +845,13 @@ const NodeMetricsDashboard = () => {
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
             Node Metrics Dashboard
-            {serverStatus === "down" && (
-              <span className="ml-2 text-sm text-red-600 font-normal">
-                (Offline Mode)
-              </span>
-            )}
+
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
             Monitor cluster performance and resource utilization
-            {serverStatus === "down" && (
+            {/* {serverStatus === "down" && (
               <span className="text-red-600 ml-2">- Showing cached data</span>
-            )}
+            )} */}
           </p>
         </div>
 
@@ -920,11 +914,11 @@ const NodeMetricsDashboard = () => {
                   <Activity className="w-4 h-4 text-primary" />
                 </div>
                 Node Status Distribution
-                {serverStatus === "down" && (
+                {/* {serverStatus === "down" && (
                   <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
                     Offline Data
                   </span>
-                )}
+                )} */}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -971,11 +965,11 @@ const NodeMetricsDashboard = () => {
                   <DollarSign className="w-4 h-4 text-emerald-600" />
                 </div>
                 Cost Breakdown by Node
-                {serverStatus === "down" && (
+                {/* {serverStatus === "down" && (
                   <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
                     Offline Data
                   </span>
-                )}
+                )} */}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -1047,11 +1041,11 @@ const NodeMetricsDashboard = () => {
                 </div>
                 Resource Utilization Trends
               </div>
-              {serverStatus === "down" && (
+              {/* {serverStatus === "down" && (
                 <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
                   Offline Data
                 </span>
-              )}
+              )} */}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -1151,11 +1145,11 @@ const NodeMetricsDashboard = () => {
                   <Server className="w-4 h-4 text-purple-600" />
                 </div>
                 Node Details
-                {serverStatus === "down" && (
+                {/* {serverStatus === "down" && (
                   <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded ml-2">
                     Offline Data
                   </span>
-                )}
+                )} */}
               </div>
               <div className="text-sm text-muted-foreground">
                 {totalItems} nodes total

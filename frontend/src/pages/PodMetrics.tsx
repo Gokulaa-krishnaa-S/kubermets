@@ -786,10 +786,10 @@ const KubecostDashboard = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-600">
                       <DollarSign className="w-6 h-10 text-blue-600" />
-                      {searchTerm ? "Filtered" : "Total"} Cost
+                      {/* {searchTerm ? "Filtered" : "Total"} Cost
                       {serverStatus === "down" && (
                         <span className="text-red-600 ml-1">(Offline)</span>
-                      )}
+                      )} */}
                     </p>
                     <p className="text-2xl font-bold text">
                       {formatCurrency(
@@ -821,10 +821,10 @@ const KubecostDashboard = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-600">
                       <Server className="w-6 h-10 text-green-600" />
-                      {searchTerm ? "Matching" : "Active"} Pods
+                      {/* {searchTerm ? "Matching" : "Active"} Pods
                       {serverStatus === "down" && (
                         <span className="text-red-600 ml-1">(Offline)</span>
-                      )}
+                      )} */}
                     </p>
                     <p className="text-2xl font-bold text">
                       {filteredAndSortedPods.length}

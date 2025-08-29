@@ -757,11 +757,11 @@ export default function ClusterMetrics() {
                   <div>
                     <CardTitle className="text-xl font-bold text-gray-900">
                       Active Clusters
-                      {serverStatus === "down" && (
+                      {/* {serverStatus === "down" && (
                         <span className="ml-2 text-sm text-red-600 font-normal">
                           (Offline Mode)
                         </span>
-                      )}
+                      )} */}
                     </CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
                       {clusters.length} clusters running
