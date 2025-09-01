@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Server,
   Box,
@@ -21,20 +20,10 @@ import {
 import { Layout } from "@/components/layout/Layout";
 import ClusterService from "@/services/ClusterService";
 import { useNavigate } from "react-router-dom";
-import { Header } from "@/components/layout/Header";
+import { useCluster } from "../../src/components/context/ClusterContext";
 import TopBar from "@/components/header/header";
 import { ResponsiveLoader } from "@/components/loader/loader";
-
-const fetchDashboardSummary = async () => {
-  try {
-    const res = await ClusterService.getAllMetrics(); // New API method
-    console.log(res, "------------------");
-    return res?.data || { clusters: [], aggregated: {} };
-  } catch (error) {
-    console.error("Error fetching dashboard summary:", error);
-    return { clusters: [], aggregated: {} };
-  }
-};
+import { useOutletContext } from "react-router-dom";
 
 export default function Overview() {
   const [dashboardData, setDashboardData] = useState({
@@ -43,6 +32,8 @@ export default function Overview() {
   });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { onDomainSelect }: any = useOutletContext();
+  const { instances }: any = useCluster();
 
   useEffect(() => {
     const loadData = async () => {
@@ -68,9 +59,66 @@ export default function Overview() {
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
   }, []);
+  const fetchDashboardSummary = async () => {
+    try {
+      const res = await ClusterService.getAllMetrics(); // New API method
+      console.log(instances);
+      console.log(res, "------------------");
+      if (!res?.data?.clusters) return { clusters: [], aggregated: {} };
+      const mergedClusters = res?.data?.clusters?.map((cluster) => {
+        const match = instances.find((inst) => inst?.id === cluster?.id);
+
+        return {
+          ...cluster,
+          clusterName: match?.config?.clusterName || cluster.name, // fallback to API name
+        };
+      });
+
+      return {
+        aggregated: res?.data?.aggregated,
+        clusters: mergedClusters,
+      };
+      // return res?.data || { clusters: [], aggregated: {} };
+    } catch (error) {
+      console.error("Error fetching dashboard summary:", error);
+      return { clusters: [], aggregated: {} };
+    }
+  };
+
+  //   const fetchDashboardSummary = async () => {
+  //   try {
+  //     const res = await ClusterService.getAllMetrics(); // API metrics
+  //     const instances = useCluster().instances; // Your clusters list
+
+  //     if (!res?.clusters) return { clusters: [], aggregated: {} };
+
+  //     // Merge data
+  //     const mergedClusters = res.clusters.map(cluster => {
+  //       const match = instances.find(inst => inst.id === cluster.id);
+
+  //       return {
+  //         ...cluster,
+  //         clusterName: match?.config?.clusterName || cluster.name, // fallback to API name
+  //       };
+  //     });
+
+  //     return {
+  //       ...res,
+  //       clusters: mergedClusters,
+  //     };
+  //   } catch (error) {
+  //     console.error("Error fetching dashboard summary:", error);
+  //     return { clusters: [], aggregated: {} };
+  //   }
+  // };
 
   const { clusters, aggregated }: any = dashboardData;
-
+  const handleRowClick = (clusterId: string) => {
+    console.log("cluster id", clusterId);
+    if (!clusterId) return;
+    onDomainSelect(clusterId);
+    navigate("/metric/cluster");
+  };
   if (loading) {
     return (
       <Layout title="Overview" subtitle="Loading Kubernetes cost metrics...">
@@ -158,366 +206,388 @@ export default function Overview() {
   };
 
   return (
-    <Layout
-      title="Overview"
-      subtitle={`Complete Kubernetes metrics visualization across ${
-        aggregated?.clusterCount || 0
-      } clusters (last 7 days)`}
-    >
-      <TopBar
-        title={"Overview"}
-        subtitle={`Complete Kubernetes metrics visualization across
-                  ${aggregated?.clusterCount || 0} cluster(last 7 days)`}
-      />
-      <div className="space-y-6 p-4 lg:p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Cluster Cost
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                ${aggregated?.totalCost?.toFixed(2) || "0.00"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Across {aggregated?.clusterCount || 0} clusters
-              </p>
-            </CardContent>
-          </Card>
+    // <Layout
+    //   title="Overview"
+    //   subtitle={`Complete Kubernetes metrics visualization across ${
+    //     aggregated?.clusterCount || 0
+    //   } clusters (last 7 days)`}
+    // >
+    //   <TopBar
+    //     title={"Overview"}
+    //     subtitle={`Complete Kubernetes metrics visualization across
+    //               ${aggregated?.clusterCount || 0} cluster(last 7 days)`}
+    //   />
+    <div className="space-y-6 p-4 lg:p-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Cluster Cost
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              ${aggregated?.totalCost?.toFixed(2) || "0.00"}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Across {aggregated?.clusterCount || 0} clusters
+            </p>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Avg Efficiency
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div
-                className={`text-2xl font-bold ${
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Avg Efficiency
+            </CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div
+              className={`text-2xl font-bold ${
+                aggregated?.avgEfficiency > 0.5
+                  ? "text-green-600"
+                  : "text-yellow-600"
+              }`}
+            >
+              {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Resource utilization
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Nodes</CardTitle>
+            <Server className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {aggregated?.totalNodes || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {aggregated?.healthyNodes || 0} healthy,{" "}
+              {aggregated?.warningNodes || 0} need attention
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Running Pods</CardTitle>
+            <Layers className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {aggregated?.runningPods || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {aggregated?.totalPods || 0} total, {aggregated?.idlePods || 0}{" "}
+              idle
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Introduction */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Multi-Cluster Kubernetes Cost Monitoring Dashboard
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground mb-4">
+            Monitor cost efficiency and resource utilization across{" "}
+            {aggregated?.clusterCount || 0} Kubernetes clusters. Track spending
+            patterns, identify optimization opportunities, and ensure optimal
+            resource allocation across your infrastructure.
+          </p>
+          <div className="flex gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">System Status:</span>
+              {getStatusIcon(
+                aggregated?.avgEfficiency > 0.5 ? "healthy" : "warning"
+              )}
+              <span
+                className={
                   aggregated?.avgEfficiency > 0.5
                     ? "text-green-600"
                     : "text-yellow-600"
-                }`}
+                }
               >
-                {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Resource utilization
-              </p>
-            </CardContent>
-          </Card>
+                {aggregated?.avgEfficiency > 0.5
+                  ? "Optimal"
+                  : "Needs Optimization"}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground">Clusters:</span>
+              <span className="font-medium">
+                {aggregated?.clusterCount || 0} Active
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Nodes</CardTitle>
-              <Server className="h-4 w-4 text-muted-foreground" />
+      {/* Metric Categories Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {metricCategories.map((category, index) => (
+          <Card
+            key={index}
+            className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] group border-l-4"
+            style={{
+              borderLeftColor:
+                category.status === "healthy"
+                  ? "#10b981"
+                  : category.status === "warning"
+                  ? "#f59e0b"
+                  : "#ef4444",
+            }}
+            onClick={() => navigate(`${category.path}`)}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div
+                  className={`p-2 rounded-lg ${
+                    category.status === "healthy"
+                      ? "bg-green-100"
+                      : category.status === "warning"
+                      ? "bg-yellow-100"
+                      : "bg-red-100"
+                  }`}
+                >
+                  <div className={getStatusColor(category.status)}>
+                    {category.icon}
+                  </div>
+                </div>
+                <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors">
+                  {category.title}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {category.description}
+                </p>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {aggregated?.totalNodes || 0}
+            <CardContent className="pt-0">
+              <div className="space-y-2">
+                {category.metrics.map((metric, metricIndex) => (
+                  <div
+                    key={metricIndex}
+                    className="flex items-center gap-2 text-sm"
+                  >
+                    <div
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        category.status === "healthy"
+                          ? "bg-green-500"
+                          : category.status === "warning"
+                          ? "bg-yellow-500"
+                          : "bg-red-500"
+                      }`}
+                    />
+                    <span className="text-muted-foreground">{metric}</span>
+                  </div>
+                ))}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {aggregated?.healthyNodes || 0} healthy,{" "}
-                {aggregated?.warningNodes || 0} need attention
-              </p>
             </CardContent>
           </Card>
+        ))}
+      </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Running Pods
-              </CardTitle>
-              <Layers className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
-                {aggregated?.runningPods || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {aggregated?.totalPods || 0} total, {aggregated?.idlePods || 0}{" "}
-                idle
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Introduction */}
+      {/* Cost Breakdown */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card>
           <CardHeader>
-            <CardTitle>
-              Multi-Cluster Kubernetes Cost Monitoring Dashboard
-            </CardTitle>
+            <CardTitle className="text-lg">Cost Breakdown (7d)</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">
-              Monitor cost efficiency and resource utilization across{" "}
-              {aggregated?.clusterCount || 0} Kubernetes clusters. Track
-              spending patterns, identify optimization opportunities, and ensure
-              optimal resource allocation across your infrastructure.
-            </p>
-            <div className="flex gap-4 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">System Status:</span>
-                {getStatusIcon(
-                  aggregated?.avgEfficiency > 0.5 ? "healthy" : "warning"
-                )}
-                <span
-                  className={
-                    aggregated?.avgEfficiency > 0.5
-                      ? "text-green-600"
-                      : "text-yellow-600"
-                  }
-                >
-                  {aggregated?.avgEfficiency > 0.5
-                    ? "Optimal"
-                    : "Needs Optimization"}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm">CPU Cost</span>
+                </div>
+                <span className="font-medium">
+                  $
+                  {aggregated?.totalCost
+                    ? (aggregated?.totalCost * 0.63).toFixed(2)
+                    : "0.00"}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Clusters:</span>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <MemoryStick className="w-4 h-4 text-green-500" />
+                  <span className="text-sm">Memory Cost</span>
+                </div>
                 <span className="font-medium">
-                  {aggregated?.clusterCount || 0} Active
+                  $
+                  {aggregated?.totalCost
+                    ? (aggregated?.totalCost * 0.33).toFixed(2)
+                    : "0.00"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <HardDrive className="w-4 h-4 text-purple-500" />
+                  <span className="text-sm">Storage Cost</span>
+                </div>
+                <span className="font-medium">
+                  $
+                  {aggregated?.totalCost
+                    ? (aggregated?.totalCost * 0.04).toFixed(2)
+                    : "0.00"}
                 </span>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Metric Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {metricCategories.map((category, index) => (
-            <Card
-              key={index}
-              className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] group border-l-4"
-              style={{
-                borderLeftColor:
-                  category.status === "healthy"
-                    ? "#10b981"
-                    : category.status === "warning"
-                    ? "#f59e0b"
-                    : "#ef4444",
-              }}
-              onClick={() => navigate(`${category.path}`)}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div
-                    className={`p-2 rounded-lg ${
-                      category.status === "healthy"
-                        ? "bg-green-100"
-                        : category.status === "warning"
-                        ? "bg-yellow-100"
-                        : "bg-red-100"
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Efficiency Insights</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Overall Efficiency</span>
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(
+                    aggregated?.avgEfficiency > 0.5 ? "healthy" : "warning"
+                  )}
+                  <span
+                    className={`font-medium ${
+                      aggregated?.avgEfficiency > 0.5
+                        ? "text-green-600"
+                        : "text-yellow-600"
                     }`}
                   >
-                    <div className={getStatusColor(category.status)}>
-                      {category.icon}
-                    </div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
+                  </span>
                 </div>
-                <div>
-                  <CardTitle className="text-lg font-semibold group-hover:text-primary transition-colors">
-                    {category.title}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {category.description}
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Idle Resources</span>
+                <span className="font-medium text-red-600">
+                  ${aggregated?.idleCost?.toFixed(2) || "0.00"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Optimization Potential</span>
+                <span className="font-medium text-green-600">
+                  {aggregated?.avgEfficiency < 0.5
+                    ? "High"
+                    : aggregated?.avgEfficiency < 0.8
+                    ? "Medium"
+                    : "Low"}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {clusters?.length > 0 && (
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-base sm:text-lg">
+                <Server className="w-4 h-4 text-purple-600" />
+                Cluster Details
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {clusters.length} clusters total
+              </div>
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="pt-0">
+            {/* Desktop Table View */}
+            <div className=" overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr
+                    className="border-b"
+                    style={{ color: "hsl(var(--primary))" }}
+                  >
+                    <th className="text-left p-4 font-medium">S.No</th>
+                    <th className="text-left p-4 font-medium">Cluster</th>
+                    <th className="text-left p-4 font-medium">Cost</th>
+                    <th className="text-left p-4 font-medium">Efficiency</th>
+                    <th className="text-left p-4 font-medium">Nodes</th>
+                    <th className="text-left p-4 font-medium">Pods</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clusters.map((cluster, index) => {
+                    if (cluster.error) {
+                      return (
+                        <tr key={index} className="border-b bg-red-50">
+                          <td className="p-4">{index + 1}</td>
+                          <td className="p-4 font-semibold text-red-600">
+                            {cluster.name}
+                          </td>
+                          <td colSpan={4} className="p-4 text-red-500">
+                            Error: {cluster.error}
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return (
+                      <tr
+                        key={index}
+                        className="border-b transition-colors cursor-pointer"
+                        style={{ color: "hsl(var(--foreground))" }}
+                        onClick={() => handleRowClick(cluster.id)}
+                      >
+                        <td className="p-4">{index + 1}</td>
+                        <td className="p-4 font-medium">
+                          {cluster?.name} <b>({cluster?.clusterName})</b>
+                        </td>
+                        <td className="p-4">
+                          ${cluster.cluster?.totalCost?.toFixed(2) || "0.00"}
+                        </td>
+                        <td
+                          className={`p-4 font-medium ${
+                            cluster.cluster?.efficiency > 0.5
+                              ? "text-emerald-600"
+                              : "text-amber-600"
+                          }`}
+                        >
+                          {((cluster.cluster?.efficiency || 0) * 100).toFixed(
+                            1
+                          )}
+                          %
+                        </td>
+                        <td className="p-4">{cluster.node?.totalNodes || 0}</td>
+                        <td className="p-4">{cluster.pod?.totalPods || 0}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+
+              {clusters.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p className="text-lg font-medium mb-2">No clusters found</p>
+                  <p className="text-sm">
+                    Try refreshing or check your connection
                   </p>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-2">
-                  {category.metrics.map((metric, metricIndex) => (
-                    <div
-                      key={metricIndex}
-                      className="flex items-center gap-2 text-sm"
-                    >
-                      <div
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          category.status === "healthy"
-                            ? "bg-green-500"
-                            : category.status === "warning"
-                            ? "bg-yellow-500"
-                            : "bg-red-500"
-                        }`}
-                      />
-                      <span className="text-muted-foreground">{metric}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Cost Breakdown */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Cost Breakdown (7d)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <Cpu className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm">CPU Cost</span>
-                  </div>
-                  <span className="font-medium">
-                    $
-                    {aggregated?.totalCost
-                      ? (aggregated?.totalCost * 0.63).toFixed(2)
-                      : "0.00"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <MemoryStick className="w-4 h-4 text-green-500" />
-                    <span className="text-sm">Memory Cost</span>
-                  </div>
-                  <span className="font-medium">
-                    $
-                    {aggregated?.totalCost
-                      ? (aggregated?.totalCost * 0.33).toFixed(2)
-                      : "0.00"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <HardDrive className="w-4 h-4 text-purple-500" />
-                    <span className="text-sm">Storage Cost</span>
-                  </div>
-                  <span className="font-medium">
-                    $
-                    {aggregated?.totalCost
-                      ? (aggregated?.totalCost * 0.04).toFixed(2)
-                      : "0.00"}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Efficiency Insights</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Overall Efficiency</span>
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(
-                      aggregated?.avgEfficiency > 0.5 ? "healthy" : "warning"
-                    )}
-                    <span
-                      className={`font-medium ${
-                        aggregated?.avgEfficiency > 0.5
-                          ? "text-green-600"
-                          : "text-yellow-600"
-                      }`}
-                    >
-                      {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Idle Resources</span>
-                  <span className="font-medium text-red-600">
-                    ${aggregated?.idleCost?.toFixed(2) || "0.00"}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Optimization Potential</span>
-                  <span className="font-medium text-green-600">
-                    {aggregated?.avgEfficiency < 0.5
-                      ? "High"
-                      : aggregated?.avgEfficiency < 0.8
-                      ? "Medium"
-                      : "Low"}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Cluster Details */}
-        {clusters?.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Cluster Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {clusters.map((cluster, index) => {
-                  if (cluster.error) {
-                    return (
-                      <div
-                        key={index}
-                        className="p-4 border border-red-200 rounded-lg bg-red-50"
-                      >
-                        <h4 className="font-semibold mb-2 text-red-600">
-                          {cluster.name}
-                        </h4>
-                        <p className="text-sm text-red-500">
-                          Error: {cluster.error}
-                        </p>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div key={index} className="p-4 border rounded-lg">
-                      <h4 className="font-semibold mb-2">{cluster.name}</h4>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span>Cost:</span>
-                          <span className="font-medium">
-                            ${cluster.cluster?.totalCost?.toFixed(2) || "0.00"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Efficiency:</span>
-                          <span
-                            className={`font-medium ${
-                              cluster.cluster?.efficiency > 0.5
-                                ? "text-green-600"
-                                : "text-yellow-600"
-                            }`}
-                          >
-                            {((cluster.cluster?.efficiency || 0) * 100).toFixed(
-                              1
-                            )}
-                            %
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Nodes:</span>
-                          <span className="font-medium">
-                            {cluster.node?.totalNodes || 0}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Pods:</span>
-                          <span className="font-medium">
-                            {cluster.pod?.totalPods || 0}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </Layout>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+    // </Layout>
   );
 }
