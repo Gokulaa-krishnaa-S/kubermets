@@ -206,17 +206,6 @@ export default function Overview() {
   };
 
   return (
-    // <Layout
-    //   title="Overview"
-    //   subtitle={`Complete Kubernetes metrics visualization across ${
-    //     aggregated?.clusterCount || 0
-    //   } clusters (last 7 days)`}
-    // >
-    //   <TopBar
-    //     title={"Overview"}
-    //     subtitle={`Complete Kubernetes metrics visualization across
-    //               ${aggregated?.clusterCount || 0} cluster(last 7 days)`}
-    //   />
     <div className="space-y-6 p-4 lg:p-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
