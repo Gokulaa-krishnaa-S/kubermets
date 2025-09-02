@@ -85,33 +85,6 @@ export default function Overview() {
     }
   };
 
-  //   const fetchDashboardSummary = async () => {
-  //   try {
-  //     const res = await ClusterService.getAllMetrics(); // API metrics
-  //     const instances = useCluster().instances; // Your clusters list
-
-  //     if (!res?.clusters) return { clusters: [], aggregated: {} };
-
-  //     // Merge data
-  //     const mergedClusters = res.clusters.map(cluster => {
-  //       const match = instances.find(inst => inst.id === cluster.id);
-
-  //       return {
-  //         ...cluster,
-  //         clusterName: match?.config?.clusterName || cluster.name, // fallback to API name
-  //       };
-  //     });
-
-  //     return {
-  //       ...res,
-  //       clusters: mergedClusters,
-  //     };
-  //   } catch (error) {
-  //     console.error("Error fetching dashboard summary:", error);
-  //     return { clusters: [], aggregated: {} };
-  //   }
-  // };
-
   const { clusters, aggregated }: any = dashboardData;
   const handleRowClick = (clusterId: string) => {
     console.log("cluster id", clusterId);
