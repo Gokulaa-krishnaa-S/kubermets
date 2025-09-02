@@ -18,16 +18,16 @@ import { BillingAndCost } from "./pages/BillingAndCost";
 import KubernetesInstanceList from "./pages/kubernetesInstance";
 import MetricRoutes from "./pages/MetricRoutes";
 import { ClusterProvider } from "./components/context/ClusterContext";
-import { useState } from "react";
+
+// Cluster Creation Pages
+import GCPClusterPage from "./pages/cluster-creation/GCPClusterPage";
+import AWSClusterPage from "./pages/cluster-creation/AWSClusterPage";
+import AzureClusterPage from "./pages/cluster-creation/AzureClusterPage";
+import SifyClusterPage from "./pages/cluster-creation/SifyClusterPage";
 import { Layout } from "@/components/layout/Layout";
 import { Header } from "@/components/layout/Header";
+import { useState } from "react";
 const queryClient = new QueryClient();
-
-// const handleDomainSelect = (hash: string) => {
-//   console.log("Selected Unique Hash:", hash);
-//   // setSelectedHash(hash);
-//   // refreshAllData(true);
-// };
 
 function MetricLayout() {
   const [selectedHash, setSelectedHash] = useState<string>("");
@@ -42,6 +42,12 @@ function MetricLayout() {
   // Get current page info based on route
   const getPageInfo = () => {
     const path = location.pathname;
+    if (path.includes("/cluster-creation")) {
+      return {
+        title: "Cluster Creation",
+        subtitle: "Cluster Creation page",
+      };
+    }
     if (path.includes("/cluster")) {
       return {
         title: "Cluster Metrics",
@@ -80,7 +86,6 @@ function MetricLayout() {
     </Layout>
   );
 }
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -90,8 +95,8 @@ const App = () => (
       <BrowserRouter>
         <ClusterProvider>
           <Routes>
+            {/* Direct routes */}
             <Route path="/" element={<MetricLayout />}>
-              {/* Direct routes */}
               <Route path="/" element={<Overview />} />
               <Route path="/overview" element={<Overview />} />
               <Route path="/new" element={<K8sDashboard />} />
@@ -102,8 +107,25 @@ const App = () => (
 
               {/* Nested metric routes */}
               <Route path="/metric/*" element={<MetricRoutes />} />
-            </Route>
 
+              {/* Cluster Creation routes */}
+              <Route
+                path="/cluster-creation/gcp"
+                element={<GCPClusterPage />}
+              />
+              <Route
+                path="/cluster-creation/aws"
+                element={<AWSClusterPage />}
+              />
+              <Route
+                path="/cluster-creation/azure"
+                element={<AzureClusterPage />}
+              />
+              <Route
+                path="/cluster-creation/sify"
+                element={<SifyClusterPage />}
+              />
+            </Route>
             {/* Catch-all route - MUST be last */}
             <Route path="*" element={<NotFound />} />
           </Routes>

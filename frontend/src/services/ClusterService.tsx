@@ -148,7 +148,7 @@ class ClusterService {
   //   }
   // }
 
-   /**
+  /**
    * Fetch allocation summary for clusters using external query params
    */
   async getClusterAllocationSummary(queryParams: QueryParams): Promise<any> {

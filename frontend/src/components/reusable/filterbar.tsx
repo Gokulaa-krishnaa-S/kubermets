@@ -361,7 +361,7 @@ export const Days: React.FC<DaysProps> = ({
             </div>
 
             {/* Custom Range Option */}
-            {/* <div className="border-t border-gray-200 mt-3 pt-3">
+            <div className="border-t border-gray-200 mt-3 pt-3">
               <button
                 onClick={() => {
                   setShowCustomCalendar(true);
@@ -371,7 +371,7 @@ export const Days: React.FC<DaysProps> = ({
               >
                 Custom Range
               </button>
-            </div> */}
+            </div>
           </div>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -1,21 +1,5 @@
-import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import {
-  BarChart3,
-  Server,
-  Box,
-  Layers,
-  Settings,
-  Database,
-  Network,
-  HardDrive,
-  ChevronLeft,
-  LayoutDashboard,
-  Activity,
-  Shield,
-  TrendingUp,
-  DollarSign,
-} from "lucide-react";
+import { BarChart3, Server, Box, Layers } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,7 +9,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -47,6 +30,33 @@ const metricItems = [
   // { title: "Networking", url: "/networking", icon: Network },
   // { title: "Storage", url: "/storage", icon: HardDrive },
   // { title: "Alerts & Events", url: "/alerts-events", icon: BarChart3 },
+];
+
+const clusterCreationItems = [
+  {
+    title: "GCP GKE",
+    url: "/cluster-creation/gcp",
+    icon: "/gcp.jpg",
+    description: "Google Kubernetes Engine",
+  },
+  {
+    title: "AWS EKS",
+    url: "/cluster-creation/aws",
+    icon: "/aws.jpg",
+    description: "Amazon Elastic Kubernetes Service",
+  },
+  {
+    title: "Azure AKS",
+    url: "/cluster-creation/azure",
+    icon: "/azure.jpg",
+    description: "Azure Kubernetes Service",
+  },
+  {
+    title: "Sify",
+    url: "/cluster-creation/sify",
+    icon: "/sify.jpg",
+    description: "Sify Cloud Platform",
+  },
 ];
 
 const platformItems = [
@@ -140,6 +150,45 @@ export function AppSidebar() {
                     >
                       <item.icon className="w-4 h-4" />
                       {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Cluster Creation Navigation */}
+        <SidebarGroup className="mt-6">
+          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Cluster Creation
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="space-y-2">
+              {clusterCreationItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className={({ isActive }) => getNavClassName(isActive)}
+                    >
+                      <div className="w-4 h-4 rounded-sm bg-gray-100 overflow-hidden flex items-center justify-center">
+                        <img
+                          src={item.icon}
+                          alt={`${item.title} icon`}
+                          className="w-3 h-3 object-contain"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "none";
+                          }}
+                        />
+                      </div>
+                      {!collapsed && (
+                        <div className="flex-1">
+                          <span className="text-sm">{item.title}</span>
+                          {/* <div className="text-xs text-muted-foreground">{item.description}</div> */}
+                        </div>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
