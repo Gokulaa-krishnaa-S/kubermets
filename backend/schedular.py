@@ -548,6 +548,16 @@ def calculate_next_window(cluster_id: int) -> tuple[datetime, datetime]:
 
     return start_time, end_time
 
+def round_down_time(dt: datetime, delta: timedelta) -> datetime:
+    """
+    Round down the given datetime `dt` to the nearest multiple of `delta`.
+    Example: if delta = 1h and dt = 04:29 -> 04:00
+    """
+    delta_seconds = int(delta.total_seconds())  # works for hours, days, etc.
+    seconds = int((dt - dt.min).total_seconds())
+    rounding = (seconds // delta_seconds) * delta_seconds
+    return dt.min + timedelta(seconds=rounding)
+
 
 def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     """
@@ -556,36 +566,27 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     """
     windows = []
     latest_timestamp = get_latest_timestamp(cluster_id)
-    print(latest_timestamp)
-    now = datetime.utcnow()
-
+    print(latest_timestamp , "----------LATEST TIMESTAMP")
+    now = round_down_time(datetime.utcnow(), timedelta(hours=COLLECTION_WINDOW_HOURS))
     if latest_timestamp is None:
-        # First run - collect last 24h
+        # First run - collect up to MAX_BACKFILL_WINDOWS windows (default = 7)
         end_time = now
-        start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
-        windows.append((start_time, end_time))
+        for i in range(MAX_BACKFILL_WINDOWS, 0, -1):
+            start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
+            windows.append((start_time, end_time))
+            end_time = start_time
         return windows
 
-    # Calculate how many windows we're missing
-    time_gap = now - latest_timestamp
-    missing_hours = time_gap.total_seconds() / 3600
-    missing_windows = int(missing_hours / COLLECTION_WINDOW_HOURS)
-
-    # Limit backfill to prevent overwhelming the system
-    missing_windows = min(missing_windows, MAX_BACKFILL_WINDOWS)
-
-    # Generate windows to backfill
+    # Normal case → catch up from latest_timestamp to today’s boundary (now)
     current_start = latest_timestamp
-    for _ in range(missing_windows):
+    while current_start < now:
         current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
         if current_end > now:
-            current_end = now
-
-        if current_start < current_end:  # Only add valid windows
-            windows.append((current_start, current_end))
-
+            break
+        windows.append((current_start, current_end))
         current_start = current_end
-
+    print(windows , "------AT OUT , CHECK THE BOUNDARY ")
+    
     return windows
 
 
@@ -993,30 +994,92 @@ def collect_cluster_data(cluster_cfg: Dict) -> None:
 # -------------------- Scheduler Management --------------------
 JOB_PREFIX = "cluster-"
 
+def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) -> None:
+    """Collect data and schedule the next run based on the new timestamp."""
+    cluster_id = cluster_cfg["cluster_id"]
+    cluster_name = cluster_cfg.get("cluster_name", f"id-{cluster_id}")
+    
+    try:
+        # Collect missing data
+        collect_cluster_data(cluster_cfg)
+        
+        # Calculate and schedule next run
+        next_run_time = calculate_next_run_time(cluster_id)
+        if next_run_time:
+            job_id = f"{JOB_PREFIX}{cluster_id}"
+            scheduler.add_job(
+                func=collect_and_reschedule,
+                id=job_id,
+                args=[cluster_cfg, scheduler],
+                trigger="date",
+                run_date=next_run_time,
+                replace_existing=True,
+            )
+            log.info(
+                "Rescheduled next collection | cluster=%s next_run=%s",
+                cluster_name,
+                next_run_time.strftime("%Y-%m-%d %H:%M:%S")
+            )
+            
+    except Exception as e:
+        log.error("Collection and reschedule failed | cluster=%s err=%s", cluster_name, e)
+        # Retry in 10 minutes on error
+        retry_time = datetime.utcnow() + timedelta(minutes=10)
+        job_id = f"{JOB_PREFIX}{cluster_id}"
+        scheduler.add_job(
+            func=collect_and_reschedule,
+            id=job_id,
+            args=[cluster_cfg, scheduler],
+            trigger="date",
+            run_date=retry_time,
+            replace_existing=True,
+        )
+
+def calculate_next_run_time(cluster_id: int) -> Optional[datetime]:
+    """Calculate when the next collection should run based on last saved timestamp."""
+    latest_timestamp = get_latest_timestamp(cluster_id)
+    
+    if latest_timestamp is None:
+        # First run - schedule immediately
+        return datetime.utcnow() + timedelta(seconds=30)
+    
+    # Next collection should happen at latest_timestamp + 24 hours
+    next_expected_window = latest_timestamp + timedelta(hours=COLLECTION_WINDOW_HOURS)
+    
+    # If that time has already passed, schedule immediately to catch up
+    now = datetime.utcnow()
+    if next_expected_window <= now:
+        return now + timedelta(seconds=30)
+    
+    return next_expected_window
 
 def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: List[Dict]):
     """
-    Schedule one interval job per active cluster for smart data collection.
+    Schedule jobs based on the next expected data window for each cluster.
+    Instead of interval triggers, each job is scheduled once at the exact
+    `next_run_time` and then re-schedules itself inside `collect_and_reschedule`.
     """
     for cfg in clusters:
+        # figure out when this cluster should next run
+        next_run_time = calculate_next_run_time(cfg["cluster_id"])
+        if not next_run_time:
+            log.warning("No next run time calculated for cluster_id=%s", cfg["cluster_id"])
+            continue
+
         job_id = f"{JOB_PREFIX}{cfg['cluster_id']}"
         scheduler.add_job(
-            func=collect_cluster_data,
+            func=collect_and_reschedule,      # new handler that collects + re-schedules
             id=job_id,
-            args=[cfg],
-            trigger="interval",
-            minutes=COLLECTION_INTERVAL_MIN,
-            coalesce=True,
-            max_instances=1,
-            misfire_grace_time=COLLECTION_INTERVAL_MIN * 60 // 2,
-            replace_existing=True,
+            args=[cfg, scheduler],            # pass scheduler so it can re-schedule itself
+            trigger="date",                   # run at a fixed datetime
+            run_date=next_run_time,
+            replace_existing=True,            # overwrite any existing job for that cluster
         )
         log.info(
-            "Scheduled smart collection job | %s every %d min",
+            "Scheduled smart collection job | %s at %s",
             job_id,
-            COLLECTION_INTERVAL_MIN,
+            next_run_time.isoformat(),
         )
-
 
 def initial_collect_all(scheduler: BackgroundScheduler):
     """

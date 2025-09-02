@@ -118,7 +118,8 @@ class NodeMetrics(Base):
     __tablename__ = "node_metrics"
 
     id = Column(Integer, primary_key=True)
-    cluster_id = Column(Integer, ForeignKey("cluster_metrics.id"), nullable=False)
+    cluster_relation_id = Column(Integer, ForeignKey("cluster_metrics.id"), nullable=False)
+    cluster_id = Column(Integer, nullable=True)
     user_id = Column(Integer, nullable=False)
     # Node identification
     node_name = Column(String(255), nullable=False)

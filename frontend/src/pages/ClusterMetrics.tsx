@@ -219,6 +219,7 @@ export default function ClusterMetrics() {
           {
             title: "CPU Cost",
             value: `$${(totalEntry.cpu_cost || 0).toFixed(2)}`,
+            tooltip: "Total CPU cost for all clusters",
             subtitle: "This period",
             icon: <Cpu className="w-4 h-4" />,
             status: "info",
@@ -765,11 +766,11 @@ export default function ClusterMetrics() {
                     </CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
                       {clusters.length} clusters running
-                      {serverStatus === "down" && (
+                      {/* {serverStatus === "down" && (
                         <span className="text-red-600 ml-2">
                           - Showing cached data
                         </span>
-                      )}
+                      )} */}
                     </p>
                   </div>
                   {/* <div className="flex items-center gap-3">
