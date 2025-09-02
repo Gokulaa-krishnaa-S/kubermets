@@ -7,13 +7,13 @@ Requirements:
 
 Env Vars:
   BACKEND_API_URL=http://localhost:5000
-  COLLECTION_INTERVAL_MIN=60        # how often scheduler checks for missing data (minutes)
   COLLECTION_WINDOW_HOURS=24        # data collection window size (hours)
   REQUEST_TIMEOUT_SEC=30
   RETRY_ATTEMPTS=3
   RETRY_DELAY_SEC=15
   LOG_LEVEL=INFO
   MAX_BACKFILL_WINDOWS=7           # max number of 24h windows to backfill in one run
+  MIN_SCHEDULE_INTERVAL_MIN=30     # minimum interval between collections (minutes)
 """
 
 import os
@@ -22,7 +22,7 @@ import time
 import signal
 import logging
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any
 
 import requests
@@ -38,13 +38,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:5000")
-COLLECTION_INTERVAL_MIN = int(os.getenv("COLLECTION_INTERVAL_MIN", "60"))
 COLLECTION_WINDOW_HOURS = float(os.getenv("COLLECTION_WINDOW_HOURS", "24"))
 REQUEST_TIMEOUT_SEC = int(os.getenv("REQUEST_TIMEOUT_SEC", "30"))
 RETRY_ATTEMPTS = int(os.getenv("RETRY_ATTEMPTS", "3"))
 RETRY_DELAY_SEC = int(os.getenv("RETRY_DELAY_SEC", "15"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 MAX_BACKFILL_WINDOWS = int(os.getenv("MAX_BACKFILL_WINDOWS", "7"))
+MIN_SCHEDULE_INTERVAL_MIN = int(os.getenv("MIN_SCHEDULE_INTERVAL_MIN", "30"))
 
 # -------------------- Logging --------------------
 logging.basicConfig(
@@ -151,7 +151,7 @@ def format_cluster_metrics(allocation_data: Dict, cluster_name: str = None) -> D
         # Identification
         "cluster_name": cluster_name or "unknown",
         # Time window information
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "window_start": start_time,
         "window_end": end_time,
         "window_duration": calculate_window_duration(start_time, end_time),
@@ -196,11 +196,11 @@ def format_cluster_metrics(allocation_data: Dict, cluster_name: str = None) -> D
         # API response metadata
         "is_idle_allocation": allocation_data.get("name", "").startswith("__idle__"),
         # Record metadata
-        "created_at": datetime.utcnow().isoformat() + "Z",
-        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
         # "raw_api_response": allocation_data,
         "query_params": None,  # Could store query params used
-        "fetch_timestamp": datetime.utcnow().isoformat() + "Z",
+        "fetch_timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return formatted_data
 
@@ -219,7 +219,7 @@ def format_node_metrics(
         "node_name": node_name,
         "cluster_name": cluster_name or "unknown",
         # Time window
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "window_start": start_time,
         "window_end": end_time,
         "window_duration": calculate_window_duration(start_time, end_time),
@@ -271,12 +271,12 @@ def format_node_metrics(
         "is_unallocated": node_name.startswith("__unallocated__"),
         "is_system_allocation": node_name in ["__idle__", "__unallocated__"],
         # Lifecycle (set defaults)
-        "first_seen": datetime.utcnow().isoformat() + "Z",
-        "last_seen": datetime.utcnow().isoformat() + "Z",
+        "first_seen": datetime.now(timezone.utc).isoformat(),
+        "last_seen": datetime.now(timezone.utc).isoformat(),
         "is_active": True,
         # Metadata
-        "created_at": datetime.utcnow().isoformat() + "Z",
-        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 
     return formatted_data
@@ -291,26 +291,6 @@ def format_pod_metrics(
     end_time = allocation_data.get("end", "")
     namespace, name = extract_namespace_and_name(pod_key)
 
-    # Calculate efficiency metrics
-    # cpu_efficiency = (
-    #     calculate_percentage(
-    #         allocation_data.get("cpuCoreUsageAverage", 0),
-    #         allocation_data.get("cpuCoreRequestAverage", 0),
-    #     )
-    #     / 100
-    #     if allocation_data.get("cpuCoreRequestAverage", 0) > 0
-    #     else 0.0
-    # )
-
-    # ram_efficiency = (
-    #     calculate_percentage(
-    #         allocation_data.get("ramByteUsageAverage", 0),
-    #         allocation_data.get("ramByteRequestAverage", 0),
-    #     )
-    #     / 100
-    #     if allocation_data.get("ramByteRequestAverage", 0) > 0
-    #     else 0.0
-    # )
     cpu_efficiency = (
         calculate_percentage(
             allocation_data.get("cpuCoreUsageAverage", 0),
@@ -337,7 +317,7 @@ def format_pod_metrics(
         # Time window
         "start_time": start_time,
         "end_time": end_time,
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "window": calculate_window_duration(start_time, end_time),
         # CPU metrics
         "cpu_core_usage_average": allocation_data.get("cpuCoreUsageAverage", 0.0),
@@ -375,8 +355,8 @@ def format_pod_metrics(
         # Query context
         "domain": None,  # Requires business logic
         # Metadata
-        "created_at": datetime.utcnow().isoformat() + "Z",
-        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
         # "raw_allocation_data": allocation_data
     }
 
@@ -505,16 +485,20 @@ def get_latest_timestamp(cluster_id: int) -> Optional[datetime]:
         resp = requests.get(url, params=params, timeout=REQUEST_TIMEOUT_SEC)
         resp.raise_for_status()
         data = resp.json()
-        print(data, "----------data")
+        
         # Handle different possible response formats
         if data.get("latest_timestamp"):
             timestamp_str = data["latest_timestamp"]
-            # Parse ISO format timestamp
-            return datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            # Parse ISO format timestamp and ensure it's timezone-aware
+            dt = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
         else:
             log.info(
-                "r cluster_id=%d, will start from 24h ago",
+                "No latest timestamp found for cluster_id=%d, will start from %dh ago",
                 cluster_id,
+                COLLECTION_WINDOW_HOURS,
             )
             return None
     except Exception as e:
@@ -524,39 +508,20 @@ def get_latest_timestamp(cluster_id: int) -> Optional[datetime]:
         return None
 
 
-def calculate_next_window(cluster_id: int) -> tuple[datetime, datetime]:
-    """
-    Calculate the next time window to collect data for.
-    Returns (start_time, end_time) tuple.
-    """
-    latest_timestamp = get_latest_timestamp(cluster_id)
-
-    if latest_timestamp is None:
-        # First run - start from 24h ago
-        end_time = datetime.utcnow()
-        start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
-    else:
-        # Next window starts where the last one ended
-        start_time = latest_timestamp
-        end_time = start_time + timedelta(hours=COLLECTION_WINDOW_HOURS)
-
-    # Ensure we don't try to collect future data
-    now = datetime.utcnow()
-    if end_time > now:
-        end_time = now
-        start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
-
-    return start_time, end_time
-
 def round_down_time(dt: datetime, delta: timedelta) -> datetime:
     """
     Round down the given datetime `dt` to the nearest multiple of `delta`.
     Example: if delta = 1h and dt = 04:29 -> 04:00
     """
-    delta_seconds = int(delta.total_seconds())  # works for hours, days, etc.
-    seconds = int((dt - dt.min).total_seconds())
-    rounding = (seconds // delta_seconds) * delta_seconds
-    return dt.min + timedelta(seconds=rounding)
+    # Ensure timezone-aware datetime
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    
+    delta_seconds = int(delta.total_seconds())
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+    seconds_since_epoch = int((dt - epoch).total_seconds())
+    rounded_seconds = (seconds_since_epoch // delta_seconds) * delta_seconds
+    return epoch + timedelta(seconds=rounded_seconds)
 
 
 def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
@@ -566,8 +531,8 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     """
     windows = []
     latest_timestamp = get_latest_timestamp(cluster_id)
-    print(latest_timestamp , "----------LATEST TIMESTAMP")
-    now = round_down_time(datetime.utcnow(), timedelta(hours=COLLECTION_WINDOW_HOURS))
+    now = round_down_time(datetime.now(timezone.utc), timedelta(hours=COLLECTION_WINDOW_HOURS))
+    
     if latest_timestamp is None:
         # First run - collect up to MAX_BACKFILL_WINDOWS windows (default = 7)
         end_time = now
@@ -577,7 +542,11 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
             end_time = start_time
         return windows
 
-    # Normal case → catch up from latest_timestamp to today’s boundary (now)
+    # Normal case - catch up from latest_timestamp to now
+    # Ensure latest_timestamp is timezone-aware
+    if latest_timestamp.tzinfo is None:
+        latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
+    
     current_start = latest_timestamp
     while current_start < now:
         current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
@@ -585,9 +554,41 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
             break
         windows.append((current_start, current_end))
         current_start = current_end
-    print(windows , "------AT OUT , CHECK THE BOUNDARY ")
     
     return windows
+
+
+def calculate_next_run_time(cluster_id: int) -> Optional[datetime]:
+    """Calculate when the next collection should run based on last saved timestamp."""
+    latest_timestamp = get_latest_timestamp(cluster_id)
+    now = datetime.now(timezone.utc)
+    
+    if latest_timestamp is None:
+        # First run - schedule immediately
+        return now + timedelta(seconds=30)
+    
+    # Ensure timezone-aware comparison
+    if latest_timestamp.tzinfo is None:
+        latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
+    
+    # Next collection should happen at latest_timestamp + window_hours
+    next_expected_window = latest_timestamp + timedelta(hours=COLLECTION_WINDOW_HOURS)
+    
+    # If that time has already passed, schedule immediately to catch up
+    if next_expected_window <= now:
+        return now + timedelta(seconds=30)
+    
+    # Don't schedule too far into the future (safety check)
+    max_future = now + timedelta(hours=COLLECTION_WINDOW_HOURS * 2)
+    if next_expected_window > max_future:
+        log.warning(
+            "Next run time too far in future for cluster_id=%d, scheduling in %d minutes",
+            cluster_id,
+            MIN_SCHEDULE_INTERVAL_MIN
+        )
+        return now + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
+    
+    return next_expected_window
 
 
 # -------------------- Helpers --------------------
@@ -742,6 +743,12 @@ def format_kubecost_window(start_time: datetime, end_time: datetime) -> str:
     Convert datetime objects to Kubecost absolute window format:
     <start_iso>Z,<end_iso>Z
     """
+    # Ensure both times are timezone-aware
+    if start_time.tzinfo is None:
+        start_time = start_time.replace(tzinfo=timezone.utc)
+    if end_time.tzinfo is None:
+        end_time = end_time.replace(tzinfo=timezone.utc)
+    
     return f"{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')},{end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}"
 
 
@@ -756,10 +763,6 @@ def fetch_kubecost_window(
     Call Kubecost allocation summary for a specific time window.
     Adds Basic Auth header if username and password are provided.
     """
-    print("==========================================")
-    print(start_time, end_time, "------------------")
-    print("==========================================")
-
     window_param = format_kubecost_window(start_time, end_time)
 
     params = {
@@ -804,19 +807,12 @@ def fetch_kubecost_window(
         )
         r.raise_for_status()
         cluster_data = r.json()
-        print(
-            "===========================after cluster data===============", cluster_data
-        )
+        
         # Fetch node and pod data for each cluster and append to cluster data
         for i in cluster_data.get("data", {}).get("sets", []):
             for cluster_name in i.get("allocations", {}):
-                print(
-                    "{{{{{{{{{{{{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}}}}}}}}}}}",
-                    cluster_name,
-                )
                 if cluster_name != "__idle__":
                     try:
-                        print("========================inside the nodeo data fprmat")
                         node_data = fetchNodeData(
                             kubecost_url,
                             cluster_name,
@@ -856,10 +852,10 @@ def send_snapshots_to_backend(
 
     # Add window metadata to payload
     formatted_payload["window_metadata"] = {
-        "start_time": window_start.isoformat() + "Z",
-        "end_time": window_end.isoformat() + "Z",
+        "start_time": window_start.isoformat(),
+        "end_time": window_end.isoformat(),
         "window_hours": COLLECTION_WINDOW_HOURS,
-        "collection_timestamp": datetime.utcnow().isoformat() + "Z",
+        "collection_timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
     log.info("Sending to backend | payload_size=%d bytes", len(str(formatted_payload)))
@@ -888,6 +884,7 @@ def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime) 
     kubecost_url = cluster_cfg["kubecost_api_url"]
     username = cluster_cfg.get("username", "")
     password = cluster_cfg.get("password", "")
+    
     for attempt in range(1, RETRY_ATTEMPTS + 1):
         try:
             log.info(
@@ -955,7 +952,6 @@ def collect_cluster_data(cluster_cfg: Dict) -> None:
     try:
         # Get all missing windows that need to be collected
         missing_windows = get_missing_windows(cluster_id)
-        print(missing_windows, "------------missing windows")
 
         if not missing_windows:
             log.info("No missing windows | cluster=%s", cluster_name)
@@ -1006,6 +1002,18 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
         # Calculate and schedule next run
         next_run_time = calculate_next_run_time(cluster_id)
         if next_run_time:
+            # Avoid scheduling if next run is too soon (prevents infinite loops)
+            now = datetime.now(timezone.utc)
+            min_interval = now + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
+            
+            if next_run_time < min_interval:
+                next_run_time = min_interval
+                log.info(
+                    "Adjusted next run time to respect minimum interval | cluster=%s next_run=%s",
+                    cluster_name,
+                    next_run_time.strftime("%Y-%m-%d %H:%M:%S")
+                )
+            
             job_id = f"{JOB_PREFIX}{cluster_id}"
             scheduler.add_job(
                 func=collect_and_reschedule,
@@ -1023,8 +1031,8 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
             
     except Exception as e:
         log.error("Collection and reschedule failed | cluster=%s err=%s", cluster_name, e)
-        # Retry in 10 minutes on error
-        retry_time = datetime.utcnow() + timedelta(minutes=10)
+        # Retry in minimum interval on error
+        retry_time = datetime.now(timezone.utc) + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
         job_id = f"{JOB_PREFIX}{cluster_id}"
         scheduler.add_job(
             func=collect_and_reschedule,
@@ -1034,24 +1042,12 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
             run_date=retry_time,
             replace_existing=True,
         )
+        log.info(
+            "Scheduled retry after error | cluster=%s retry_at=%s",
+            cluster_name,
+            retry_time.strftime("%Y-%m-%d %H:%M:%S")
+        )
 
-def calculate_next_run_time(cluster_id: int) -> Optional[datetime]:
-    """Calculate when the next collection should run based on last saved timestamp."""
-    latest_timestamp = get_latest_timestamp(cluster_id)
-    
-    if latest_timestamp is None:
-        # First run - schedule immediately
-        return datetime.utcnow() + timedelta(seconds=30)
-    
-    # Next collection should happen at latest_timestamp + 24 hours
-    next_expected_window = latest_timestamp + timedelta(hours=COLLECTION_WINDOW_HOURS)
-    
-    # If that time has already passed, schedule immediately to catch up
-    now = datetime.utcnow()
-    if next_expected_window <= now:
-        return now + timedelta(seconds=30)
-    
-    return next_expected_window
 
 def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: List[Dict]):
     """
@@ -1068,18 +1064,19 @@ def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: List[Dict]):
 
         job_id = f"{JOB_PREFIX}{cfg['cluster_id']}"
         scheduler.add_job(
-            func=collect_and_reschedule,      # new handler that collects + re-schedules
+            func=collect_and_reschedule,      
             id=job_id,
-            args=[cfg, scheduler],            # pass scheduler so it can re-schedule itself
-            trigger="date",                   # run at a fixed datetime
+            args=[cfg, scheduler],            
+            trigger="date",                   
             run_date=next_run_time,
-            replace_existing=True,            # overwrite any existing job for that cluster
+            replace_existing=True,            
         )
         log.info(
             "Scheduled smart collection job | %s at %s",
             job_id,
             next_run_time.isoformat(),
         )
+
 
 def initial_collect_all(scheduler: BackgroundScheduler):
     """
@@ -1125,11 +1122,11 @@ def main():
     initial_collect_all(scheduler)
 
     log.info(
-        "Smart scheduler started | Backend=%s interval=%d min window=%d hours max_backfill=%d",
+        "Smart scheduler started | Backend=%s window=%d hours max_backfill=%d min_interval=%d min",
         BACKEND_API_URL,
-        COLLECTION_INTERVAL_MIN,
         COLLECTION_WINDOW_HOURS,
         MAX_BACKFILL_WINDOWS,
+        MIN_SCHEDULE_INTERVAL_MIN,
     )
 
     # keep main thread alive
