@@ -291,39 +291,31 @@ def get_latest_timestamp_route():
     Fetch the most recent record's timestamp for a given cluster_id.
 
     """
-
     cluster_id = request.args.get("cluster_id", type=int)
-
     if not cluster_id:
-
         return jsonify({"error": "cluster_id is required"}), 400
-
     session = db_manager.get_session()
-
     try:
 
         latest_record = (
-            session.query(ClusterMetrics.timestamp)
-            .filter(ClusterMetrics.cluster_id == cluster_id)
-            .order_by(desc(ClusterMetrics.timestamp))
-            .first()
+        session.query(ClusterMetrics.window_end, ClusterMetrics.window_duration)
+        .filter(ClusterMetrics.cluster_id == cluster_id)
+        .order_by(desc(ClusterMetrics.window_end))
+        .first()
         )
 
+        print(latest_record , "--------")
         if not latest_record:
-
             return (
                 jsonify({"message": f"No records found for cluster_id={cluster_id}"}),
                 404,
             )
 
-        return jsonify({"latest_timestamp": latest_record.timestamp.isoformat()}), 200
-
+        return jsonify({"latest_timestamp": latest_record.window_end.isoformat() , "window_duration":latest_record.window_duration}), 200
+    
     except Exception as e:
-
         return jsonify({"error": str(e)}), 500
-
     finally:
-
         session.close()
 
 
@@ -530,7 +522,7 @@ def fetch_metrics():
         snapshots = data.get("snapshots", [])
         user_id = data.get("user_id")
         cluster_id = data.get("cluster_id")
-        print("kjhghjkl;'-------------------------cluster_i", cluster_id)
+        print("kjhghjkl;'-------------------------cluster_i", cluster_id , snapshots , "---------------END-----------------")
         for snapshot in snapshots:
             allocations = snapshot.get("allocations", {})
             window_info = snapshot.get("window", {})
@@ -636,7 +628,8 @@ def fetch_metrics():
                                     try:
                                         # Create NodeMetrics entry with cluster_id foreign key
                                         node_entry = {
-                                            "cluster_id": cluster_id,  # Foreign key to cluster
+                                            "cluster_relation_id":cluster_obj.id,
+                                            "cluster_id": cluster_id, 
                                             "node_name": node_allocation.get(
                                                 "node_name"
                                             ),
