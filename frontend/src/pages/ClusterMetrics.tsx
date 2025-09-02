@@ -9,7 +9,6 @@ import { toast } from "@/components/ui/use-toast";
 import { FilterBar } from "@/components/reusable/filterbar";
 import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
-
 import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
 
@@ -39,7 +38,74 @@ import {
   ChevronRight,
   Coins,
   WifiOff,
+  Info,
 } from "lucide-react";
+
+// Tooltip definitions based on Excel INFO column
+const METRIC_TOOLTIPS = {
+  activeClusters: "Number of clusters currently running workloads (excluding idle or terminated clusters)",
+  cpuCost: "Total CPU cost across all active clusters for the selected time period",
+  memoryCost: "Total memory (RAM) cost across all active clusters for the selected time period",
+  storageCost: "Total persistent volume (PV) cost across all active clusters for the selected time period",
+  totalCpuCores: "Sum of CPU cores currently in use across all clusters",
+  totalMemory: "Sum of memory currently in use (GB) across all clusters",
+  
+  clusterName: "Unique identifier for the cluster",
+  clusterCost: "Total cost incurred by this cluster during the selected time period",
+  cpuCores: "CPU cores allocated/used by this cluster",
+  memoryGB: "Memory allocated/used by this cluster in GB",
+  cpuUsage: "Percentage of CPU capacity currently utilized in this cluster",
+  memoryUsage: "Percentage of memory capacity currently utilized in this cluster",
+  efficiency: "Ratio of actual resource usage to requested resources for this cluster (higher is better)",
+  
+  version: "Kubernetes version running on the cluster",
+  nodes: "Total number of nodes in this cluster",
+  pods: "Total number of pods running in this cluster",
+  status: "Current operational state of the cluster (e.g., Running, Pending, Failed)",
+  
+  avgCpuUtilization: "Average CPU utilization across all active clusters",
+  avgMemoryUsage: "Average memory utilization across all active clusters",
+  clusterHealth: "Proportion of healthy (Running) clusters compared to total clusters",
+  
+  highEfficiency: "Number of clusters with efficiency 70% or higher",
+  mediumEfficiency: "Number of clusters with efficiency between 30% and 70%",
+  lowEfficiency: "Number of clusters with efficiency below 30%",
+  
+  costBreakdown: "Breakdown of this cluster’s cost by CPU, memory, storage, and other resources",
+  idleResourcesCost: "Portion of cost from resources that were allocated but not used (idle)",
+  usedCpu: "Actual CPU cores actively consumed by workloads",
+  requestedCpu: "Total CPU cores requested/allocated by workloads",
+  usedMemory: "Actual memory actively consumed by workloads (GB)",
+  requestedMemory: "Total memory requested/allocated by workloads (GB)",
+  costDistribution: "Visual representation of how costs are distributed across clusters and idle resources"
+};
+
+
+// Tooltip Component
+const TooltipWrapper = ({ children, tooltip, className = "" }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  
+  return (
+    <div className={`relative ${className}`}>
+      {children}
+      <div 
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
+        <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" />
+      </div>
+      {showTooltip && tooltip && (
+        <div className="absolute top-8 right-0 z-50 w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-lg border">
+          <div className="relative">
+            {tooltip}
+            <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function ClusterMetrics() {
   const { selectedInstance }: any = useCluster();
@@ -207,7 +273,7 @@ export default function ClusterMetrics() {
 
         setClusters(clusterList);
 
-        // Set cluster stats using computed totalEntry (active + idle)
+        // Set cluster stats using computed totalEntry (active + idle) with tooltips
         setClusterStats([
           {
             title: "Active Clusters",
@@ -215,11 +281,12 @@ export default function ClusterMetrics() {
             subtitle: "Running clusters",
             icon: <Server className="w-4 h-4" />,
             status: "healthy",
+            tooltip: METRIC_TOOLTIPS.activeClusters,
           },
           {
             title: "CPU Cost",
             value: `$${(totalEntry.cpu_cost || 0).toFixed(2)}`,
-            tooltip: "Total CPU cost for all clusters",
+            tooltip: METRIC_TOOLTIPS.cpuCost,
             subtitle: "This period",
             icon: <Cpu className="w-4 h-4" />,
             status: "info",
@@ -230,6 +297,7 @@ export default function ClusterMetrics() {
             subtitle: "This period",
             icon: <Activity className="w-4 h-4" />,
             status: "healthy",
+            tooltip: METRIC_TOOLTIPS.memoryCost,
           },
           {
             title: "Storage Cost",
@@ -237,6 +305,7 @@ export default function ClusterMetrics() {
             subtitle: "This period",
             icon: <HardDrive className="w-4 h-4" />,
             status: "info",
+            tooltip: METRIC_TOOLTIPS.storageCost,
           },
           {
             title: "Total CPU Cores",
@@ -244,6 +313,7 @@ export default function ClusterMetrics() {
             subtitle: "In use",
             icon: <Zap className="w-4 h-4" />,
             status: "healthy",
+            tooltip: METRIC_TOOLTIPS.totalCpuCores,
           },
           {
             title: "Total Memory",
@@ -251,6 +321,7 @@ export default function ClusterMetrics() {
             subtitle: "In use",
             icon: <Database className="w-4 h-4" />,
             status: "info",
+            tooltip: METRIC_TOOLTIPS.totalMemory,
           },
         ]);
       } catch (error) {
@@ -582,6 +653,7 @@ export default function ClusterMetrics() {
         max: 100,
         color: "bg-gradient-to-r from-blue-500 to-blue-600",
         unit: "%",
+        tooltip: METRIC_TOOLTIPS.avgCpuUtilization,
       },
       {
         label: "Avg Memory Usage",
@@ -589,6 +661,7 @@ export default function ClusterMetrics() {
         max: 100,
         color: "bg-gradient-to-r from-emerald-500 to-emerald-600",
         unit: "%",
+        tooltip: METRIC_TOOLTIPS.avgMemoryUsage,
       },
       {
         label: "Cluster Health",
@@ -596,6 +669,7 @@ export default function ClusterMetrics() {
         max: clusters.length || 1,
         color: "bg-gradient-to-r from-green-500 to-green-600",
         unit: `/${clusters.length}`,
+        tooltip: METRIC_TOOLTIPS.clusterHealth,
       },
     ];
   };
@@ -618,39 +692,41 @@ export default function ClusterMetrics() {
     return { high, medium, low };
   };
 
-  // Enhanced Progress Bar Component
-  const ProgressBar = ({ label, value, max, color, unit }) => (
-    <div className="space-y-3">
-      <div className="flex justify-between items-center">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-bold text-gray-900">
-            {value}
-            {unit}
-          </span>
-          <span className="text-xs text-gray-500">
-            / {max}
-            {unit === "%" ? "%" : ""}
-          </span>
-        </div>
-      </div>
-      <div className="relative">
-        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-          <div
-            className={`h-full ${color} transition-all duration-700 ease-out rounded-full relative`}
-            style={{ width: `${Math.min((value / max) * 100, 100)}%` }}
-          >
-            <div className="absolute inset-0 bg-white opacity-20 rounded-full animate-pulse"></div>
+  // Enhanced Progress Bar Component with Tooltip
+  const ProgressBar = ({ label, value, max, color, unit, tooltip }) => (
+    <TooltipWrapper tooltip={tooltip} className="group">
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium text-gray-700">{label}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-gray-900">
+              {value}
+              {unit}
+            </span>
+            <span className="text-xs text-gray-500">
+              / {max}
+              {unit === "%" ? "%" : ""}
+            </span>
           </div>
         </div>
-        <div
-          className="absolute -top-1 text-xs text-gray-500"
-          style={{ left: `${Math.min((value / max) * 100, 100)}%` }}
-        >
-          ↑
+        <div className="relative">
+          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div
+              className={`h-full ${color} transition-all duration-700 ease-out rounded-full relative`}
+              style={{ width: `${Math.min((value / max) * 100, 100)}%` }}
+            >
+              <div className="absolute inset-0 bg-white opacity-20 rounded-full animate-pulse"></div>
+            </div>
+          </div>
+          <div
+            className="absolute -top-1 text-xs text-gray-500"
+            style={{ left: `${Math.min((value / max) * 100, 100)}%` }}
+          >
+            ↑
+          </div>
         </div>
       </div>
-    </div>
+    </TooltipWrapper>
   );
 
   // Error Display Component - similar to NodeMetrics
@@ -697,17 +773,6 @@ export default function ClusterMetrics() {
 
   return (
     <div className="p-4 lg:p-6">
-      {/* Standardized Connection Status Banner */}
-      {/* <ConnectionStatusBanner
-        connectionStatus={connectionStatus}
-        error={error}
-        retryAttempts={retryAttempts}
-        maxRetries={maxRetries}
-        isLoadingData={isLoadingData}
-        isRefreshing={isRefreshing}
-        onRetry={handleRetry}
-      /> */}
-
       {/* Filter Bar with Network Status Indicator */}
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
@@ -737,14 +802,17 @@ export default function ClusterMetrics() {
       {isLoadingData && <LoadingBanner message="Loading cluster data..." />}
 
       <div className="space-y-6">
-        {/* Enhanced Metric Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {clusterStats.map((stat, index) => (
-            <div key={index} className="relative">
+            <TooltipWrapper 
+              key={index} 
+              tooltip={stat.tooltip}
+              className="group relative"
+            >
               <MetricCard {...stat} />
-              {/* Add subtle animation */}
+    
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 hover:opacity-10 transition-opacity duration-500 rounded-lg pointer-events-none"></div>
-            </div>
+            </TooltipWrapper>
           ))}
         </div>
 
@@ -752,31 +820,18 @@ export default function ClusterMetrics() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Enhanced Cluster Overview */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Enhanced Cluster Cards */}
+            {/* Enhanced Cluster Cards with Tooltips */}
             <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-xl font-bold text-gray-900">
                       Active Clusters
-                      {/* {serverStatus === "down" && (
-                        <span className="ml-2 text-sm text-red-600 font-normal">
-                          (Offline Mode)
-                        </span>
-                      )} */}
                     </CardTitle>
                     <p className="text-sm text-gray-600 mt-1">
                       {clusters.length} clusters running
-                      {/* {serverStatus === "down" && (
-                        <span className="text-red-600 ml-2">
-                          - Showing cached data
-                        </span>
-                      )} */}
                     </p>
                   </div>
-                  {/* <div className="flex items-center gap-3">
-                    <NetworkStatusIndicator serverStatus={serverStatus} />
-                  </div> */}
                 </div>
               </CardHeader>
               <CardContent>
@@ -797,150 +852,165 @@ export default function ClusterMetrics() {
                     </div>
                   ) : (
                     clusters.map((cluster, index) => (
-                      <div
+                      <TooltipWrapper
                         key={`${cluster.name}-${index}`}
-                        onClick={() => {
-                          setSelectedCluster(cluster.name);
-                          setShowClusterModal(true);
-                        }}
-                        className="group p-6 border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-lg transition-all duration-300 cursor-pointer bg-white hover:bg-blue-50/30"
+                        tooltip={METRIC_TOOLTIPS.clusterName}
+                        className="group"
                       >
-                        <div className="flex items-start justify-between mb-6">
-                          <div className="flex items-center gap-4">
-                            <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl group-hover:from-blue-600 group-hover:to-blue-700 transition-all duration-300 shadow-lg">
-                              <Server className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-900 transition-colors">
-                                {cluster.name}
-                              </h3>
-                              <div className="flex items-center gap-2 mt-1">
-                                <p className="text-sm text-gray-600">
-                                  Kubernetes {cluster.version}
-                                </p>
-                                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-                                <p className="text-sm text-gray-600">
-                                  Efficiency: {cluster.efficiency}
-                                </p>
+                        <div
+                          onClick={() => {
+                            setSelectedCluster(cluster.name);
+                            setShowClusterModal(true);
+                          }}
+                          className="p-6 border-2 border-gray-100 rounded-xl hover:border-blue-300 hover:shadow-lg transition-all duration-300 cursor-pointer bg-white hover:bg-blue-50/30"
+                        >
+                          <div className="flex items-start justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl group-hover:from-blue-600 group-hover:to-blue-700 transition-all duration-300 shadow-lg">
+                                <Server className="w-6 h-6 text-white" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-900 transition-colors">
+                                  {cluster.name}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <p className="text-sm text-gray-600">
+                                    Kubernetes {cluster.version}
+                                  </p>
+                                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                                  <p className="text-sm text-gray-600">
+                                    Efficiency: {cluster.efficiency}
+                                  </p>
+                                </div>
                               </div>
                             </div>
+                            <div className="flex items-center gap-2">
+                              <StatusBadge status={cluster.status} />
+                              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <StatusBadge status={cluster.status} />
-                            <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                          </div>
-                        </div>
 
-                        {/* Enhanced Metrics Row */}
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                          <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
-                            <div className="text-xl font-bold text-gray-900 mb-1">
-                              {cluster.cost}
-                            </div>
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                              Total Cost
-                            </div>
-                          </div>
-                          <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
-                            <div className="text-xl font-bold text-gray-900 mb-1">
-                              {cluster.cpuCores}
-                            </div>
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                              CPU Cores
-                            </div>
-                          </div>
-                          <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
-                            <div className="text-xl font-bold text-gray-900 mb-1">
-                              {cluster.memoryGB} GB
-                            </div>
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                              Memory
-                            </div>
-                          </div>
-                          <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
-                            <div className="text-xl font-bold text-gray-900 mb-1">
-                              {cluster.efficiency}
-                            </div>
-                            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                              Efficiency
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Enhanced Resource Usage Bars */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <Cpu className="w-4 h-4 text-blue-600" />
-                                CPU Usage
-                              </span>
-                              <span className="text-sm font-bold text-gray-900">
-                                {cluster.cpu}
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-700 ease-out rounded-full relative"
-                                style={{ width: cluster.cpu }}
-                              >
-                                <div className="absolute inset-0 bg-white opacity-20 rounded-full"></div>
+                          {/* Enhanced Metrics Row with Tooltips */}
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <TooltipWrapper tooltip={METRIC_TOOLTIPS.clusterCost}>
+                              <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
+                                <div className="text-xl font-bold text-gray-900 mb-1">
+                                  {cluster.cost}
+                                </div>
+                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  Total Cost
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                                <Activity className="w-4 h-4 text-emerald-600" />
-                                Memory Usage
-                              </span>
-                              <span className="text-sm font-bold text-gray-900">
-                                {cluster.memory}
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                              <div
-                                className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-700 ease-out rounded-full relative"
-                                style={{ width: cluster.memory }}
-                              >
-                                <div className="absolute inset-0 bg-white opacity-20 rounded-full"></div>
+                            </TooltipWrapper>
+                            <TooltipWrapper tooltip={METRIC_TOOLTIPS.cpuCores}>
+                              <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
+                                <div className="text-xl font-bold text-gray-900 mb-1">
+                                  {cluster.cpuCores}
+                                </div>
+                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  CPU Cores
+                                </div>
                               </div>
+                            </TooltipWrapper>
+                            <TooltipWrapper tooltip={METRIC_TOOLTIPS.memoryGB}>
+                              <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
+                                <div className="text-xl font-bold text-gray-900 mb-1">
+                                  {cluster.memoryGB} GB
+                                </div>
+                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  Memory
+                                </div>
+                              </div>
+                            </TooltipWrapper>
+                            <TooltipWrapper tooltip={METRIC_TOOLTIPS.efficiency}>
+                              <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
+                                <div className="text-xl font-bold text-gray-900 mb-1">
+                                  {cluster.efficiency}
+                                </div>
+                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                  Efficiency
+                                </div>
+                              </div>
+                            </TooltipWrapper>
+                          </div>
+
+                          {/* Enhanced Resource Usage Bars with Tooltips */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <TooltipWrapper tooltip={METRIC_TOOLTIPS.cpuUsage}>
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                    <Cpu className="w-4 h-4 text-blue-600" />
+                                    CPU Usage
+                                  </span>
+                                  <span className="text-sm font-bold text-gray-900">
+                                    {cluster.cpu}
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-700 ease-out rounded-full relative"
+                                    style={{ width: cluster.cpu }}
+                                  >
+                                    <div className="absolute inset-0 bg-white opacity-20 rounded-full"></div>
+                                  </div>
+                                </div>
+                              </div>
+                            </TooltipWrapper>
+                            <TooltipWrapper tooltip={METRIC_TOOLTIPS.memoryUsage}>
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                                    <Activity className="w-4 h-4 text-emerald-600" />
+                                    Memory Usage
+                                  </span>
+                                  <span className="text-sm font-bold text-gray-900">
+                                    {cluster.memory}
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                                  <div
+                                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-700 ease-out rounded-full relative"
+                                    style={{ width: cluster.memory }}
+                                  >
+                                    <div className="absolute inset-0 bg-white opacity-20 rounded-full"></div>
+                                  </div>
+                                </div>
+                              </div>
+                            </TooltipWrapper>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <span className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                Updated{" "}
+                                {lastUpdated
+                                  ? new Date(lastUpdated).toLocaleTimeString()
+                                  : "just now"}
+                              </span>
                             </div>
                           </div>
                         </div>
-
-                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
-                          <div className="flex items-center gap-4 text-sm text-gray-600">
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              Updated{" "}
-                              {lastUpdated
-                                ? new Date(lastUpdated).toLocaleTimeString()
-                                : "just now"}
-                            </span>
-                          </div>
-                          {/* <button className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm font-medium group-hover:translate-x-1 transition-all duration-200">
-                            View Details
-                            <ChevronRight className="w-4 h-4" />
-                          </button> */}
-                        </div>
-                      </div>
+                      </TooltipWrapper>
                     ))
                   )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Enhanced Resource Utilization Chart */}
+            {/* Enhanced Resource Utilization Chart with Tooltips */}
             {resourceMetrics.length > 0 && (
               <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
-                      <BarChart3 className="w-5 h-5 text-white" />
-                    </div>
-                    Resource Utilization Overview
-                  </CardTitle>
+                  <TooltipWrapper tooltip="Real-time cluster resource metrics and utilization patterns">
+                    <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+                        <BarChart3 className="w-5 h-5 text-white" />
+                      </div>
+                      Resource Utilization Overview
+                    </CardTitle>
+                  </TooltipWrapper>
                   <p className="text-sm text-gray-600">
                     Real-time cluster resource metrics
                   </p>
@@ -956,118 +1026,131 @@ export default function ClusterMetrics() {
             )}
           </div>
 
-          {/* Right Column - Enhanced Sidebar */}
+          {/* Right Column - Enhanced Sidebar with Tooltips */}
           <div className="space-y-6">
-            {/* Cluster Efficiency Stats */}
+            {/* Cluster Efficiency Stats with Tooltips */}
             <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
               <CardHeader>
-                <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
-                  <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
-                    <Gauge className="w-4 h-4 text-white" />
-                  </div>
-                  Efficiency Distribution
-                </CardTitle>
+                <TooltipWrapper tooltip="Distribution of cluster efficiency levels for optimization planning">
+                  <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg">
+                      <Gauge className="w-4 h-4 text-white" />
+                    </div>
+                    Efficiency Distribution
+                  </CardTitle>
+                </TooltipWrapper>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-700">
-                        High Efficiency (≥70%)
+                  <TooltipWrapper tooltip={METRIC_TOOLTIPS.highEfficiency}>
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-700">
+                          High Efficiency (≥70%)
+                        </span>
+                      </div>
+                      <span className="text-lg font-bold text-green-700">
+                        {efficiencyStats.high}
                       </span>
                     </div>
-                    <span className="text-lg font-bold text-green-700">
-                      {efficiencyStats.high}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-700">
-                        Medium Efficiency (30-70%)
+                  </TooltipWrapper>
+                  <TooltipWrapper tooltip={METRIC_TOOLTIPS.mediumEfficiency}>
+                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-700">
+                          Medium Efficiency (30-70%)
+                        </span>
+                      </div>
+                      <span className="text-lg font-bold text-yellow-700">
+                        {efficiencyStats.medium}
                       </span>
                     </div>
-                    <span className="text-lg font-bold text-yellow-700">
-                      {efficiencyStats.medium}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-gray-700">
-                        Low Efficiency (&lt;30%)
+                  </TooltipWrapper>
+                  <TooltipWrapper tooltip={METRIC_TOOLTIPS.lowEfficiency}>
+                    <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-gray-700">
+                          Low Efficiency (&lt;30%)
+                        </span>
+                      </div>
+                      <span className="text-lg font-bold text-red-700">
+                        {efficiencyStats.low}
                       </span>
                     </div>
-                    <span className="text-lg font-bold text-red-700">
-                      {efficiencyStats.low}
-                    </span>
-                  </div>
+                  </TooltipWrapper>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Cost Breakdown */}
+            {/* Cost Breakdown with Tooltips */}
             {chartData.costBreakdown.length > 0 && (
               <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>
-                  <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
-                    <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
-                      <Coins className="w-4 h-4 text-white" />
-                    </div>
-                    Cost Breakdown
-                  </CardTitle>
+                  <TooltipWrapper tooltip={METRIC_TOOLTIPS.costBreakdown}>
+                    <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
+                        <Coins className="w-4 h-4 text-white" />
+                      </div>
+                      Cost Breakdown
+                    </CardTitle>
+                  </TooltipWrapper>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {chartData.costBreakdown.map((item, index) => (
-                      <div
+                      <TooltipWrapper
                         key={`${item.name}-${index}`}
-                        className="group hover:bg-gray-50 p-3 rounded-lg transition-colors"
+                        tooltip={item.name === "Idle Resources" ? METRIC_TOOLTIPS.idleResourcesCost : METRIC_TOOLTIPS.clusterCost}
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-gray-700 truncate">
-                              {item.name}
-                            </span>
+                        <div className="hover:bg-gray-50 p-3 rounded-lg transition-colors">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-medium text-gray-700 truncate">
+                                {item.name}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-bold text-gray-900">
+                                ${item.value}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {item.percentage}%
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-sm font-bold text-gray-900">
-                              ${item.value}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {item.percentage}%
-                            </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className={`h-2 rounded-full transition-all duration-500 ${
+                                item.name === "Idle Resources"
+                                  ? "bg-gray-400"
+                                  : "bg-gradient-to-r from-blue-500 to-blue-600"
+                              }`}
+                              style={{ width: `${item.percentage}%` }}
+                            ></div>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full transition-all duration-500 ${
-                              item.name === "Idle Resources"
-                                ? "bg-gray-400"
-                                : "bg-gradient-to-r from-blue-500 to-blue-600"
-                            }`}
-                            style={{ width: `${item.percentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
+                      </TooltipWrapper>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* System Health */}
-            {/* Bottom Section - Cost Breakdown Donut Chart */}
+            {/* Cost Distribution Analysis with Tooltip */}
             {chartData.costBreakdown.length > 0 && (
               <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>
-                  <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                    <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg">
-                      <DollarSign className="w-5 h-5 text-white" />
-                    </div>
-                    Cost Distribution Analysis
-                  </CardTitle>
+                  <TooltipWrapper tooltip={METRIC_TOOLTIPS.costDistribution}>
+                    <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                      <div className="p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg">
+                        <DollarSign className="w-5 h-5 text-white" />
+                      </div>
+                      Cost Distribution Analysis
+                    </CardTitle>
+                  </TooltipWrapper>
                   <p className="text-sm text-gray-600">
                     Visual breakdown of cluster costs and idle resources
                   </p>

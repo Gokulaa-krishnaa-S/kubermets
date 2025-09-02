@@ -14,7 +14,86 @@ import {
   User,
   WifiOff,
   RefreshCw,
+  Info
 } from "lucide-react";
+
+
+
+
+
+
+
+
+const POD_METRIC_TOOLTIPS = {
+  // Overall pod metrics
+  totalCost: "Total pod cost (CPU + Memory + Storage + Network + Shared). Key KPI for cost tracking.",
+  activePods: "Number of running pods with allocated resources.",
+  idleCost: "Cost of unused cluster capacity (waste).",
+  avgEfficiency: "Average resource efficiency = Usage ÷ Requests.",
+
+  // Pod cost breakdown
+  totalCpuCost: "Total CPU cost based on requests and runtime.",
+  totalMemoryCost: "Total memory cost from requested GB-hours.",
+  totalStorageCost: "Persistent + ephemeral storage costs.",
+  podCount: "Number of pods with allocated cost.",
+  computeCost: "CPU + Memory cost (excludes storage & extras).",
+
+  // Pod cost distribution
+  cpuDistribution: "CPU cost share of total cluster cost.",
+  memoryDistribution: "Memory cost share of total cluster cost.",
+  storageDistribution: "Storage cost share of total cluster cost.",
+  sharedDistribution: "Shared infra costs (e.g., LBs, services).",
+
+  // Individual pod details
+  podName: "Kubernetes pod identifier (namespace/pod-name).",
+  podCpuCost: "Pod CPU cost = Request × Time × Rate.",
+  podCpuUsage: "Actual CPU usage vs requested cores.",
+  podCpuEfficiency: "CPU efficiency = Usage ÷ Request.",
+  podMemoryCost: "Pod memory cost = Request × Time × Rate.",
+  podMemoryUsage: "Actual vs requested memory (GB).",
+  podMemoryRequest: "Requested memory (GB).",
+  podMemoryEfficiency: "Memory efficiency = Usage ÷ Request.",
+  podStorageCost: "Pod storage cost from PV claims.",
+  podTotalEfficiency: "Overall efficiency (CPU + Memory).",
+  podTotalCost: "Full pod cost (CPU + Memory + Storage + Network + Shared).",
+};
+
+
+
+// Tooltip Component
+const TooltipWrapper = ({ children, tooltip, className = "" }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div
+      className={`relative group inline-block ${className}`}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+    >
+      {/* Wrapped content */}
+      {children}
+
+      {/* Info icon (hover only) */}
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" />
+      </div>
+
+      {/* Tooltip */}
+      {showTooltip && tooltip && (
+        <div className="absolute top-8 right-0 z-50 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border">
+          <div className="relative">
+            {tooltip}
+            <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+
+
 import {
   XAxis,
   YAxis,
@@ -288,8 +367,7 @@ const KubecostDashboard = () => {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying... (${
-                retryAttempts + 1
+              `Connection failed, retrying... (${retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -699,17 +777,6 @@ const KubecostDashboard = () => {
       <div className=" ">
         <div className="min-h-screen sm:p-4 md:p-6">
           <div className="mx-auto max-w-full">
-            {/* Standardized Connection Status Banner */}
-            {/* <ConnectionStatusBanner
-              connectionStatus={connectionStatus}
-              error={error}
-              retryAttempts={retryAttempts}
-              maxRetries={maxRetries}fi
-              isLoadingData={isLoadingData}
-              isRefreshing={isRefreshing}
-              onRetry={handleRetry}
-            /> */}
-
             {/* Enhanced Filter Bar with Network Status Indicator */}
             <div className="bg-white rounded-xl shadow-sm mb-6">
               <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
@@ -757,7 +824,6 @@ const KubecostDashboard = () => {
                     isRefreshing={isRefreshing}
                     lastUpdated={lastUpdated}
                   />
-                  {/* <NetworkStatusIndicator serverStatus={serverStatus} /> */}
                 </div>
               </div>
 
@@ -769,8 +835,8 @@ const KubecostDashboard = () => {
                       {totalItems === 0
                         ? "No pods found"
                         : totalItems === 1
-                        ? "1 pod found"
-                        : `${totalItems} pods found`}
+                          ? "1 pod found"
+                          : `${totalItems} pods found`}
                       {searchTerm && ` matching "${searchTerm}"`}
                     </span>
                     {searchTerm && (
@@ -791,96 +857,99 @@ const KubecostDashboard = () => {
             {/* Loading Banner */}
             {isLoadingData && <LoadingBanner message="Loading pod data..." />}
 
-            {/* Summary Cards - Updated to reflect filtered data and connection status */}
+            {/* Summary Cards with Tooltips */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-              <div
-                className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${
-                  serverStatus === "down" ? "opacity-75" : ""
-                }`}
+              <TooltipWrapper
+                tooltip={POD_METRIC_TOOLTIPS.totalCost}
+                className="w-full"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">
-                      <DollarSign className="w-6 h-10 text-blue-600" />
-                      {/* {searchTerm ? "Filtered" : "Total"} Cost
-                      {serverStatus === "down" && (
-                        <span className="text-red-600 ml-1">(Offline)</span>
-                      )} */}
-                    </p>
-                    <p className="text-2xl font-bold text">
-                      {formatCurrency(
-                        filteredAndSortedPods.reduce(
-                          (sum, pod) => sum + pod.totalCost,
-                          0
-                        )
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Selected period
-                      {serverStatus === "down" && (
-                        <span className="text-red-600 ml-1">
-                          {" "}
-                          - Cached data
-                        </span>
-                      )}
-                    </p>
+                <div
+                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === "down" ? "opacity-75" : ""
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        <DollarSign className="w-6 h-10 text-blue-600" />
+                      </p>
+                      <p className="text-2xl font-bold text">
+                        {formatCurrency(
+                          filteredAndSortedPods.reduce(
+                            (sum, pod) => sum + pod.totalCost,
+                            0
+                          )
+                        )}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Selected period
+                        {serverStatus === "down" && (
+                          <span className="text-red-600 ml-1">
+                            {" "}
+                            - Cached data
+                          </span>
+                        )}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </TooltipWrapper>
 
-              <div
-                className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${
-                  serverStatus === "down" ? "opacity-75" : ""
-                }`}
+              <TooltipWrapper
+                tooltip={POD_METRIC_TOOLTIPS.activePods}
+                className="w-full"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">
-                      <Server className="w-6 h-10 text-green-600" />
-                      {/* {searchTerm ? "Matching" : "Active"} Pods
-                      {serverStatus === "down" && (
-                        <span className="text-red-600 ml-1">(Offline)</span>
-                      )} */}
-                    </p>
-                    <p className="text-2xl font-bold text">
-                      {filteredAndSortedPods.length}
-                    </p>
-                    <p className="text-xs text-green-600 mt-1">Running</p>
+                <div
+                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === "down" ? "opacity-75" : ""
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        <Server className="w-6 h-10 text-green-600" />
+                      </p>
+                      <p className="text-2xl font-bold text">
+                        {filteredAndSortedPods.length}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">Running</p>
+                    </div>
                   </div>
-                  {/* <div className="p-3 bg-green-100 rounded-lg">
-                    <Server className="w-6 h-6 text-green-600" />
-                  </div> */}
                 </div>
-              </div>
+              </TooltipWrapper>
 
-              <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">
-                      <Clock className="w-6 h-10 text-orange-600" />
-                      Idle Cost
-                    </p>
-                    <p className="text-2xl font-bold text">
-                      {formatCurrency(processedData.idle?.totalCost || 0)}
-                    </p>
-                    <p className="text-xs text-orange-600 mt-1">Unallocated</p>
+              <TooltipWrapper
+                tooltip={POD_METRIC_TOOLTIPS.idleCost}
+                className="w-full"
+              >
+                <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        <Clock className="w-6 h-10 text-orange-600" />
+                        Idle Cost
+                      </p>
+                      <p className="text-2xl font-bold text">
+                        {formatCurrency(processedData.idle?.totalCost || 0)}
+                      </p>
+                      <p className="text-xs text-orange-600 mt-1">Unallocated</p>
+                    </div>
                   </div>
-                  {/* <div className="p-3 bg-orange-100 rounded-lg">
-                    <Clock className="w-6 h-6 text-orange-600" />
-                  </div> */}
                 </div>
-              </div>
+              </TooltipWrapper>
 
-              <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">
-                      <Activity className="w-6 h-10 text-purple-600" />
-                      Avg Efficiency
-                    </p>
-                    <p className="text-2xl font-bold text">
-                      {filteredAndSortedPods.length > 0
-                        ? (
+              <TooltipWrapper
+                tooltip={POD_METRIC_TOOLTIPS.avgEfficiency}
+                className="w-full"
+              >
+                <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">
+                        <Activity className="w-6 h-10 text-purple-600" />
+                        Avg Efficiency
+                      </p>
+                      <p className="text-2xl font-bold text">
+                        {filteredAndSortedPods.length > 0
+                          ? (
                             (filteredAndSortedPods.reduce(
                               (sum, pod) => sum + (pod.totalEfficiency || 0),
                               0
@@ -888,23 +957,21 @@ const KubecostDashboard = () => {
                               filteredAndSortedPods.length) *
                             100
                           ).toFixed(1)
-                        : "0"}
-                      %
-                    </p>
-                    <p className="text-xs text-purple-600 mt-1">
-                      Resource usage
-                    </p>
+                          : "0"}
+                        %
+                      </p>
+                      <p className="text-xs text-purple-600 mt-1">
+                        Resource usage
+                      </p>
+                    </div>
                   </div>
-                  {/* <div className="p-3 bg-purple-100 rounded-lg">
-                    <Activity className="w-6 h-6 text-purple-600" />
-                  </div> */}
                 </div>
-              </div>
+              </TooltipWrapper>
             </div>
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
-              {/* Cost Over Time Chart */}
+              {/* Cost Over Time Chart with Tooltips */}
               <div className="md:col-span-2 bg-white rounded-2xl p-4 sm:p-6 border border-slate-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 sm:mb-8 pb-4 border-b border-slate-100 gap-4">
                   <div className="flex items-center gap-3 mb-4 sm:mb-0">
@@ -941,48 +1008,54 @@ const KubecostDashboard = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-3 sm:gap-6 mb-4 sm:mb-6 p-2 sm:p-4 bg-slate-50 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-blue-500 shadow-sm"></div>
-                    <span className="text-sm font-medium text-slate-700">
-                      CPU
-                    </span>
-                    <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded-full">
-                      {formatCurrency(
-                        chartData?.reduce(
-                          (sum, item) => sum + (item.cpuCost || 0),
-                          0
-                        ) || 0
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-emerald-500 shadow-sm"></div>
-                    <span className="text-sm font-medium text-slate-700">
-                      Memory
-                    </span>
-                    <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded-full">
-                      {formatCurrency(
-                        chartData?.reduce(
-                          (sum, item) => sum + (item.ramCost || 0),
-                          0
-                        ) || 0
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-full bg-amber-500 shadow-sm"></div>
-                    <span className="text-sm font-medium text-slate-700">
-                      Storage
-                    </span>
-                    <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded-full">
-                      {formatCurrency(
-                        chartData?.reduce(
-                          (sum, item) => sum + (item.pvCost || 0),
-                          0
-                        ) || 0
-                      )}
-                    </span>
-                  </div>
+                  <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.totalCpuCost}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-blue-500 shadow-sm"></div>
+                      <span className="text-sm font-medium text-slate-700">
+                        CPU
+                      </span>
+                      <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded-full">
+                        {formatCurrency(
+                          chartData?.reduce(
+                            (sum, item) => sum + (item.cpuCost || 0),
+                            0
+                          ) || 0
+                        )}
+                      </span>
+                    </div>
+                  </TooltipWrapper>
+                  <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.totalMemoryCost}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-emerald-500 shadow-sm"></div>
+                      <span className="text-sm font-medium text-slate-700">
+                        Memory
+                      </span>
+                      <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded-full">
+                        {formatCurrency(
+                          chartData?.reduce(
+                            (sum, item) => sum + (item.ramCost || 0),
+                            0
+                          ) || 0
+                        )}
+                      </span>
+                    </div>
+                  </TooltipWrapper>
+                  <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.totalStorageCost}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-amber-500 shadow-sm"></div>
+                      <span className="text-sm font-medium text-slate-700">
+                        Storage
+                      </span>
+                      <span className="text-xs text-slate-500 bg-white px-2 py-1 rounded-full">
+                        {formatCurrency(
+                          chartData?.reduce(
+                            (sum, item) => sum + (item.pvCost || 0),
+                            0
+                          ) || 0
+                        )}
+                      </span>
+                    </div>
+                  </TooltipWrapper>
                 </div>
 
                 <div className="relative">
@@ -1135,45 +1208,55 @@ const KubecostDashboard = () => {
 
                 <div className="mt-4 sm:mt-6 pt-4 border-t border-slate-100">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
-                    <div className="text-center p-3 bg-slate-50 rounded-lg">
-                      <div className="text-lg font-bold text-slate-900">
-                        {chartData?.length || 0}
+                    <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podCount}>
+                      <div className="text-center p-3 bg-slate-50 rounded-lg">
+                        <div className="text-lg font-bold text-slate-900">
+                          {chartData?.length || 0}
+                        </div>
+                        <div className="text-xs text-slate-600">Total Pods</div>
                       </div>
-                      <div className="text-xs text-slate-600">Total Pods</div>
-                    </div>
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <div className="text-lg font-bold text-blue-600">
-                        {formatCurrency(
-                          chartData?.reduce(
-                            (sum, item) =>
-                              sum + (item.cpuCost || 0) + (item.ramCost || 0),
-                            0
-                          ) || 0
-                        )}
+                    </TooltipWrapper>
+                    <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.computeCost}>
+                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                        <div className="text-lg font-bold text-blue-600">
+                          {formatCurrency(
+                            chartData?.reduce(
+                              (sum, item) =>
+                                sum + (item.cpuCost || 0) + (item.ramCost || 0),
+                              0
+                            ) || 0
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-600">Compute</div>
                       </div>
-                      <div className="text-xs text-slate-600">Compute</div>
-                    </div>
-                    <div className="text-center p-3 bg-amber-50 rounded-lg">
-                      <div className="text-lg font-bold text-amber-600">
-                        {formatCurrency(
-                          chartData?.reduce(
-                            (sum, item) => sum + (item.pvCost || 0),
-                            0
-                          ) || 0
-                        )}
+                    </TooltipWrapper>
+                    <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.totalStorageCost}>
+                      <div className="text-center p-3 bg-amber-50 rounded-lg">
+                        <div className="text-lg font-bold text-amber-600">
+                          {formatCurrency(
+                            chartData?.reduce(
+                              (sum, item) => sum + (item.pvCost || 0),
+                              0
+                            ) || 0
+                          )}
+                        </div>
+                        <div className="text-xs text-slate-600">Storage</div>
                       </div>
-                      <div className="text-xs text-slate-600">Storage</div>
-                    </div>
+                    </TooltipWrapper>
                   </div>
                 </div>
               </div>
 
-              {/* Cost Distribution Pie Chart */}
+              {/* Cost Distribution Pie Chart with Tooltips */}
               <div className="w-full">
                 <div className="bg-white rounded-xl p-4 sm:p-6 border border-slate-200 shadow-sm">
-                  <h2 className="text-xl font-semibold text mb-6">
-                    Cost Distribution
-                  </h2>
+                  <TooltipWrapper
+                    tooltip="Cost distribution breakdown shows how your cluster spending is allocated across different resource types, helping identify optimization opportunities."
+                  >
+                    <h2 className="text-xl font-semibold text mb-6">
+                      Cost Distribution
+                    </h2>
+                  </TooltipWrapper>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
@@ -1192,83 +1275,95 @@ const KubecostDashboard = () => {
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="mt-2 sm:mt-4 space-y-2">
-                    {costBreakdownData.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: item.color }}
-                          ></div>
-                          <span className="text-gray-600">{item.name}</span>
-                        </div>
-                        <span className="font-medium">
-                          {formatCurrency(item.value)}
-                        </span>
-                      </div>
-                    ))}
+                    {costBreakdownData.map((item, index) => {
+                      const tooltipKey = item.name.toLowerCase() + 'Distribution';
+                      return (
+                        <TooltipWrapper
+                          key={index}
+                          tooltip={POD_METRIC_TOOLTIPS[tooltipKey]}
+                        >
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: item.color }}
+                              ></div>
+                              <span className="text-gray-600">{item.name}</span>
+                            </div>
+                            <span className="font-medium">
+                              {formatCurrency(item.value)}
+                            </span>
+                          </div>
+                        </TooltipWrapper>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Idle Resources Section */}
+                {/* Idle Resources Section with Tooltip */}
                 {processedData.idle && (
-                  <div className="mt-6 sm:mt-8 bg-orange-50 rounded-xl p-4 sm:p-6 border border-orange-200">
-                    <div className="flex items-center gap-3 mb-4">
-                      <AlertCircle className="w-6 h-6 text-orange-600" />
-                      <h2 className="text-xl font-semibold text-orange-900">
-                        Idle Resources
-                      </h2>
+                  <TooltipWrapper
+                    tooltip={POD_METRIC_TOOLTIPS.idleCost}
+                    className="w-full"
+                  >
+                    <div className="mt-6 sm:mt-8 bg-orange-50 rounded-xl p-4 sm:p-6 border border-orange-200">
+                      <div className="flex items-center gap-3 mb-4">
+                        <AlertCircle className="w-6 h-6 text-orange-600" />
+                        <h2 className="text-xl font-semibold text-orange-900">
+                          Idle Resources
+                        </h2>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
+                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.totalCpuCost}>
+                          <div className="bg-white rounded-lg p-4 border border-orange-200">
+                            <p className="text-sm font-medium text-gray-600">
+                              CPU Cost
+                            </p>
+                            <p className="text-lg font-bold text-orange-900">
+                              <div className="flex items-center gap-2">
+                                {formatCurrency(processedData.idle.cpuCost)}
+                              </div>
+                            </p>
+                          </div>
+                        </TooltipWrapper>
+                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.totalMemoryCost}>
+                          <div className="bg-white rounded-lg p-4 border border-orange-200">
+                            <p className="text-sm font-medium text-gray-600">
+                              Memory Cost
+                            </p>
+                            <p className="text-lg font-bold text-orange-900">
+                              <div className="flex items-center gap-2">
+                                {formatCurrency(processedData.idle.ramCost)}
+                              </div>
+                            </p>
+                          </div>
+                        </TooltipWrapper>
+                        <div className="bg-white rounded-lg p-4 border border-orange-200">
+                          <p className="text-sm font-medium text-gray-600">
+                            Total Idle Cost
+                          </p>
+                          <p className="text-lg font-bold text-orange-900">
+                            <div className="flex items-center gap-2">
+                              {formatCurrency(processedData.idle.totalCost)}
+                            </div>
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-orange-700 mt-4">
+                        These costs represent unallocated cluster resources that
+                        could be optimized to reduce overall spending.
+                      </p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                      <div className="bg-white rounded-lg p-4 border border-orange-200">
-                        <p className="text-sm font-medium text-gray-600">
-                          CPU Cost
-                        </p>
-                        <p className="text-lg font-bold text-orange-900">
-                          <div className="flex items-center gap-2">
-                            {formatCurrency(processedData.idle.cpuCost)}
-                          </div>
-                        </p>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 border border-orange-200">
-                        <p className="text-sm font-medium text-gray-600">
-                          Memory Cost
-                        </p>
-                        <p className="text-lg font-bold text-orange-900">
-                          <div className="flex items-center gap-2">
-                            {formatCurrency(processedData.idle.ramCost)}
-                          </div>
-                        </p>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 border border-orange-200">
-                        <p className="text-sm font-medium text-gray-600">
-                          Total Idle Cost
-                        </p>
-                        <p className="text-lg font-bold text-orange-900">
-                          <div className="flex items-center gap-2">
-                            {formatCurrency(processedData.idle.totalCost)}
-                          </div>
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-sm text-orange-700 mt-4">
-                      These costs represent unallocated cluster resources that
-                      could be optimized to reduce overall spending.
-                    </p>
-                  </div>
+                  </TooltipWrapper>
                 )}
               </div>
             </div>
 
-            {/* Pod Details Table */}
+            {/* Pod Details Table with Enhanced Tooltips */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
               <div className="p-4 sm:p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text">
-                    Pod Cost Allocation Details
-                  </h2>
+                  <h2 className="text-xl font-semibold">Pod Cost Allocation Details</h2>
                   <div className="text-sm text-gray-500">
                     {totalItems} items • Page {currentPage} of {totalPages}
                   </div>
@@ -1276,41 +1371,90 @@ const KubecostDashboard = () => {
               </div>
 
               <div className="overflow-x-auto w-full">
-                <table className="min-w-[600px] w-full">
+                <table className="min-w-[1200px] w-full table-fixed">
                   <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
+                      {/* Pod Name */}
                       <th
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        className="w-1/3 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("name")}
                       >
-                        Pod Name {getSortIcon("name")}
+                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podName}>
+                          <div className="flex items-center gap-1">
+                            <span>Pod Name {getSortIcon("name")}</span>
+
+                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
+                          </div>
+                        </TooltipWrapper>
+
                       </th>
+
+                      {/* CPU Cost */}
                       <th
-                        className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("cpuCost")}
                       >
-                        CPU Cost {getSortIcon("cpuCost")}
+                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podCpuCost}>
+                          <div className="flex items-center justify-center gap-1">
+                            <span>CPU Cost {getSortIcon("cpuCost")}</span>
+                          </div>
+                        </TooltipWrapper>
                       </th>
+
+                      {/* Memory Cost */}
                       <th
-                        className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("ramCost")}
                       >
-                        Memory Cost {getSortIcon("ramCost")}
+                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podMemoryCost}>
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Memory Cost {getSortIcon("ramCost")}</span>
+                          </div>
+
+                          {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
+                        </TooltipWrapper>
+
                       </th>
+
+                      {/* Storage Cost */}
                       <th
-                        className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("pvCost")}
-                      >
-                        Storage Cost {getSortIcon("pvCost")}
+                      >                  <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podStorageCost}>
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Storage Cost {getSortIcon("pvCost")}</span>
+                          </div>
+
+                          {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
+                        </TooltipWrapper>
+
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Efficiency
+
+                      {/* Efficiency */}
+                      <th className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podTotalEfficiency}>
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Efficiency</span>
+                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
+                          </div>
+                        </TooltipWrapper>
+
                       </th>
+
+                      {/* Total Cost */}
                       <th
-                        className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("totalCost")}
                       >
-                        Total Cost {getSortIcon("totalCost")}
+                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podTotalCost}>
+                          <div className="flex items-center justify-center gap-1">
+                            <span>Total Cost {getSortIcon("totalCost")}</span>
+
+                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
+                          </div>
+                        </TooltipWrapper>
+
                       </th>
                     </tr>
                   </thead>
@@ -1318,65 +1462,76 @@ const KubecostDashboard = () => {
                     {paginatedPods.map((pod) => (
                       <tr
                         key={pod.id}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-gray-50 transition-colors cursor-pointer"
                         onClick={() => handlePodDetails(pod.name)}
                       >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                        <td className="px-4 py-4">
+                          <div className="flex items-center min-w-0">
+                            <div className="p-2 bg-blue-100 rounded-lg mr-3 flex-shrink-0">
                               <Database className="w-4 h-4 text-blue-600" />
                             </div>
-                            <div>
-                              <div className="text-sm font-medium text-gray-900 cursor-pointer">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-sm font-medium text-gray-900 truncate" title={pod.name}>
                                 {pod.name}
                               </div>
-                              <div className="text-xs text-gray-500">
-                                CPU: {pod.cpuCoreUsageAverage?.toFixed(4)} /{" "}
-                                {pod.cpuCoreRequestAverage} cores
-                              </div>
+                              <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podCpuUsage}>
+                                <div className="text-xs text-gray-500 truncate">
+                                  CPU: {(pod.cpuCoreUsageAverage || 0).toFixed(4)} / {(pod.cpuCoreRequestAverage || 0).toFixed(3)} cores
+                                </div>
+                              </TooltipWrapper>
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-4 text-center">
                           <div className="text-sm font-medium text-gray-900">
-                            {formatCurrency(pod.cpuCost)}
+                            {formatCurrency(pod.cpuCost || 0)}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {typeof pod?.cpuEfficiency === "number"
-                              ? pod.cpuEfficiency
-                              : 0.0}
-                            % used
-                          </div>
+                          <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podCpuEfficiency}>
+                            <div className="text-xs text-gray-500">
+                              {(typeof pod?.cpuEfficiency === "number" && !isNaN(pod.cpuEfficiency)
+                                ? parseFloat(pod.cpuEfficiency).toFixed(1)
+                                : "0.0")}% used
+                            </div>
+                          </TooltipWrapper>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-4 text-center">
                           <div className="text-sm font-medium text-gray-900">
-                            {formatCurrency(pod.ramCost)}
+                            {formatCurrency(pod.ramCost || 0)}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {pod.ramUsageGB}GB / {pod.ramRequestGB}GB
-                          </div>
+                          <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podMemoryUsage + " vs " + POD_METRIC_TOOLTIPS.podMemoryRequest}>
+                            <div className="text-xs text-gray-500">
+                              {(pod.ramUsageGB || 0)}GB / {(pod.ramRequestGB || 0)}GB
+                            </div>
+                          </TooltipWrapper>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-4 text-center">
                           <div className="text-sm font-medium text-gray-900">
                             {formatCurrency(pod.pvCost || 0)}
                           </div>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <div
-                            className={`... ${
-                              pod.totalEfficiency * 100 > 50
-                                ? "bg-green-100 text-green-800"
-                                : pod.totalEfficiency * 100 > 20
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {(pod.totalEfficiency * 100).toFixed(1)}%
+                          <div className="text-xs text-gray-500">
+                            {formatBytes(pod.pvBytes || 0)}
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-4 py-4 text-center">
+                          <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podTotalEfficiency}>
+                            <div
+                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${(pod.totalEfficiency || 0) * 100 > 50
+                                ? "bg-green-100 text-green-800"
+                                : (pod.totalEfficiency || 0) * 100 > 20
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                                }`}
+                            >
+                              {((pod.totalEfficiency || 0) * 100).toFixed(1)}%
+                            </div>
+                          </TooltipWrapper>
+                        </td>
+                        <td className="px-4 py-4 text-center">
                           <div className="text-sm font-bold text-gray-900">
-                            {formatCurrency(pod.totalCost)}
+                            {formatCurrency(pod.totalCost || 0)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Last {selectedTimeRange}
                           </div>
                         </td>
                       </tr>
@@ -1449,11 +1604,10 @@ const KubecostDashboard = () => {
                               <button
                                 key={pageNum}
                                 onClick={() => handlePageChange(pageNum)}
-                                className={`px-3 py-1 text-sm border rounded ${
-                                  currentPage === pageNum
-                                    ? "bg-blue-500 text-white border-blue-500"
-                                    : "border-gray-300 hover:bg-gray-100"
-                                }`}
+                                className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
+                                  ? "bg-blue-500 text-white border-blue-500"
+                                  : "border-gray-300 hover:bg-gray-100"
+                                  }`}
                               >
                                 {pageNum}
                               </button>

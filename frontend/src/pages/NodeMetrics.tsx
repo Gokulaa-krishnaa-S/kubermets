@@ -12,7 +12,75 @@ import {
   AlertCircle,
   WifiOff,
   RefreshCw,
+  
 } from "lucide-react";
+
+const NODE_METRIC_TOOLTIPS = {
+  // Overall node metrics
+  activeNodes: "Total number of nodes currently counted (including idle nodes) in the cluster",
+  totalNodeCost: "Sum of all node costs during the selected time period",
+  avgCpuUsage: "Average CPU usage across all nodes: (sum of node CPU usage %) ÷ total nodes",
+  avgEfficiency: "Average efficiency across all nodes: (sum of node efficiency %) ÷ total nodes",
+
+  // Node status distribution
+  healthyNodes: "Number of nodes in a healthy state (default from node_status unless overridden by CPU/Memory thresholds)",
+  warningNodes: "Number of nodes in warning state (CPU > 80% or RAM > 85%)",
+  criticalNodes: "Number of nodes in critical state (CPU > 90% or RAM > 95%)",
+
+  // Cost breakdown
+  ramCost: "Total cost attributed to RAM usage across all nodes",
+  storageCost: "Total cost attributed to storage usage across all nodes",
+  cpuCost: "Total cost attributed to CPU usage across all nodes",
+  pvCost: "Persistent volume cost (if applicable) attributed to nodes",
+
+  // Resource utilization
+  nodeCpuUsage: "CPU usage percentage per node = (CPU cores used ÷ CPU cores requested) × 100",
+  nodeRamUsage: "RAM usage percentage per node = (Memory used ÷ Memory requested) × 100 (capped at 100%)",
+  nodeEfficiency: "Efficiency percentage per node = efficiency_percent × 100",
+
+  // Node details
+  nodeStatus: "Current operational state of the node (overridden to Warning or Critical based on utilization thresholds)",
+  nodeCpu: "Node CPU utilization percentage = (CPU cores used ÷ CPU cores requested) × 100",
+  nodeMemory: "Node memory utilization percentage = (Memory used ÷ Memory requested) × 100",
+  nodeCost: "Total cost incurred by this node during the selected time period",
+  nodeEfficiencyUsage: "Efficiency usage percentage for this node = efficiency_percent × 100",
+  nodeUptime: "Time since node became active, calculated from start and end timestamps",
+  totalNodes: "Total number of nodes currently active in the cluster"
+};
+
+
+// Tooltip Component
+const TooltipWrapper = ({ children, tooltip, className = "" }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div className={`relative group inline-block ${className}`}>
+      {/* Wrapped content */}
+      {children}
+
+      {/* Info icon (only visible on hover of parent) */}
+      <div
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
+        <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" />
+      </div>
+
+      {/* Tooltip */}
+      {showTooltip && tooltip && (
+        <div className="absolute top-8 right-0 z-50 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border">
+          <div className="relative">
+            {tooltip}
+            {/* Tooltip arrow */}
+            <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 import {
   BarChart,
   Bar,
@@ -839,6 +907,8 @@ const NodeMetricsDashboard = () => {
         {/* Loading Banner */}
         {isLoadingData && <LoadingBanner message="Loading node data..." />}
 
+        
+
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
@@ -853,7 +923,10 @@ const NodeMetricsDashboard = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
+ {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
+        
+        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.activeNodes}>
           <MetricCard
             title="Active Nodes"
             value={summaryStats.totalNodes?.toString() || "0"}
@@ -862,7 +935,9 @@ const NodeMetricsDashboard = () => {
             status="info"
             trend={undefined}
           />
+        </TooltipWrapper>
 
+        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.totalNodeCost}>
           <MetricCard
             title="Total Cost"
             value={`${summaryStats.totalCost?.toFixed(2) || "0.00"}`}
@@ -873,7 +948,9 @@ const NodeMetricsDashboard = () => {
             status="info"
             trend={undefined}
           />
+        </TooltipWrapper>
 
+        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgCpuUsage}>
           <MetricCard
             title="Avg CPU Usage"
             value={`${summaryStats.avgCpuUsage?.toFixed(1) || "0.0"}%`}
@@ -886,7 +963,9 @@ const NodeMetricsDashboard = () => {
             }
             trend={undefined}
           />
+        </TooltipWrapper>
 
+        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgEfficiency}>
           <MetricCard
             title="Avg Efficiency"
             value={`${summaryStats.avgEfficiency?.toFixed(1) || "0.0"}%`}
@@ -899,7 +978,10 @@ const NodeMetricsDashboard = () => {
             }
             trend={undefined}
           />
-        </div>
+        </TooltipWrapper>
+
+      </div>
+
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
@@ -1134,228 +1216,72 @@ const NodeMetricsDashboard = () => {
         </Card>
 
         {/* Node Details Table */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-base sm:text-lg">
-                <div className="p-1.5 rounded bg-purple-100 dark:bg-purple-900/30">
-                  <Server className="w-4 h-4 text-purple-600" />
-                </div>
-                Node Details
-                {/* {serverStatus === "down" && (
-                  <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded ml-2">
-                    Offline Data
-                  </span>
-                )} */}
+  {/* Node Details Table */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-base sm:text-lg">
+              <div className="p-1.5 rounded bg-purple-100 dark:bg-purple-900/30">
+                <Server className="w-4 h-4 text-purple-600" />
               </div>
-              <div className="text-sm text-muted-foreground">
-                {totalItems} nodes total
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {/* Mobile View */}
-            <div className="block lg:hidden space-y-4">
-              {currentNodes.map((node, index) => (
-                <Card
-                  key={startIndex + index}
-                  className={`p-4 bg-muted/30 ${
-                    serverStatus === "down" ? "opacity-75" : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <Server className="w-4 h-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{node.name}</span>
-                    </div>
-                    <StatusBadge status={node.status} />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                        <Cpu className="w-3 h-3" />
-                        <span>CPU</span>
-                      </div>
-                      <div className="font-medium">{node.cpuUsage}%</div>
-                      <div className="text-muted-foreground">
-                        {node.cpuCores} cores
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                        <Activity className="w-3 h-3" />
-                        <span>Memory</span>
-                      </div>
-                      <div className="font-medium">{node.ramUtilization}%</div>
-                      <div className="text-muted-foreground">
-                        {node.ramUsage}GB used
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                        <DollarSign className="w-3 h-3" />
-                        <span>Cost</span>
-                      </div>
-                      <div className="font-medium">${node.totalCost}</div>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                        <Zap className="w-3 h-3" />
-                        <span>Efficiency</span>
-                      </div>
-                      <div
-                        className={`font-medium ${
-                          parseFloat(node.efficiency) > 50
-                            ? "text-emerald-600"
-                            : parseFloat(node.efficiency) > 30
-                            ? "text-amber-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {node.efficiency}%
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground mt-3">
-                    <Clock className="w-3 h-3" />
-                    <span>Uptime: {node.uptime}</span>
-                  </div>
-                </Card>
-              ))}
-
-              {currentNodes.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Server className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No nodes found</p>
-                  {serverStatus === "down" && (
-                    <p className="text-sm text-red-600 mt-2">
-                      Connection lost - showing cached data
-                    </p>
-                  )}
-                </div>
-              )}
+              Node Details
             </div>
-
-            {/* Desktop Table View */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table
-                className={`w-full ${
-                  serverStatus === "down" ? "opacity-75" : ""
-                }`}
-              >
-                <thead>
-                  <tr
-                    className="border-b"
-                    style={{ color: "hsl(var(--primary))" }}
-                  >
-                    <th className="text-left p-4 font-medium">Node</th>
-                    <th className="text-left p-4 font-medium">Status</th>
-                    <th className="text-left p-4 font-medium">CPU</th>
-                    <th className="text-left p-4 font-medium">Memory</th>
-                    <th className="text-left p-4 font-medium">Cost</th>
-                    <th className="text-left p-4 font-medium">Efficiency</th>
-                    <th className="text-left p-4 font-medium">Uptime</th>
+            <div className="text-sm text-muted-foreground">
+              {totalItems} nodes total
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="hidden lg:block overflow-x-auto">
+            <table className={`w-full ${serverStatus === "down" ? "opacity-75" : ""}`}>
+              <thead>
+                <tr className="border-b" style={{ color: "hsl(var(--primary))" }}>
+                  <th className="text-left p-4 font-medium">Node</th>
+                  <th className="text-left p-4 font-medium">
+                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeStatus}>Status</TooltipWrapper>
+                  </th>
+                  <th className="text-left p-4 font-medium">
+                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCpu}>CPU</TooltipWrapper>
+                  </th>
+                  <th className="text-left p-4 font-medium">
+                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeMemory}>Memory</TooltipWrapper>
+                  </th>
+                  <th className="text-left p-4 font-medium">
+                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCost}>Cost</TooltipWrapper>
+                  </th>
+                  <th className="text-left p-4 font-medium">
+                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeEfficiencyUsage}>Efficiency</TooltipWrapper>
+                  </th>
+                  <th className="text-left p-4 font-medium">
+                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeUptime}>Uptime</TooltipWrapper>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentNodes.map((node, index) => (
+                  <tr key={startIndex + index} className="border-b transition-colors">
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg" style={{ background: "hsl(var(--primary) / 0.1)" }}>
+                          <Server className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
+                        </div>
+                        <span className="font-medium">{node.name}</span>
+                      </div>
+                    </td>
+                    <td className="p-4"><StatusBadge status={node.status} /></td>
+                    <td className="p-4">{node.cpuUsage}%</td>
+                    <td className="p-4">{node.ramUtilization}%</td>
+                    <td className="p-4">${node.totalCost}</td>
+                    <td className="p-4">{node.efficiency}%</td>
+                    <td className="p-4">{node.uptime}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {currentNodes.map((node, index) => (
-                    <tr
-                      key={startIndex + index}
-                      className="border-b transition-colors"
-                      style={{
-                        color: "hsl(var(--foreground))",
-                        backgroundColor: undefined,
-                      }}
-                    >
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="p-2 rounded-lg"
-                            style={{ background: "hsl(var(--primary) / 0.1)" }}
-                          >
-                            <Server
-                              className="w-4 h-4"
-                              style={{ color: "hsl(var(--primary))" }}
-                            />
-                          </div>
-                          <span className="font-medium">{node.name}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <StatusBadge status={node.status} />
-                      </td>
-                      <td className="p-4">
-                        <div className="space-y-1">
-                          <div className="font-medium">{node.cpuUsage}%</div>
-                          <div className="text-muted-foreground text-sm">
-                            {node.cpuCores} cores
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="space-y-1">
-                          <div className="font-medium">
-                            {node.ramUtilization}%
-                          </div>
-                          <div className="text-muted-foreground text-sm">
-                            {node.ramUsage}GB used
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="space-y-1">
-                          <div className="font-medium">${node.totalCost}</div>
-                          <div className="text-muted-foreground text-sm">
-                            CPU: ${node.cpuCost} | RAM: ${node.ramCost}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`font-medium ${
-                            parseFloat(node.efficiency) > 50
-                              ? "text-emerald-600"
-                              : parseFloat(node.efficiency) > 30
-                              ? "text-amber-600"
-                              : "text-red-600"
-                          }`}
-                        >
-                          {node.efficiency}%
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          {node.uptime}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
-              {currentNodes.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium mb-2">No nodes found</p>
-                  <p className="text-sm">
-                    {serverStatus === "down"
-                      ? "Connection lost - unable to load node data"
-                      : "Try adjusting your filters or refresh the data"}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Pagination */}
-            {totalItems > 0 && <Pagination />}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
