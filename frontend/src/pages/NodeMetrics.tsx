@@ -596,10 +596,7 @@ const NodeMetricsDashboard = () => {
             <div className="text-xl sm:text-2xl font-bold text-foreground">
               {value}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {subtitle}
-
-            </p>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
           </div>
         </CardContent>
       </Card>
@@ -831,6 +828,7 @@ const NodeMetricsDashboard = () => {
               lastUpdated={lastUpdated}
               showRefresh={true}
               className="flex-1"
+              type="node"
             />
             <div className="ml-4">
               {/* <NetworkStatusIndicator serverStatus={serverStatus} /> */}
@@ -845,7 +843,6 @@ const NodeMetricsDashboard = () => {
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
             Node Metrics Dashboard
-
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
             Monitor cluster performance and resource utilization

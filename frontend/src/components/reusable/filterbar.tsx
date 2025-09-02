@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom";
 
 const predefinedOptions = [
   { label: "Last 24h", value: "24h" },
@@ -496,36 +496,6 @@ export const Refresh: React.FC<RefreshProps> = ({
         />
         <span className="hidden sm:inline">Refresh</span>
       </Button>
-
-      {/* <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2 text-xs sm:text-sm order-2 sm:order-3"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span className="hidden sm:inline">
-              {getRefreshLabel().replace("Every ", "")}
-            </span>
-            <span className="sm:hidden">Auto</span>
-            <ChevronDown className="w-4 h-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          {refreshOptions.map((option) => (
-            <DropdownMenuItem
-              key={option.value}
-              onClick={() => onRefreshIntervalChange(option.value)}
-              className={`cursor-pointer text-gray-700 dark:text-white ${
-                refreshInterval === option.value ? "bg-accent" : ""
-              }`}
-            >
-              {option.label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu> */}
     </div>
   );
 };
@@ -545,6 +515,7 @@ interface FilterBarProps {
   lastUpdated?: Date | null;
   showRefresh?: boolean;
   className?: string;
+  type?: string;
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({
@@ -561,9 +532,13 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   lastUpdated = null,
   showRefresh = true,
   className = "",
+  type = "",
 }) => {
+  const navigate = useNavigate();
   return (
-    <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 ${className}`}>
+    <div
+      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 ${className}`}
+    >
       {/* Time Range Selection */}
       <div className="flex-shrink-0 order-1">
         <Days
@@ -577,153 +552,91 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       {/* Filter and Refresh Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-2 flex-shrink-0 order-2">
         {/* Filter and action buttons */}
+        {type === "cluster" && (
+          <div className="flex items-center gap-2">
+            {/* Show Node + Pod buttons when in cluster view */}
+            <Button
+              variant="primary"
+              size="sm"
+              title="Navigate to Node metrics"
+              onClick={() => navigate("/metric/node")}
+            >
+              Node
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              title="Navigate to Pod metrics"
+              onClick={() => navigate("/metric/pod")}
+            >
+              Pod
+            </Button>
+          </div>
+        )}
+
+        {type === "node" && (
+          <div className="flex items-center gap-2">
+            {/* Show Cluster + Pod buttons when in node view */}
+            <Button
+              variant="primary"
+              size="sm"
+              title="Navigate to Cluster metrics"
+              onClick={() => navigate("/metric/cluster")}
+            >
+              Cluster
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              title="Navigate to Pod metrics"
+              onClick={() => navigate("/metric/pod")}
+            >
+              Pod
+            </Button>
+          </div>
+        )}
+
+        {type === "pod" && (
+          <div className="flex items-center gap-2">
+            {/* Show Cluster + Node buttons when in pod view */}
+            <Button
+              variant="primary"
+              size="sm"
+              title="Navigate to Cluster metrics"
+              onClick={() => navigate("/metric/cluster")}
+            >
+              Cluster
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              title="Navigate to Node metrics"
+              onClick={() => navigate("/metric/node")}
+            >
+              Node
+            </Button>
+          </div>
+        )}
+
+        {/* Filter + Refresh */}
         <div className="flex items-center gap-2">
           {showFilter && <FilterButton onFilterClick={onFilterClick} />}
           {showRefresh && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onRefresh(true)}
-                disabled={isRefreshing}
-                className="flex items-center gap-2 text-xs sm:text-sm"
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
-                />
-                <span className="hidden sm:inline">Refresh</span>
-              </Button>
-
-              {/* <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2 text-xs sm:text-sm"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    <span className="">
-                      {refreshInterval ? 
-                        refreshOptions.find(opt => opt.value === refreshInterval)?.label.replace("Every ", "") || "10 seconds"
-                        : "Off"
-                      }
-                    </span>
-                     <span className="sm:hidden">auto</span> 
-                    <ChevronDown className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  {refreshOptions.map((option) => (
-                    <DropdownMenuItem
-                      key={option.value}
-                      onClick={() => onRefreshIntervalChange(option.value)}
-                      className={`cursor-pointer text-gray-700 dark:text-white ${
-                        refreshInterval === option.value ? "bg-accent" : ""
-                      }`}
-                    >
-                      {option.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu> */}
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onRefresh(true)}
+              disabled={isRefreshing}
+              className="flex items-center gap-2 text-xs sm:text-sm"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+              />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
           )}
         </div>
-
-        {/* Last updated info */}
-        {/* {lastUpdated && showRefresh && (
-          <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
-            <Clock className="w-3 h-3" />
-            <span>Updated {formatLastUpdated(lastUpdated)}</span>
-          </div>
-        )} */}
       </div>
     </div>
   );
 };
-
-// Add the missing refreshOptions constant
-const refreshOptions = [
-  { label: "Every 10 seconds", value: 10000 },
-  { label: "Every 30 seconds", value: 30000 },
-  { label: "Every 1 minute", value: 60000 },
-  { label: "Every 2 minutes", value: 120000 },
-  { label: "Every 5 minutes", value: 300000 },
-  { label: "Every 10 minutes", value: 600000 },
-];
-
-// Helper function for formatLastUpdated
-const formatLastUpdated = (date: Date) => {
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  return `${Math.floor(diff / 3600)}h ago`;
-};
-
-// Demo Component
-const Demo = () => {
-  const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
-  const [refreshInterval, setRefreshInterval] = useState(10000);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
-
-  const handleRefresh = async (showToast = true) => {
-    setIsRefreshing(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setLastUpdated(new Date());
-    setIsRefreshing(false);
-  };
-
-  return (
-    <div className="p-4 sm:p-6 space-y-8 max-w-6xl mx-auto">
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Responsive Filter Bar Demo</h2>
-        <div className="border border-gray-200 rounded-lg p-4">
-          <FilterBar
-            selectedTimeRange={selectedTimeRange}
-            onTimeRangeChange={setSelectedTimeRange}
-            timeRangeVariant="select"
-            showFilter={true}
-            onFilterClick={() => alert("Filter clicked")}
-            onRefresh={handleRefresh}
-            refreshInterval={refreshInterval}
-            onRefreshIntervalChange={setRefreshInterval}
-            isRefreshing={isRefreshing}
-            lastUpdated={lastUpdated}
-          />
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-md font-medium mb-2">Button Variant Demo</h3>
-        <div className="border border-gray-200 rounded-lg p-4">
-          <FilterBar
-            selectedTimeRange={selectedTimeRange}
-            onTimeRangeChange={setSelectedTimeRange}
-            timeRangeVariant="buttons"
-            showFilter={true}
-            onFilterClick={() => alert("Filter clicked")}
-            onRefresh={handleRefresh}
-            refreshInterval={refreshInterval}
-            onRefreshIntervalChange={setRefreshInterval}
-            isRefreshing={isRefreshing}
-            lastUpdated={lastUpdated}
-          />
-        </div>
-      </div>
-
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="text-md font-medium mb-2">Current Settings:</h3>
-        <div className="space-y-1 text-sm text-gray-600">
-          <p><strong>Time Range:</strong> {selectedTimeRange}</p>
-          <p><strong>Refresh Interval:</strong> {refreshInterval ? `${refreshInterval/1000}s` : 'Off'}</p>
-          <p><strong>Last Updated:</strong> {lastUpdated.toLocaleTimeString()}</p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Demo;

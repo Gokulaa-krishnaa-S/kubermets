@@ -31,7 +31,7 @@ import ClusterService from "@/services/ClusterService";
 import podService from "@/services/podService";
 import PodDetailsModal from "@/components/modals/podDetailMetrics";
 import { Days, Refresh } from "@/components/reusable/filterbar";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import DomainDropdown from "@/components/reusable/domainDropdown";
 import { toast } from "@/components/ui/use-toast";
@@ -101,7 +101,7 @@ const KubecostDashboard = () => {
 
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
-
+  const navigate = useNavigate();
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -734,6 +734,22 @@ const KubecostDashboard = () => {
 
                 {/* Right side - Refresh Controls and Network Status */}
                 <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => navigate("/metric/cluster")}
+                    >
+                      Cluster
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => navigate("/metric/node")}
+                    >
+                      Node
+                    </Button>
+                  </div>
                   <Refresh
                     onRefresh={refreshAllData}
                     refreshInterval={refreshInterval}
