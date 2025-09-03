@@ -123,6 +123,8 @@ class NodeMetrics(Base):
     user_id = Column(Integer, nullable=False)
     # Node identification
     node_name = Column(String(255), nullable=False)
+    namespace = Column(String(255), nullable=True)
+    deployment_name = Column(String(255), nullable=True)
     cluster_name = Column(String(100), nullable=False)
 
     # Time window
@@ -225,7 +227,9 @@ class PodMetrics(Base):
     # Identification
     key = Column(String(255), nullable=False)
     namespace = Column(String(100), nullable=True)  # Added (index exists)
-    name = Column(String(100), nullable=True)  # Added (index exists)
+    name = Column(String(100), nullable=True)  
+    deployment_name = Column(String(100), nullable=True)  
+    node_name = Column(String(100), nullable=True)  
     timestamp = Column(DateTime, nullable=False)
     # Time window
     start_time = Column(DateTime, nullable=False)

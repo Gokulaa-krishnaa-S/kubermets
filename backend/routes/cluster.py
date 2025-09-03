@@ -636,6 +636,12 @@ def fetch_metrics():
                                             "cluster_name": node_allocation.get(
                                                 "cluster_name"
                                             ),
+                                            "namespace": node_allocation.get(
+                                                "namespace"
+                                            ),
+                                            "deployment_name": node_allocation.get(
+                                                "deployment_name"
+                                            ),
                                             "timestamp": node_allocation.get(
                                                 "timestamp"
                                             ),
@@ -793,6 +799,12 @@ def fetch_metrics():
                                                             ),
                                                             "name": pod_allocation.get(
                                                                 "name"
+                                                            ),
+                                                            "deployment_name": pod_allocation.get(
+                                                                "deployment_name"
+                                                            ),
+                                                            "node_name": pod_allocation.get(
+                                                                "node_name"
                                                             ),
                                                             "start_time": pod_allocation.get(
                                                                 "start_time"
