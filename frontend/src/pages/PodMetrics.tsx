@@ -14,19 +14,13 @@ import {
   User,
   WifiOff,
   RefreshCw,
-  Info
+  Info,
 } from "lucide-react";
-
-
-
-
-
-
-
 
 const POD_METRIC_TOOLTIPS = {
   // Overall pod metrics
-  totalCost: "Total pod cost (CPU + Memory + Storage + Network + Shared). Key KPI for cost tracking.",
+  totalCost:
+    "Total pod cost (CPU + Memory + Storage + Network + Shared). Key KPI for cost tracking.",
   activePods: "Number of running pods with allocated resources.",
   idleCost: "Cost of unused cluster capacity (waste).",
   avgEfficiency: "Average resource efficiency = Usage ÷ Requests.",
@@ -58,8 +52,6 @@ const POD_METRIC_TOOLTIPS = {
   podTotalCost: "Full pod cost (CPU + Memory + Storage + Network + Shared).",
 };
 
-
-
 // Tooltip Component
 const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   const [showTooltip, setShowTooltip] = useState(false);
@@ -90,9 +82,6 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
     </div>
   );
 };
-
-
-
 
 import {
   XAxis,
@@ -367,7 +356,8 @@ const KubecostDashboard = () => {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying... (${retryAttempts + 1
+              `Connection failed, retrying... (${
+                retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -812,7 +802,7 @@ const KubecostDashboard = () => {
                     <Button
                       variant="primary"
                       size="sm"
-                      onClick={() => navigate("/metric/node")}
+                      onClick={() => navigate("/metric/nodes")}
                     >
                       Node
                     </Button>
@@ -835,8 +825,8 @@ const KubecostDashboard = () => {
                       {totalItems === 0
                         ? "No pods found"
                         : totalItems === 1
-                          ? "1 pod found"
-                          : `${totalItems} pods found`}
+                        ? "1 pod found"
+                        : `${totalItems} pods found`}
                       {searchTerm && ` matching "${searchTerm}"`}
                     </span>
                     {searchTerm && (
@@ -864,8 +854,9 @@ const KubecostDashboard = () => {
                 className="w-full"
               >
                 <div
-                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === "down" ? "opacity-75" : ""
-                    }`}
+                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${
+                    serverStatus === "down" ? "opacity-75" : ""
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -899,8 +890,9 @@ const KubecostDashboard = () => {
                 className="w-full"
               >
                 <div
-                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === "down" ? "opacity-75" : ""
-                    }`}
+                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${
+                    serverStatus === "down" ? "opacity-75" : ""
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -930,7 +922,9 @@ const KubecostDashboard = () => {
                       <p className="text-2xl font-bold text">
                         {formatCurrency(processedData.idle?.totalCost || 0)}
                       </p>
-                      <p className="text-xs text-orange-600 mt-1">Unallocated</p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        Unallocated
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -950,13 +944,13 @@ const KubecostDashboard = () => {
                       <p className="text-2xl font-bold text">
                         {filteredAndSortedPods.length > 0
                           ? (
-                            (filteredAndSortedPods.reduce(
-                              (sum, pod) => sum + (pod.totalEfficiency || 0),
-                              0
-                            ) /
-                              filteredAndSortedPods.length) *
-                            100
-                          ).toFixed(1)
+                              (filteredAndSortedPods.reduce(
+                                (sum, pod) => sum + (pod.totalEfficiency || 0),
+                                0
+                              ) /
+                                filteredAndSortedPods.length) *
+                              100
+                            ).toFixed(1)
                           : "0"}
                         %
                       </p>
@@ -1040,7 +1034,9 @@ const KubecostDashboard = () => {
                       </span>
                     </div>
                   </TooltipWrapper>
-                  <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.totalStorageCost}>
+                  <TooltipWrapper
+                    tooltip={POD_METRIC_TOOLTIPS.totalStorageCost}
+                  >
                     <div className="flex items-center gap-2">
                       <div className="w-4 h-4 rounded-full bg-amber-500 shadow-sm"></div>
                       <span className="text-sm font-medium text-slate-700">
@@ -1230,7 +1226,9 @@ const KubecostDashboard = () => {
                         <div className="text-xs text-slate-600">Compute</div>
                       </div>
                     </TooltipWrapper>
-                    <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.totalStorageCost}>
+                    <TooltipWrapper
+                      tooltip={POD_METRIC_TOOLTIPS.totalStorageCost}
+                    >
                       <div className="text-center p-3 bg-amber-50 rounded-lg">
                         <div className="text-lg font-bold text-amber-600">
                           {formatCurrency(
@@ -1250,9 +1248,7 @@ const KubecostDashboard = () => {
               {/* Cost Distribution Pie Chart with Tooltips */}
               <div className="w-full">
                 <div className="bg-white rounded-xl p-4 sm:p-6 border border-slate-200 shadow-sm">
-                  <TooltipWrapper
-                    tooltip="Cost distribution breakdown shows how your cluster spending is allocated across different resource types, helping identify optimization opportunities."
-                  >
+                  <TooltipWrapper tooltip="Cost distribution breakdown shows how your cluster spending is allocated across different resource types, helping identify optimization opportunities.">
                     <h2 className="text-xl font-semibold text mb-6">
                       Cost Distribution
                     </h2>
@@ -1276,7 +1272,8 @@ const KubecostDashboard = () => {
                   </ResponsiveContainer>
                   <div className="mt-2 sm:mt-4 space-y-2">
                     {costBreakdownData.map((item, index) => {
-                      const tooltipKey = item.name.toLowerCase() + 'Distribution';
+                      const tooltipKey =
+                        item.name.toLowerCase() + "Distribution";
                       return (
                         <TooltipWrapper
                           key={index}
@@ -1314,7 +1311,9 @@ const KubecostDashboard = () => {
                         </h2>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4">
-                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.totalCpuCost}>
+                        <TooltipWrapper
+                          tooltip={POD_METRIC_TOOLTIPS.totalCpuCost}
+                        >
                           <div className="bg-white rounded-lg p-4 border border-orange-200">
                             <p className="text-sm font-medium text-gray-600">
                               CPU Cost
@@ -1326,7 +1325,9 @@ const KubecostDashboard = () => {
                             </p>
                           </div>
                         </TooltipWrapper>
-                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.totalMemoryCost}>
+                        <TooltipWrapper
+                          tooltip={POD_METRIC_TOOLTIPS.totalMemoryCost}
+                        >
                           <div className="bg-white rounded-lg p-4 border border-orange-200">
                             <p className="text-sm font-medium text-gray-600">
                               Memory Cost
@@ -1363,7 +1364,9 @@ const KubecostDashboard = () => {
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
               <div className="p-4 sm:p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Pod Cost Allocation Details</h2>
+                  <h2 className="text-xl font-semibold">
+                    Pod Cost Allocation Details
+                  </h2>
                   <div className="text-sm text-gray-500">
                     {totalItems} items • Page {currentPage} of {totalPages}
                   </div>
@@ -1386,7 +1389,6 @@ const KubecostDashboard = () => {
                             {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
                           </div>
                         </TooltipWrapper>
-
                       </th>
 
                       {/* CPU Cost */}
@@ -1394,7 +1396,9 @@ const KubecostDashboard = () => {
                         className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("cpuCost")}
                       >
-                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podCpuCost}>
+                        <TooltipWrapper
+                          tooltip={POD_METRIC_TOOLTIPS.podCpuCost}
+                        >
                           <div className="flex items-center justify-center gap-1">
                             <span>CPU Cost {getSortIcon("cpuCost")}</span>
                           </div>
@@ -1406,40 +1410,44 @@ const KubecostDashboard = () => {
                         className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("ramCost")}
                       >
-                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podMemoryCost}>
+                        <TooltipWrapper
+                          tooltip={POD_METRIC_TOOLTIPS.podMemoryCost}
+                        >
                           <div className="flex items-center justify-center gap-1">
                             <span>Memory Cost {getSortIcon("ramCost")}</span>
                           </div>
 
                           {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
                         </TooltipWrapper>
-
                       </th>
 
                       {/* Storage Cost */}
                       <th
                         className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("pvCost")}
-                      >                  <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podStorageCost}>
+                      >
+                        {" "}
+                        <TooltipWrapper
+                          tooltip={POD_METRIC_TOOLTIPS.podStorageCost}
+                        >
                           <div className="flex items-center justify-center gap-1">
                             <span>Storage Cost {getSortIcon("pvCost")}</span>
                           </div>
 
                           {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
                         </TooltipWrapper>
-
                       </th>
 
                       {/* Efficiency */}
                       <th className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-
-                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podTotalEfficiency}>
+                        <TooltipWrapper
+                          tooltip={POD_METRIC_TOOLTIPS.podTotalEfficiency}
+                        >
                           <div className="flex items-center justify-center gap-1">
                             <span>Efficiency</span>
                             {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
                           </div>
                         </TooltipWrapper>
-
                       </th>
 
                       {/* Total Cost */}
@@ -1447,14 +1455,15 @@ const KubecostDashboard = () => {
                         className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("totalCost")}
                       >
-                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podTotalCost}>
+                        <TooltipWrapper
+                          tooltip={POD_METRIC_TOOLTIPS.podTotalCost}
+                        >
                           <div className="flex items-center justify-center gap-1">
                             <span>Total Cost {getSortIcon("totalCost")}</span>
 
                             {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
                           </div>
                         </TooltipWrapper>
-
                       </th>
                     </tr>
                   </thead>
@@ -1471,12 +1480,20 @@ const KubecostDashboard = () => {
                               <Database className="w-4 h-4 text-blue-600" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="text-sm font-medium text-gray-900 truncate" title={pod.name}>
+                              <div
+                                className="text-sm font-medium text-gray-900 truncate"
+                                title={pod.name}
+                              >
                                 {pod.name}
                               </div>
-                              <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podCpuUsage}>
+                              <TooltipWrapper
+                                tooltip={POD_METRIC_TOOLTIPS.podCpuUsage}
+                              >
                                 <div className="text-xs text-gray-500 truncate">
-                                  CPU: {(pod.cpuCoreUsageAverage || 0).toFixed(4)} / {(pod.cpuCoreRequestAverage || 0).toFixed(3)} cores
+                                  CPU:{" "}
+                                  {(pod.cpuCoreUsageAverage || 0).toFixed(4)} /{" "}
+                                  {(pod.cpuCoreRequestAverage || 0).toFixed(3)}{" "}
+                                  cores
                                 </div>
                               </TooltipWrapper>
                             </div>
@@ -1486,11 +1503,15 @@ const KubecostDashboard = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {formatCurrency(pod.cpuCost || 0)}
                           </div>
-                          <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podCpuEfficiency}>
+                          <TooltipWrapper
+                            tooltip={POD_METRIC_TOOLTIPS.podCpuEfficiency}
+                          >
                             <div className="text-xs text-gray-500">
-                              {(typeof pod?.cpuEfficiency === "number" && !isNaN(pod.cpuEfficiency)
+                              {typeof pod?.cpuEfficiency === "number" &&
+                              !isNaN(pod.cpuEfficiency)
                                 ? parseFloat(pod.cpuEfficiency).toFixed(1)
-                                : "0.0")}% used
+                                : "0.0"}
+                              % used
                             </div>
                           </TooltipWrapper>
                         </td>
@@ -1498,9 +1519,16 @@ const KubecostDashboard = () => {
                           <div className="text-sm font-medium text-gray-900">
                             {formatCurrency(pod.ramCost || 0)}
                           </div>
-                          <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podMemoryUsage + " vs " + POD_METRIC_TOOLTIPS.podMemoryRequest}>
+                          <TooltipWrapper
+                            tooltip={
+                              POD_METRIC_TOOLTIPS.podMemoryUsage +
+                              " vs " +
+                              POD_METRIC_TOOLTIPS.podMemoryRequest
+                            }
+                          >
                             <div className="text-xs text-gray-500">
-                              {(pod.ramUsageGB || 0)}GB / {(pod.ramRequestGB || 0)}GB
+                              {pod.ramUsageGB || 0}GB / {pod.ramRequestGB || 0}
+                              GB
                             </div>
                           </TooltipWrapper>
                         </td>
@@ -1513,14 +1541,17 @@ const KubecostDashboard = () => {
                           </div>
                         </td>
                         <td className="px-4 py-4 text-center">
-                          <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podTotalEfficiency}>
+                          <TooltipWrapper
+                            tooltip={POD_METRIC_TOOLTIPS.podTotalEfficiency}
+                          >
                             <div
-                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${(pod.totalEfficiency || 0) * 100 > 50
-                                ? "bg-green-100 text-green-800"
-                                : (pod.totalEfficiency || 0) * 100 > 20
+                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
+                                (pod.totalEfficiency || 0) * 100 > 50
+                                  ? "bg-green-100 text-green-800"
+                                  : (pod.totalEfficiency || 0) * 100 > 20
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-red-100 text-red-800"
-                                }`}
+                              }`}
                             >
                               {((pod.totalEfficiency || 0) * 100).toFixed(1)}%
                             </div>
@@ -1604,10 +1635,11 @@ const KubecostDashboard = () => {
                               <button
                                 key={pageNum}
                                 onClick={() => handlePageChange(pageNum)}
-                                className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
-                                  ? "bg-blue-500 text-white border-blue-500"
-                                  : "border-gray-300 hover:bg-gray-100"
-                                  }`}
+                                className={`px-3 py-1 text-sm border rounded ${
+                                  currentPage === pageNum
+                                    ? "bg-blue-500 text-white border-blue-500"
+                                    : "border-gray-300 hover:bg-gray-100"
+                                }`}
                               >
                                 {pageNum}
                               </button>

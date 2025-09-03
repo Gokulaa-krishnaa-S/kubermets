@@ -559,7 +559,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               variant="primary"
               size="sm"
               title="Navigate to Node metrics"
-              onClick={() => navigate("/metric/node")}
+              onClick={() => navigate("/metric/nodes")}
             >
               Node
             </Button>
@@ -567,7 +567,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               variant="primary"
               size="sm"
               title="Navigate to Pod metrics"
-              onClick={() => navigate("/metric/pod")}
+              onClick={() => navigate("/metric/pods")}
             >
               Pod
             </Button>
@@ -589,7 +589,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               variant="primary"
               size="sm"
               title="Navigate to Pod metrics"
-              onClick={() => navigate("/metric/pod")}
+              onClick={() => navigate("/metric/pods")}
             >
               Pod
             </Button>
@@ -611,7 +611,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               variant="primary"
               size="sm"
               title="Navigate to Node metrics"
-              onClick={() => navigate("/metric/node")}
+              onClick={() => navigate("/metric/nodes")}
             >
               Node
             </Button>
