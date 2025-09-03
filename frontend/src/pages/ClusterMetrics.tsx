@@ -790,6 +790,7 @@ export default function ClusterMetrics() {
             lastUpdated={lastUpdated}
             showRefresh
             className="flex-1"
+            type="cluster"
           />
           <div className="ml-4">
             {/* <NetworkStatusIndicator serverStatus={serverStatus} /> */}
