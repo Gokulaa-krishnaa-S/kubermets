@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
+  Info,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import ClusterService from "@/services/ClusterService";
@@ -24,6 +25,69 @@ import { useCluster } from "../../src/components/context/ClusterContext";
 import TopBar from "@/components/header/header";
 import { ResponsiveLoader } from "@/components/loader/loader";
 import { useOutletContext } from "react-router-dom";
+
+// Overview page metric tooltips
+const OVERVIEW_METRIC_TOOLTIPS = {
+  // Overall metrics
+  totalClusterCost: "Sum of all cluster costs from API response. Total cost across all clusters for selected time period",
+  avgEfficiency: "Mean efficiency across all clusters calculated as (Actual resource usage / Requested resources) * 100",
+  totalNodes: "Total count of all nodes across clusters",
+  healthyNodes: "Count of nodes with healthy status",
+  warningNodes: "Count of nodes requiring attention",
+  runningPods: "Count of pods in running state",
+  totalPods: "Total pod count across all clusters",
+  idlePods: "Count of pods with idle status",
+  clusterCount: "Number of active clusters being monitored",
+  
+  // Cost breakdown
+  cpuCost: "Calculated as 63% of total cost based on typical Kubernetes resource allocation",
+  memoryCost: "Calculated as 33% of total cost for memory resources",
+  storageCost: "Calculated as 4% of total cost for persistent storage",
+  
+  // Efficiency insights
+  overallEfficiency: "Average efficiency across all clusters",
+  idleResourcesCost: "Cost of unused/idle resources from API response",
+  optimizationPotential: "Assessment of potential cost savings: High (< 50%), Medium (50-80%), Low (> 80%)",
+  
+  // Cluster details
+  clusterName: "Display name and configuration name of the cluster",
+  clusterCost: "Total cost incurred by this cluster during the selected time period",
+  clusterEfficiency: "Efficiency percentage for this cluster = efficiency_percent × 100",
+  clusterNodes: "Total number of nodes in this specific cluster",
+  clusterPods: "Total number of pods running in this specific cluster"
+};
+
+// Tooltip Component
+const TooltipWrapper = ({ children, tooltip, className = "" }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  return (
+    <div className={`relative group inline-block ${className}`}>
+      {/* Wrapped content */}
+      {children}
+
+      {/* Info icon (only visible on hover of parent) */}
+      <div
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
+        <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" />
+      </div>
+
+      {/* Tooltip */}
+      {showTooltip && tooltip && (
+        <div className="absolute top-8 right-0 z-50 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border">
+          <div className="relative">
+            {tooltip}
+            {/* Tooltip arrow */}
+            <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function Overview() {
   const [dashboardData, setDashboardData] = useState({
@@ -59,6 +123,7 @@ export default function Overview() {
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
   }, []);
+  
   const fetchDashboardSummary = async () => {
     try {
       const res = await ClusterService.getAllMetrics(); // New API method
@@ -92,6 +157,7 @@ export default function Overview() {
     onDomainSelect(clusterId);
     navigate("/metric/cluster");
   };
+  
   if (loading) {
     return (
       <Layout title="Overview" subtitle="Loading Kubernetes cost metrics...">
@@ -116,7 +182,7 @@ export default function Overview() {
       icon: <Server className="w-6 h-6" />,
       path: "/metric/cluster",
       metrics: [
-        `$${aggregated?.totalCost?.toFixed(2) || "0.00"} Total Cost`,
+        `${aggregated?.totalCost?.toFixed(2) || "0.00"} Total Cost`,
         `${
           (aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"
         }% Avg Efficiency`,
@@ -181,77 +247,85 @@ export default function Overview() {
   return (
     <div className="space-y-6 p-4 lg:p-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Cluster Cost
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              ${aggregated?.totalCost?.toFixed(2) || "0.00"}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Across {aggregated?.clusterCount || 0} clusters
-            </p>
-          </CardContent>
-        </Card>
+        <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.totalClusterCost}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Cluster Cost
+              </CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">
+                ${aggregated?.totalCost?.toFixed(2) || "0.00"}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Across {aggregated?.clusterCount || 0} clusters
+              </p>
+            </CardContent>
+          </Card>
+        </TooltipWrapper>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Avg Efficiency
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${
-                aggregated?.avgEfficiency > 0.5
-                  ? "text-green-600"
-                  : "text-yellow-600"
-              }`}
-            >
-              {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Resource utilization
-            </p>
-          </CardContent>
-        </Card>
+        <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.avgEfficiency}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Avg Efficiency
+              </CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div
+                className={`text-2xl font-bold ${
+                  aggregated?.avgEfficiency > 0.5
+                    ? "text-green-600"
+                    : "text-yellow-600"
+                }`}
+              >
+                {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Resource utilization
+              </p>
+            </CardContent>
+          </Card>
+        </TooltipWrapper>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Nodes</CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {aggregated?.totalNodes || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {aggregated?.healthyNodes || 0} healthy,{" "}
-              {aggregated?.warningNodes || 0} need attention
-            </p>
-          </CardContent>
-        </Card>
+        <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.totalNodes}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Nodes</CardTitle>
+              <Server className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {aggregated?.totalNodes || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {aggregated?.healthyNodes || 0} healthy,{" "}
+                {aggregated?.warningNodes || 0} need attention
+              </p>
+            </CardContent>
+          </Card>
+        </TooltipWrapper>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Running Pods</CardTitle>
-            <Layers className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {aggregated?.runningPods || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {aggregated?.totalPods || 0} total, {aggregated?.idlePods || 0}{" "}
-              idle
-            </p>
-          </CardContent>
-        </Card>
+        <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.runningPods}>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Running Pods</CardTitle>
+              <Layers className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-600">
+                {aggregated?.runningPods || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {aggregated?.totalPods || 0} total, {aggregated?.idlePods || 0}{" "}
+                idle
+              </p>
+            </CardContent>
+          </Card>
+        </TooltipWrapper>
       </div>
 
       {/* Introduction */}
@@ -371,42 +445,50 @@ export default function Overview() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm">CPU Cost</span>
+              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.cpuCost} className="w-full">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm">CPU Cost</span>
+                  </div>
+                  <span className="font-medium">
+                    $
+                    {aggregated?.totalCost
+                      ? (aggregated?.totalCost * 0.63).toFixed(2)
+                      : "0.00"}
+                  </span>
                 </div>
-                <span className="font-medium">
-                  $
-                  {aggregated?.totalCost
-                    ? (aggregated?.totalCost * 0.63).toFixed(2)
-                    : "0.00"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <MemoryStick className="w-4 h-4 text-green-500" />
-                  <span className="text-sm">Memory Cost</span>
+              </TooltipWrapper>
+              
+              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.memoryCost} className="w-full">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <MemoryStick className="w-4 h-4 text-green-500" />
+                    <span className="text-sm">Memory Cost</span>
+                  </div>
+                  <span className="font-medium">
+                    $
+                    {aggregated?.totalCost
+                      ? (aggregated?.totalCost * 0.33).toFixed(2)
+                      : "0.00"}
+                  </span>
                 </div>
-                <span className="font-medium">
-                  $
-                  {aggregated?.totalCost
-                    ? (aggregated?.totalCost * 0.33).toFixed(2)
-                    : "0.00"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <HardDrive className="w-4 h-4 text-purple-500" />
-                  <span className="text-sm">Storage Cost</span>
+              </TooltipWrapper>
+              
+              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.storageCost} className="w-full">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <HardDrive className="w-4 h-4 text-purple-500" />
+                    <span className="text-sm">Storage Cost</span>
+                  </div>
+                  <span className="font-medium">
+                    $
+                    {aggregated?.totalCost
+                      ? (aggregated?.totalCost * 0.04).toFixed(2)
+                      : "0.00"}
+                  </span>
                 </div>
-                <span className="font-medium">
-                  $
-                  {aggregated?.totalCost
-                    ? (aggregated?.totalCost * 0.04).toFixed(2)
-                    : "0.00"}
-                </span>
-              </div>
+              </TooltipWrapper>
             </div>
           </CardContent>
         </Card>
@@ -417,39 +499,47 @@ export default function Overview() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Overall Efficiency</span>
-                <div className="flex items-center gap-2">
-                  {getStatusIcon(
-                    aggregated?.avgEfficiency > 0.5 ? "healthy" : "warning"
-                  )}
-                  <span
-                    className={`font-medium ${
-                      aggregated?.avgEfficiency > 0.5
-                        ? "text-green-600"
-                        : "text-yellow-600"
-                    }`}
-                  >
-                    {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
+              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.overallEfficiency} className="w-full">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Overall Efficiency</span>
+                  <div className="flex items-center gap-2">
+                    {getStatusIcon(
+                      aggregated?.avgEfficiency > 0.5 ? "healthy" : "warning"
+                    )}
+                    <span
+                      className={`font-medium ${
+                        aggregated?.avgEfficiency > 0.5
+                          ? "text-green-600"
+                          : "text-yellow-600"
+                      }`}
+                    >
+                      {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
+                    </span>
+                  </div>
+                </div>
+              </TooltipWrapper>
+              
+              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.idleResourcesCost} className="w-full">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Idle Resources</span>
+                  <span className="font-medium text-red-600">
+                    ${aggregated?.idleCost?.toFixed(2) || "0.00"}
                   </span>
                 </div>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Idle Resources</span>
-                <span className="font-medium text-red-600">
-                  ${aggregated?.idleCost?.toFixed(2) || "0.00"}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Optimization Potential</span>
-                <span className="font-medium text-green-600">
-                  {aggregated?.avgEfficiency < 0.5
-                    ? "High"
-                    : aggregated?.avgEfficiency < 0.8
-                    ? "Medium"
-                    : "Low"}
-                </span>
-              </div>
+              </TooltipWrapper>
+              
+              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.optimizationPotential} className="w-full">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Optimization Potential</span>
+                  <span className="font-medium text-green-600">
+                    {aggregated?.avgEfficiency < 0.5
+                      ? "High"
+                      : aggregated?.avgEfficiency < 0.8
+                      ? "Medium"
+                      : "Low"}
+                  </span>
+                </div>
+              </TooltipWrapper>
             </div>
           </CardContent>
         </Card>
@@ -471,7 +561,7 @@ export default function Overview() {
 
           <CardContent className="pt-0">
             {/* Desktop Table View */}
-            <div className=" overflow-x-auto">
+            <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr
@@ -479,11 +569,31 @@ export default function Overview() {
                     style={{ color: "hsl(var(--primary))" }}
                   >
                     <th className="text-left p-4 font-medium">S.No</th>
-                    <th className="text-left p-4 font-medium">Cluster</th>
-                    <th className="text-left p-4 font-medium">Cost</th>
-                    <th className="text-left p-4 font-medium">Efficiency</th>
-                    <th className="text-left p-4 font-medium">Nodes</th>
-                    <th className="text-left p-4 font-medium">Pods</th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterName}>
+                        <span>Cluster</span>
+                      </TooltipWrapper>
+                    </th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterCost}>
+                        <span>Cost</span>
+                      </TooltipWrapper>
+                    </th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterEfficiency}>
+                        <span>Efficiency</span>
+                      </TooltipWrapper>
+                    </th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterNodes}>
+                        <span>Nodes</span>
+                      </TooltipWrapper>
+                    </th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterPods}>
+                        <span>Pods</span>
+                      </TooltipWrapper>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -550,6 +660,5 @@ export default function Overview() {
         </Card>
       )}
     </div>
-    // </Layout>
   );
 }
