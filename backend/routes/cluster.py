@@ -345,8 +345,8 @@ def dashboard_summary():
             session.query(ClusterMetrics)
             .filter(
                 ClusterMetrics.user_id == user_id,
-                ClusterMetrics.timestamp >= start_time,
-                ClusterMetrics.timestamp <= end_time,
+                ClusterMetrics.window_end > start_time,    
+                ClusterMetrics.window_start < end_time,  
             )
             .all()
         )
@@ -416,8 +416,9 @@ def dashboard_summary():
                 .filter(
                     NodeMetrics.user_id == user_id,
                     NodeMetrics.cluster_id == cluster_id,
-                    NodeMetrics.timestamp >= start_time,
-                    NodeMetrics.timestamp <= end_time,
+                    NodeMetrics.window_end > start_time,    
+                    NodeMetrics.window_start < end_time,  
+                    
                 )
                 .all()
             )
@@ -428,8 +429,9 @@ def dashboard_summary():
                 .filter(
                     PodMetrics.user_id == user_id,
                     PodMetrics.cluster_id == cluster_id,
-                    PodMetrics.timestamp >= start_time,
-                    PodMetrics.timestamp <= end_time,
+                    PodMetrics.end_time > start_time,    
+                    PodMetrics.start_time < end_time,  
+                   
                 )
                 .all()
             )

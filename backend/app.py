@@ -16,6 +16,8 @@ load_dotenv()
 from routes.cluster import clusters_bp
 from routes.node import nodes_bp
 from routes.pod import pods_bp   
+from routes.helpers import helper_bp
+
 from models.model import db_manager
 
 # Configure logging
@@ -39,8 +41,8 @@ def create_app():
     # Register blueprints
     app.register_blueprint(clusters_bp)
     app.register_blueprint(nodes_bp)  
-    app.register_blueprint(pods_bp)    # For /v1/nodes
-
+    app.register_blueprint(pods_bp) 
+    app.register_blueprint(helper_bp)
 
     # Setup Swagger documentation
     swagger = Swagger(app, template_file="./docs/swagger.yaml")
