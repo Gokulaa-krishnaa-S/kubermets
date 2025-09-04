@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import AdvancedFilter from "@/components/reusable/advancedFilter";
 import {
   Server,
   Cpu,
@@ -12,18 +13,23 @@ import {
   AlertCircle,
   WifiOff,
   RefreshCw,
-  
+  Search,
+  X,
 } from "lucide-react";
 
 const NODE_METRIC_TOOLTIPS = {
   // Overall node metrics
-  activeNodes: "Total number of nodes currently counted (including idle nodes) in the cluster",
+  activeNodes:
+    "Total number of nodes currently counted (including idle nodes) in the cluster",
   totalNodeCost: "Sum of all node costs during the selected time period",
-  avgCpuUsage: "Average CPU usage across all nodes: (sum of node CPU usage %) ÷ total nodes",
-  avgEfficiency: "Average efficiency across all nodes: (sum of node efficiency %) ÷ total nodes",
+  avgCpuUsage:
+    "Average CPU usage across all nodes: (sum of node CPU usage %) ÷ total nodes",
+  avgEfficiency:
+    "Average efficiency across all nodes: (sum of node efficiency %) ÷ total nodes",
 
   // Node status distribution
-  healthyNodes: "Number of nodes in a healthy state (default from node_status unless overridden by CPU/Memory thresholds)",
+  healthyNodes:
+    "Number of nodes in a healthy state (default from node_status unless overridden by CPU/Memory thresholds)",
   warningNodes: "Number of nodes in warning state (CPU > 80% or RAM > 85%)",
   criticalNodes: "Number of nodes in critical state (CPU > 90% or RAM > 95%)",
 
@@ -34,20 +40,26 @@ const NODE_METRIC_TOOLTIPS = {
   pvCost: "Persistent volume cost (if applicable) attributed to nodes",
 
   // Resource utilization
-  nodeCpuUsage: "CPU usage percentage per node = (CPU cores used ÷ CPU cores requested) × 100",
-  nodeRamUsage: "RAM usage percentage per node = (Memory used ÷ Memory requested) × 100 (capped at 100%)",
+  nodeCpuUsage:
+    "CPU usage percentage per node = (CPU cores used ÷ CPU cores requested) × 100",
+  nodeRamUsage:
+    "RAM usage percentage per node = (Memory used ÷ Memory requested) × 100 (capped at 100%)",
   nodeEfficiency: "Efficiency percentage per node = efficiency_percent × 100",
 
   // Node details
-  nodeStatus: "Current operational state of the node (overridden to Warning or Critical based on utilization thresholds)",
-  nodeCpu: "Node CPU utilization percentage = (CPU cores used ÷ CPU cores requested) × 100",
-  nodeMemory: "Node memory utilization percentage = (Memory used ÷ Memory requested) × 100",
+  nodeStatus:
+    "Current operational state of the node (overridden to Warning or Critical based on utilization thresholds)",
+  nodeCpu:
+    "Node CPU utilization percentage = (CPU cores used ÷ CPU cores requested) × 100",
+  nodeMemory:
+    "Node memory utilization percentage = (Memory used ÷ Memory requested) × 100",
   nodeCost: "Total cost incurred by this node during the selected time period",
-  nodeEfficiencyUsage: "Efficiency usage percentage for this node = efficiency_percent × 100",
-  nodeUptime: "Time since node became active, calculated from start and end timestamps",
-  totalNodes: "Total number of nodes currently active in the cluster"
+  nodeEfficiencyUsage:
+    "Efficiency usage percentage for this node = efficiency_percent × 100",
+  nodeUptime:
+    "Time since node became active, calculated from start and end timestamps",
+  totalNodes: "Total number of nodes currently active in the cluster",
 };
-
 
 // Tooltip Component
 const TooltipWrapper = ({ children, tooltip, className = "" }) => {
@@ -81,6 +93,46 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   );
 };
 
+// Search Component
+interface SearchProps {
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+const SearchInput: React.FC<SearchProps> = ({
+  searchTerm,
+  onSearchChange,
+  placeholder = "Search nodes...",
+  className = "",
+}) => {
+  return (
+    <div className={`relative ${className}`}>
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <Search className="w-4 h-4 text-gray-400" />
+      </div>
+      <input
+        type="text"
+        value={searchTerm}
+        onChange={(e) => onSearchChange(e.target.value)}
+        placeholder={placeholder}
+        className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+      />
+      {searchTerm && (
+        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+          <button
+            onClick={() => onSearchChange("")}
+            className="text-gray-400 hover:text-gray-600 focus:outline-none"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 import {
   BarChart,
   Bar,
@@ -96,8 +148,8 @@ import {
   Cell,
 } from "recharts";
 import ClusterService from "@/services/ClusterService";
-import { useSearchParams } from "react-router-dom";
-import { FilterBar } from "@/components/reusable/filterbar";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Days, Refresh } from "@/components/reusable/filterbar";
 import { toast } from "@/components/ui/use-toast";
 import DomainDropdown from "@/components/reusable/domainDropdown";
 import { Button } from "@/components/ui/button";
@@ -142,6 +194,50 @@ const NodeMetricsDashboard = () => {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
+  // Advanced Filter States
+  const [filters, setFilters] = useState({
+    pod: [],
+    deployment: [],
+    namespace: [],
+  });
+
+  // Search state
+  const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
+
+  // Mock filter data for nodes page - you should replace this with actual data
+  const nodeFilterConfig = {
+    pod: [
+      { value: "nginx-pod-1", label: "nginx-pod-1", count: 15 },
+      { value: "redis-pod-2", label: "redis-pod-2", count: 8 },
+      { value: "api-pod-3", label: "api-pod-3", count: 22 },
+      { value: "database-pod-1", label: "database-pod-1", count: 5 },
+      { value: "web-pod-1", label: "web-pod-1", count: 12 },
+    ],
+    deployment: [
+      { value: "nginx-deployment", label: "nginx-deployment", count: 15 },
+      { value: "redis-deployment", label: "redis-deployment", count: 8 },
+      { value: "api-deployment", label: "api-deployment", count: 22 },
+      { value: "database-deployment", label: "database-deployment", count: 5 },
+      { value: "web-deployment", label: "web-deployment", count: 12 },
+    ],
+    namespace: [
+      { value: "default", label: "default", count: 45 },
+      { value: "kube-system", label: "kube-system", count: 12 },
+      { value: "production", label: "production", count: 38 },
+      { value: "staging", label: "staging", count: 20 },
+      { value: "monitoring", label: "monitoring", count: 8 },
+    ],
+  };
+
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters);
+    console.log("Node Filters changed:", newFilters);
+
+    // Apply filters to your API call
+    // fetchNodeData({ ...queryParams, filters: newFilters });
+  };
+
   // Standardized connection status tracking
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
   const [connectionStatus, setConnectionStatus] = useState<
@@ -173,6 +269,11 @@ const NodeMetricsDashboard = () => {
         cluster_id: cluster_id,
         user_id: user_id,
         duration: timeRange,
+        // Add filter parameters
+        // ...(searchTerm && { search: searchTerm }),
+        // ...(filters.pod?.length > 0 && { pods: filters.pod }),
+        // ...(filters.deployment?.length > 0 && { deployments: filters.deployment }),
+        // ...(filters.namespace?.length > 0 && { namespaces: filters.namespace }),
       };
 
       const response = await NodeService.getNodeAllocationSummary(queryParams);
@@ -235,16 +336,23 @@ const NodeMetricsDashboard = () => {
           throw new Error("Invalid response format");
         }
 
-        //
         console.log(response);
         const allocations = response;
-
         const totalNodes = response.length;
 
-        //
-        const activeNodes = response.filter(
+        // Filter based on search term and filters
+        let filteredAllocations = response.filter(
           (node) => !node.node_name.startsWith("__")
         );
+
+        // Apply search filter
+        if (searchTerm) {
+          filteredAllocations = filteredAllocations.filter((node) =>
+            node.node_name.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+        }
+
+        const activeNodes = filteredAllocations;
 
         const totalCost = activeNodes.reduce(
           (sum, node) => sum + (node.total_cost || 0),
@@ -268,35 +376,6 @@ const NodeMetricsDashboard = () => {
             (sum, node) => sum + (node.efficiency_percent || 0),
             0
           ) / (activeNodes.length || 1);
-
-        //
-
-        // const allocations = response;
-        // const activeNodes = allocations.filter(
-        //   (node) =>
-        //     !node.node_name.startsWith("__") &&
-        //     node.cpu_core_request_average !== undefined
-        // );
-
-        // const totalNodes = activeNodes.length;
-        // const totalCost = activeNodes.reduce(
-        //   (sum, node) => sum + (node.total_cost || 0),
-        //   0
-        // );
-
-        // const avgCpuUsage =
-        //   activeNodes.reduce((sum, node) => {
-        //     const usage =
-        //       (node.cpu_core_usage_average || 0) /
-        //       (node.cpu_core_request_average || 1);
-        //     return sum + (isNaN(usage) ? 0 : usage);
-        //   }, 0) / totalNodes;
-
-        // const avgEfficiency =
-        //   activeNodes.reduce(
-        //     (sum, node) => sum + (node.total_efficiency * 100 || 0),
-        //     0
-        //   ) / totalNodes;
 
         setSummaryStats({
           totalNodes,
@@ -345,6 +424,10 @@ const NodeMetricsDashboard = () => {
             pvCost: node.pv_cost.toFixed(2),
             efficiency: (node.total_efficiency * 100).toFixed(2),
             uptime: calculateUptime(node.first_seen, node.last_seen),
+            // Add fields that would be used for filtering
+            pods: node.pods || [], // Assuming this comes from your API
+            deployments: node.deployments || [], // Assuming this comes from your API
+            namespaces: node.namespaces || [], // Assuming this comes from your API
           };
         });
 
@@ -395,8 +478,52 @@ const NodeMetricsDashboard = () => {
         setIsInitialLoading(false);
       }
     },
-    [thresholds, retryAttempts, maxRetries]
+    [thresholds, retryAttempts, maxRetries, searchTerm, filters]
   );
+
+  // Filter nodes based on selected filters and search term
+  const filteredNodeData = useMemo(() => {
+    if (!nodeData.length) return [];
+
+    return nodeData.filter((node) => {
+      // Apply search filter
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        if (!node.name.toLowerCase().includes(searchLower)) {
+          return false;
+        }
+      }
+
+      // Apply pod filter
+      if (filters.pod?.length > 0) {
+        const nodePods = node.pods || []; // Assuming node has pods array
+        const hasMatchingPod = nodePods.some((pod) =>
+          filters.pod.includes(pod.name || pod)
+        );
+        if (!hasMatchingPod) return false;
+      }
+
+      // Apply namespace filter
+      if (filters.namespace?.length > 0) {
+        const nodeNamespaces = node.namespaces || [];
+        const hasMatchingNamespace = nodeNamespaces.some((ns) =>
+          filters.namespace.includes(ns)
+        );
+        if (!hasMatchingNamespace) return false;
+      }
+
+      // Apply deployment filter
+      if (filters.deployment?.length > 0) {
+        const nodeDeployments = node.deployments || [];
+        const hasMatchingDeployment = nodeDeployments.some((deployment) =>
+          filters.deployment.includes(deployment)
+        );
+        if (!hasMatchingDeployment) return false;
+      }
+
+      return true;
+    });
+  }, [nodeData, filters, searchTerm]);
 
   const refreshAllData = async (showToast = true) => {
     setIsRefreshing(true);
@@ -440,13 +567,20 @@ const NodeMetricsDashboard = () => {
     refreshAllData(false);
   };
 
+  // Reset current page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters]);
+
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
     setIsInitialLoading(true);
 
     console.log(cluster_id, "cluster_id in NodeMetrics");
     setTimeRange(rangeFromUrl);
-
+    if (!cluster_id) {
+      return;
+    }
     const queryParams = {
       accumulate: true,
       aggregate: "node",
@@ -526,10 +660,6 @@ const NodeMetricsDashboard = () => {
 
   const handleRefreshIntervalChange = (interval) => {
     setRefreshInterval(interval);
-  };
-
-  const handleFilterClick = () => {
-    console.log("Filter button clicked");
   };
 
   const calculateUptime = (start, end) => {
@@ -671,7 +801,7 @@ const NodeMetricsDashboard = () => {
     );
   };
 
-  const costBreakdownData = nodeData.map((node) => ({
+  const costBreakdownData = filteredNodeData.map((node) => ({
     name: node.name
       .replace("k8gwell", "")
       .replace("worker-node-", "W")
@@ -682,7 +812,7 @@ const NodeMetricsDashboard = () => {
     total: parseFloat(node.totalCost),
   }));
 
-  const utilizationData = nodeData.map((node) => ({
+  const utilizationData = filteredNodeData.map((node) => ({
     name: node.name
       .replace("k8gwell", "")
       .replace("worker-node-", "W")
@@ -692,7 +822,7 @@ const NodeMetricsDashboard = () => {
     efficiency: parseFloat(node.efficiency),
   }));
 
-  const statusDistribution = nodeData.reduce((acc, node) => {
+  const statusDistribution = filteredNodeData.reduce((acc, node) => {
     acc[node.status] = (acc[node.status] || 0) + 1;
     return acc;
   }, {});
@@ -709,16 +839,16 @@ const NodeMetricsDashboard = () => {
   }));
 
   // Pagination logic
-  const totalItems = nodeData.length;
+  const totalItems = filteredNodeData.length;
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
-  const currentNodes = nodeData.slice(startIndex, endIndex);
+  const currentNodes = filteredNodeData.slice(startIndex, endIndex);
 
   // Reset to first page when data changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [nodeData]);
+  }, [filteredNodeData]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -868,46 +998,137 @@ const NodeMetricsDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className=" mx-auto p-4 lg:p-6">
-        {/* Standardized Connection Status Banner */}
-        {/* <ConnectionStatusBanner
-          connectionStatus={connectionStatus}
-          error={error}
-          retryAttempts={retryAttempts}
-          maxRetries={maxRetries}
-          isLoadingData={isLoadingData}
-          isRefreshing={isRefreshing}
-          onRetry={handleRetry}
-        /> */}
+        {/* Enhanced Filter Bar with Network Status Indicator */}
+        <div className="bg-white rounded-xl shadow-sm mb-6">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
+            {/* Left side - Time Range */}
+            <div className="flex items-center gap-4">
+              <Days
+                selectedTimeRange={timeRange}
+                onTimeRangeChange={handleTimeRangeChange}
+                variant="select"
+                buttonOptions={["1h", "6h", "24h", "7d", "30d"]}
+              />
+            </div>
 
-        {/* Filter Bar with Network Status Indicator */}
-        <div className="mb-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <FilterBar
-              selectedTimeRange={timeRange}
-              onTimeRangeChange={handleTimeRangeChange}
-              timeRangeVariant="select"
-              timeRangeOptions={["1h", "6h", "24h", "7d", "30d"]}
-              onFilterClick={handleFilterClick}
-              showFilter={false}
-              onRefresh={refreshAllData}
-              refreshInterval={refreshInterval}
-              onRefreshIntervalChange={handleRefreshIntervalChange}
-              isRefreshing={isRefreshing}
-              lastUpdated={lastUpdated}
-              showRefresh={true}
-              className="flex-1"
-              type="node"
-            />
-            <div className="ml-4">
-              {/* <NetworkStatusIndicator serverStatus={serverStatus} /> */}
+            {/* Center - Search */}
+            <div className="flex-1 max-w-md">
+              <SearchInput
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                placeholder="Search nodes by name"
+              />
+            </div>
+
+            {/* Right side - Filters, Navigation and Refresh Controls */}
+            <div className="flex items-center gap-3">
+              {/* Advanced Filter */}
+              <AdvancedFilter
+                pageType="node"
+                filterConfig={nodeFilterConfig}
+                filters={filters}
+                onFiltersChange={handleFiltersChange}
+                isLoading={loading}
+                showClearAll={true}
+              />
+
+              {/* Navigation buttons */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    navigate({
+                      pathname: "/metric/cluster",
+                      search: `?cluster_id=${selectedInstance.id}`,
+                    });
+                  }}
+                >
+                  Cluster
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    navigate({
+                      pathname: "/metric/pods",
+                      search: `?cluster_id=${selectedInstance.id}`,
+                    });
+                  }}
+                >
+                  Pod
+                </Button>
+              </div>
+
+              <Refresh
+                onRefresh={refreshAllData}
+                refreshInterval={refreshInterval}
+                onRefreshIntervalChange={handleRefreshIntervalChange}
+                isRefreshing={isRefreshing}
+                lastUpdated={lastUpdated}
+              />
             </div>
           </div>
+
+          {/* Search and Filter Results Info */}
+          {(searchTerm || Object.values(filters).some((f) => f.length > 0)) && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <div className="flex items-center gap-4">
+                  <span>
+                    {filteredNodeData.length === 0
+                      ? "No nodes found"
+                      : filteredNodeData.length === 1
+                      ? "1 node found"
+                      : `${filteredNodeData.length} nodes found`}
+                    {(searchTerm ||
+                      Object.values(filters).some((f) => f.length > 0)) &&
+                      " with current filters"}
+                  </span>
+
+                  {/* Show active filters */}
+                  {Object.values(filters).some((f) => f.length > 0) && (
+                    <div className="flex items-center gap-2">
+                      <span>Filters:</span>
+                      {Object.entries(filters).map(
+                        ([filterType, filterValues]) => {
+                          if (!filterValues || filterValues.length === 0)
+                            return null;
+                          return (
+                            <span
+                              key={filterType}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                            >
+                              {filterType}: {filterValues.length}
+                            </span>
+                          );
+                        }
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {(searchTerm ||
+                  Object.values(filters).some((f) => f.length > 0)) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setFilters({ pod: [], deployment: [], namespace: [] });
+                    }}
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Loading Banner */}
         {isLoadingData && <LoadingBanner message="Loading node data..." />}
-
-        
 
         {/* Header */}
         <div className="mb-6">
@@ -916,72 +1137,99 @@ const NodeMetricsDashboard = () => {
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base">
             Monitor cluster performance and resource utilization
-            {/* {serverStatus === "down" && (
-              <span className="text-red-600 ml-2">- Showing cached data</span>
-            )} */}
           </p>
         </div>
 
         {/* Summary Cards */}
- {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
-        
-        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.activeNodes}>
-          <MetricCard
-            title="Active Nodes"
-            value={summaryStats.totalNodes?.toString() || "0"}
-            subtitle="All nodes operational"
-            icon={<Server className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
-            status="info"
-            trend={undefined}
-          />
-        </TooltipWrapper>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
+          <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.activeNodes}>
+            <MetricCard
+              title="Active Nodes"
+              value={filteredNodeData.length?.toString() || "0"}
+              subtitle="Filtered nodes shown"
+              icon={<Server className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
+              status="info"
+              trend={undefined}
+            />
+          </TooltipWrapper>
 
-        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.totalNodeCost}>
-          <MetricCard
-            title="Total Cost"
-            value={`${summaryStats.totalCost?.toFixed(2) || "0.00"}`}
-            subtitle={`Last ${timeRange}`}
-            icon={
-              <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
-            }
-            status="info"
-            trend={undefined}
-          />
-        </TooltipWrapper>
+          <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.totalNodeCost}>
+            <MetricCard
+              title="Total Cost"
+              value={`${
+                filteredNodeData
+                  .reduce((sum, node) => sum + parseFloat(node.totalCost), 0)
+                  .toFixed(2) || "0.00"
+              }`}
+              subtitle={`Last ${timeRange}`}
+              icon={
+                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+              }
+              status="info"
+              trend={undefined}
+            />
+          </TooltipWrapper>
 
-        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgCpuUsage}>
-          <MetricCard
-            title="Avg CPU Usage"
-            value={`${summaryStats.avgCpuUsage?.toFixed(1) || "0.0"}%`}
-            subtitle="Across all nodes"
-            icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />}
-            status={
-              summaryStats.avgCpuUsage > thresholds.cpuUsageWarning
-                ? "warning"
-                : "healthy"
-            }
-            trend={undefined}
-          />
-        </TooltipWrapper>
+          <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgCpuUsage}>
+            <MetricCard
+              title="Avg CPU Usage"
+              value={`${
+                filteredNodeData.length > 0
+                  ? (
+                      filteredNodeData.reduce(
+                        (sum, node) => sum + parseFloat(node.cpuUsage),
+                        0
+                      ) / filteredNodeData.length
+                    ).toFixed(1)
+                  : "0.0"
+              }%`}
+              subtitle="Across filtered nodes"
+              icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />}
+              status={
+                filteredNodeData.length > 0 &&
+                filteredNodeData.reduce(
+                  (sum, node) => sum + parseFloat(node.cpuUsage),
+                  0
+                ) /
+                  filteredNodeData.length >
+                  thresholds.cpuUsageWarning
+                  ? "warning"
+                  : "healthy"
+              }
+              trend={undefined}
+            />
+          </TooltipWrapper>
 
-        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgEfficiency}>
-          <MetricCard
-            title="Avg Efficiency"
-            value={`${summaryStats.avgEfficiency?.toFixed(1) || "0.0"}%`}
-            subtitle="Resource utilization"
-            icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
-            status={
-              summaryStats.avgEfficiency < thresholds.efficiencyWarning
-                ? "warning"
-                : "healthy"
-            }
-            trend={undefined}
-          />
-        </TooltipWrapper>
-
-      </div>
-
+          <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgEfficiency}>
+            <MetricCard
+              title="Avg Efficiency"
+              value={`${
+                filteredNodeData.length > 0
+                  ? (
+                      filteredNodeData.reduce(
+                        (sum, node) => sum + parseFloat(node.efficiency),
+                        0
+                      ) / filteredNodeData.length
+                    ).toFixed(1)
+                  : "0.0"
+              }%`}
+              subtitle="Resource utilization"
+              icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
+              status={
+                filteredNodeData.length > 0 &&
+                filteredNodeData.reduce(
+                  (sum, node) => sum + parseFloat(node.efficiency),
+                  0
+                ) /
+                  filteredNodeData.length <
+                  thresholds.efficiencyWarning
+                  ? "warning"
+                  : "healthy"
+              }
+              trend={undefined}
+            />
+          </TooltipWrapper>
+        </div>
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
@@ -993,11 +1241,6 @@ const NodeMetricsDashboard = () => {
                   <Activity className="w-4 h-4 text-primary" />
                 </div>
                 Node Status Distribution
-                {/* {serverStatus === "down" && (
-                  <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
-                    Offline Data
-                  </span>
-                )} */}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -1044,11 +1287,6 @@ const NodeMetricsDashboard = () => {
                   <DollarSign className="w-4 h-4 text-emerald-600" />
                 </div>
                 Cost Breakdown by Node
-                {/* {serverStatus === "down" && (
-                  <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
-                    Offline Data
-                  </span>
-                )} */}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
@@ -1120,11 +1358,6 @@ const NodeMetricsDashboard = () => {
                 </div>
                 Resource Utilization Trends
               </div>
-              {/* {serverStatus === "down" && (
-                <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
-                  Offline Data
-                </span>
-              )} */}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -1216,72 +1449,105 @@ const NodeMetricsDashboard = () => {
         </Card>
 
         {/* Node Details Table */}
-  {/* Node Details Table */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-base sm:text-lg">
-              <div className="p-1.5 rounded bg-purple-100 dark:bg-purple-900/30">
-                <Server className="w-4 h-4 text-purple-600" />
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-base sm:text-lg">
+                <div className="p-1.5 rounded bg-purple-100 dark:bg-purple-900/30">
+                  <Server className="w-4 h-4 text-purple-600" />
+                </div>
+                Node Details
               </div>
-              Node Details
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {totalItems} nodes total
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0">
-          <div className="hidden lg:block overflow-x-auto">
-            <table className={`w-full ${serverStatus === "down" ? "opacity-75" : ""}`}>
-              <thead>
-                <tr className="border-b" style={{ color: "hsl(var(--primary))" }}>
-                  <th className="text-left p-4 font-medium">Node</th>
-                  <th className="text-left p-4 font-medium">
-                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeStatus}>Status</TooltipWrapper>
-                  </th>
-                  <th className="text-left p-4 font-medium">
-                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCpu}>CPU</TooltipWrapper>
-                  </th>
-                  <th className="text-left p-4 font-medium">
-                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeMemory}>Memory</TooltipWrapper>
-                  </th>
-                  <th className="text-left p-4 font-medium">
-                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCost}>Cost</TooltipWrapper>
-                  </th>
-                  <th className="text-left p-4 font-medium">
-                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeEfficiencyUsage}>Efficiency</TooltipWrapper>
-                  </th>
-                  <th className="text-left p-4 font-medium">
-                    <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeUptime}>Uptime</TooltipWrapper>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentNodes.map((node, index) => (
-                  <tr key={startIndex + index} className="border-b transition-colors">
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg" style={{ background: "hsl(var(--primary) / 0.1)" }}>
-                          <Server className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
-                        </div>
-                        <span className="font-medium">{node.name}</span>
-                      </div>
-                    </td>
-                    <td className="p-4"><StatusBadge status={node.status} /></td>
-                    <td className="p-4">{node.cpuUsage}%</td>
-                    <td className="p-4">{node.ramUtilization}%</td>
-                    <td className="p-4">${node.totalCost}</td>
-                    <td className="p-4">{node.efficiency}%</td>
-                    <td className="p-4">{node.uptime}</td>
+              <div className="text-sm text-muted-foreground">
+                {totalItems} nodes total
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="hidden lg:block overflow-x-auto">
+              <table
+                className={`w-full ${
+                  serverStatus === "down" ? "opacity-75" : ""
+                }`}
+              >
+                <thead>
+                  <tr
+                    className="border-b"
+                    style={{ color: "hsl(var(--primary))" }}
+                  >
+                    <th className="text-left p-4 font-medium">Node</th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeStatus}>
+                        Status
+                      </TooltipWrapper>
+                    </th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCpu}>
+                        CPU
+                      </TooltipWrapper>
+                    </th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeMemory}>
+                        Memory
+                      </TooltipWrapper>
+                    </th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCost}>
+                        Cost
+                      </TooltipWrapper>
+                    </th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper
+                        tooltip={NODE_METRIC_TOOLTIPS.nodeEfficiencyUsage}
+                      >
+                        Efficiency
+                      </TooltipWrapper>
+                    </th>
+                    <th className="text-left p-4 font-medium">
+                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeUptime}>
+                        Uptime
+                      </TooltipWrapper>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                </thead>
+                <tbody>
+                  {currentNodes.map((node, index) => (
+                    <tr
+                      key={startIndex + index}
+                      className="border-b transition-colors"
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="p-2 rounded-lg"
+                            style={{ background: "hsl(var(--primary) / 0.1)" }}
+                          >
+                            <Server
+                              className="w-4 h-4"
+                              style={{ color: "hsl(var(--primary))" }}
+                            />
+                          </div>
+                          <span className="font-medium">{node.name}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <StatusBadge status={node.status} />
+                      </td>
+                      <td className="p-4">{node.cpuUsage}%</td>
+                      <td className="p-4">{node.ramUtilization}%</td>
+                      <td className="p-4">${node.totalCost}</td>
+                      <td className="p-4">{node.efficiency}%</td>
+                      <td className="p-4">{node.uptime}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
+            {/* Pagination */}
+            <Pagination />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

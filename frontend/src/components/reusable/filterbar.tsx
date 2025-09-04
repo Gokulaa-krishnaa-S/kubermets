@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useCluster } from "../context/ClusterContext";
 
 const predefinedOptions = [
   { label: "Last 24h", value: "24h" },
@@ -535,6 +536,8 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   type = "",
 }) => {
   const navigate = useNavigate();
+  const { selectedInstance }: any = useCluster();
+
   return (
     <div
       className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 ${className}`}
@@ -559,7 +562,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               variant="primary"
               size="sm"
               title="Navigate to Node metrics"
-              onClick={() => navigate("/metric/nodes")}
+              onClick={() => {
+                navigate({
+                  pathname: "/metric/nodes",
+                  search: `?cluster_id=${selectedInstance.id}`,
+                });
+              }}
             >
               Node
             </Button>
@@ -567,7 +575,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               variant="primary"
               size="sm"
               title="Navigate to Pod metrics"
-              onClick={() => navigate("/metric/pods")}
+              onClick={() => {
+                navigate({
+                  pathname: "/metric/pods",
+                  search: `?cluster_id=${selectedInstance.id}`,
+                });
+              }}
             >
               Pod
             </Button>
@@ -581,7 +594,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               variant="primary"
               size="sm"
               title="Navigate to Cluster metrics"
-              onClick={() => navigate("/metric/cluster")}
+              onClick={() => {
+                navigate({
+                  pathname: "/metric/cluster",
+                  search: `?cluster_id=${selectedInstance.id}`,
+                });
+              }}
             >
               Cluster
             </Button>
@@ -589,7 +607,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               variant="primary"
               size="sm"
               title="Navigate to Pod metrics"
-              onClick={() => navigate("/metric/pods")}
+              onClick={() => {
+                navigate({
+                  pathname: "/metric/pods",
+                  search: `?cluster_id=${selectedInstance.id}`,
+                });
+              }}
             >
               Pod
             </Button>
@@ -603,7 +626,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               variant="primary"
               size="sm"
               title="Navigate to Cluster metrics"
-              onClick={() => navigate("/metric/cluster")}
+              onClick={() => {
+                navigate({
+                  pathname: "/metric/cluster",
+                  search: `?cluster_id=${selectedInstance.id}`,
+                });
+              }}
             >
               Cluster
             </Button>
@@ -611,7 +639,12 @@ export const FilterBar: React.FC<FilterBarProps> = ({
               variant="primary"
               size="sm"
               title="Navigate to Node metrics"
-              onClick={() => navigate("/metric/nodes")}
+              onClick={() => {
+                navigate({
+                  pathname: "/metric/nodes",
+                  search: `?cluster_id=${selectedInstance.id}`,
+                });
+              }}
             >
               Node
             </Button>

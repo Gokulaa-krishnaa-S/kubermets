@@ -43,52 +43,63 @@ import {
 
 // Tooltip definitions based on Excel INFO column
 const METRIC_TOOLTIPS = {
-  activeClusters: "Number of clusters currently running workloads (excluding idle or terminated clusters)",
-  cpuCost: "Total CPU cost across all active clusters for the selected time period",
-  memoryCost: "Total memory (RAM) cost across all active clusters for the selected time period",
-  storageCost: "Total persistent volume (PV) cost across all active clusters for the selected time period",
+  activeClusters:
+    "Number of clusters currently running workloads (excluding idle or terminated clusters)",
+  cpuCost:
+    "Total CPU cost across all active clusters for the selected time period",
+  memoryCost:
+    "Total memory (RAM) cost across all active clusters for the selected time period",
+  storageCost:
+    "Total persistent volume (PV) cost across all active clusters for the selected time period",
   totalCpuCores: "Sum of CPU cores currently in use across all clusters",
   totalMemory: "Sum of memory currently in use (GB) across all clusters",
-  
+
   clusterName: "Unique identifier for the cluster",
-  clusterCost: "Total cost incurred by this cluster during the selected time period",
+  clusterCost:
+    "Total cost incurred by this cluster during the selected time period",
   cpuCores: "CPU cores allocated/used by this cluster",
   memoryGB: "Memory allocated/used by this cluster in GB",
   cpuUsage: "Percentage of CPU capacity currently utilized in this cluster",
-  memoryUsage: "Percentage of memory capacity currently utilized in this cluster",
-  efficiency: "Ratio of actual resource usage to requested resources for this cluster (higher is better)",
-  
+  memoryUsage:
+    "Percentage of memory capacity currently utilized in this cluster",
+  efficiency:
+    "Ratio of actual resource usage to requested resources for this cluster (higher is better)",
+
   version: "Kubernetes version running on the cluster",
   nodes: "Total number of nodes in this cluster",
   pods: "Total number of pods running in this cluster",
-  status: "Current operational state of the cluster (e.g., Running, Pending, Failed)",
-  
+  status:
+    "Current operational state of the cluster (e.g., Running, Pending, Failed)",
+
   avgCpuUtilization: "Average CPU utilization across all active clusters",
   avgMemoryUsage: "Average memory utilization across all active clusters",
-  clusterHealth: "Proportion of healthy (Running) clusters compared to total clusters",
-  
+  clusterHealth:
+    "Proportion of healthy (Running) clusters compared to total clusters",
+
   highEfficiency: "Number of clusters with efficiency 70% or higher",
   mediumEfficiency: "Number of clusters with efficiency between 30% and 70%",
   lowEfficiency: "Number of clusters with efficiency below 30%",
-  
-  costBreakdown: "Breakdown of this cluster’s cost by CPU, memory, storage, and other resources",
-  idleResourcesCost: "Portion of cost from resources that were allocated but not used (idle)",
+
+  costBreakdown:
+    "Breakdown of this cluster’s cost by CPU, memory, storage, and other resources",
+  idleResourcesCost:
+    "Portion of cost from resources that were allocated but not used (idle)",
   usedCpu: "Actual CPU cores actively consumed by workloads",
   requestedCpu: "Total CPU cores requested/allocated by workloads",
   usedMemory: "Actual memory actively consumed by workloads (GB)",
   requestedMemory: "Total memory requested/allocated by workloads (GB)",
-  costDistribution: "Visual representation of how costs are distributed across clusters and idle resources"
+  costDistribution:
+    "Visual representation of how costs are distributed across clusters and idle resources",
 };
-
 
 // Tooltip Component
 const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   const [showTooltip, setShowTooltip] = useState(false);
-  
+
   return (
     <div className={`relative ${className}`}>
       {children}
-      <div 
+      <div
         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
@@ -309,7 +320,7 @@ export default function ClusterMetrics() {
           },
           {
             title: "Total CPU Cores",
-            value: (totalEntry.cpu_core_usage_average || 0).toFixed(1),
+            value: (totalEntry.cpu_core_usage_average || 0).toFixed(2),
             subtitle: "In use",
             icon: <Zap className="w-4 h-4" />,
             status: "healthy",
@@ -585,7 +596,7 @@ export default function ClusterMetrics() {
 
   // Auto-refresh interval effect
   useEffect(() => {
-    if (refreshInterval > 0 && !isAutoRefreshPaused) {
+    if (refreshInterval > 0 && !isAutoRefreshPaused && cluster_id) {
       console.log(`Setting up auto-refresh every ${refreshInterval}ms`);
 
       intervalRef.current = setInterval(() => {
@@ -804,13 +815,13 @@ export default function ClusterMetrics() {
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
           {clusterStats.map((stat, index) => (
-            <TooltipWrapper 
-              key={index} 
+            <TooltipWrapper
+              key={index}
               tooltip={stat.tooltip}
               className="group relative"
             >
               <MetricCard {...stat} />
-    
+
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 hover:opacity-10 transition-opacity duration-500 rounded-lg pointer-events-none"></div>
             </TooltipWrapper>
           ))}
@@ -892,7 +903,9 @@ export default function ClusterMetrics() {
 
                           {/* Enhanced Metrics Row with Tooltips */}
                           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <TooltipWrapper tooltip={METRIC_TOOLTIPS.clusterCost}>
+                            <TooltipWrapper
+                              tooltip={METRIC_TOOLTIPS.clusterCost}
+                            >
                               <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
                                 <div className="text-xl font-bold text-gray-900 mb-1">
                                   {cluster.cost}
@@ -922,7 +935,9 @@ export default function ClusterMetrics() {
                                 </div>
                               </div>
                             </TooltipWrapper>
-                            <TooltipWrapper tooltip={METRIC_TOOLTIPS.efficiency}>
+                            <TooltipWrapper
+                              tooltip={METRIC_TOOLTIPS.efficiency}
+                            >
                               <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
                                 <div className="text-xl font-bold text-gray-900 mb-1">
                                   {cluster.efficiency}
@@ -957,7 +972,9 @@ export default function ClusterMetrics() {
                                 </div>
                               </div>
                             </TooltipWrapper>
-                            <TooltipWrapper tooltip={METRIC_TOOLTIPS.memoryUsage}>
+                            <TooltipWrapper
+                              tooltip={METRIC_TOOLTIPS.memoryUsage}
+                            >
                               <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                   <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -1103,7 +1120,11 @@ export default function ClusterMetrics() {
                     {chartData.costBreakdown.map((item, index) => (
                       <TooltipWrapper
                         key={`${item.name}-${index}`}
-                        tooltip={item.name === "Idle Resources" ? METRIC_TOOLTIPS.idleResourcesCost : METRIC_TOOLTIPS.clusterCost}
+                        tooltip={
+                          item.name === "Idle Resources"
+                            ? METRIC_TOOLTIPS.idleResourcesCost
+                            : METRIC_TOOLTIPS.clusterCost
+                        }
                       >
                         <div className="hover:bg-gray-50 p-3 rounded-lg transition-colors">
                           <div className="flex items-center justify-between mb-2">

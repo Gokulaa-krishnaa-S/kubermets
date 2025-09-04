@@ -6,6 +6,7 @@ import React, {
   useState,
   ReactNode,
 } from "react";
+import { useSearchParams } from "react-router-dom";
 import ClusterService from "@/services/ClusterService";
 
 interface Instance {
@@ -32,14 +33,33 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
     null
   );
 
+  const [searchParams] = useSearchParams();
+  const queryClusterId = searchParams.get("cluster_id");
+
   useEffect(() => {
     const fetchInstances = async () => {
       try {
         const data = await ClusterService.getInstanceList();
-        console.log(data, "-----------");
-        if (data?.data?.length) {
-          setInstances(data.data);
-          setSelectedInstance(data.data[0]); // default select first
+        const instanceList = data?.data || [];
+        setInstances(instanceList);
+        console.log(
+          queryClusterId,
+          "-----------------------",
+          selectedInstance
+        );
+        if (instanceList.length > 0) {
+          // Try to match cluster_id from query param
+          const matched =
+            queryClusterId &&
+            instanceList.find((inst) => String(inst.id) === queryClusterId);
+
+          setSelectedInstance(
+            matched
+              ? matched
+              : selectedInstance
+              ? selectedInstance
+              : instanceList[0]
+          ); // fallback to first
         }
       } catch (error) {
         console.error("Error fetching instances:", error);
@@ -49,7 +69,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
     };
 
     fetchInstances();
-  }, []);
+  }, [queryClusterId]); // refetch when query param changes
 
   return (
     <ClusterContext.Provider
