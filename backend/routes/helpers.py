@@ -5,26 +5,6 @@ from datetime import datetime, timedelta
 
 helper_bp = Blueprint("helper", __name__, url_prefix="/v1")
 
-# @helper_bp.route("/get_filter_params", methods=["GET"])
-# def get_namespaces():
-#     metric_type = request.args.get("type", "node") 
-#     metric = request.args.get("metric", "namespace") 
-#     session = db_manager.get_session()
-#     try:
-#         if metric_type == "node":
-#             query = session.query(NodeMetrics.metric).distinct()
-#         elif metric_type == "pod":
-#             query = session.query(PodMetrics.metric).distinct()
-#         else:
-#             return jsonify({"error": "Invalid type. Use 'node' or 'pod'."}), 400
-
-#         namespaces = query.all()
-#         namespace_list = [ns[0] for ns in namespaces]
-#         return jsonify(namespace_list)
-#     finally:
-#         session.close()
-
-
 @helper_bp.route("/get_filter_params", methods=["GET"])
 def get_filter_params():
     metric_type = request.args.get("type", "node")   # node / pod
