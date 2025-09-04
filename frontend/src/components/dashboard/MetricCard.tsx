@@ -15,7 +15,6 @@ interface MetricCardProps {
     label: string;
   };
   status?: "healthy" | "warning" | "error" | "info";
-  tooltip?: string;
   className?: string;
   onClick?: () => void;
 }
@@ -46,7 +45,6 @@ export function MetricCard({
   trend,
   status = "info",
   className,
-  tooltip="title",
   onClick,
 }: MetricCardProps) {
   const config = statusConfig[status];
@@ -61,7 +59,6 @@ export function MetricCard({
         config.card,
         className
       )}
-      title={tooltip}
       onClick={onClick}
     >
       <CardHeader className="pb-3 flex-shrink-0">

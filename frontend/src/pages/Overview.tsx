@@ -83,7 +83,7 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
 
       {/* Tooltip */}
       {showTooltip && tooltip && (
-        <div className="absolute top-8 right-0 z-50 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border">
+        <div className="absolute top-8 right-0 z-50 w-44 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border">
           <div className="relative">
             {tooltip}
             {/* Tooltip arrow */}
