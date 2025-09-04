@@ -56,7 +56,7 @@ def get_cluster_metrics():
         elif duration.endswith("d"):
             days = int(duration[:-1])
             start_time = end_time - timedelta(days=days)
-        elif duration.endswith("m"): 
+        elif duration.endswith("m"):
             months = int(duration[:-1])
             start_time = end_time - timedelta(days=months * 30)
         else:
@@ -70,8 +70,8 @@ def get_cluster_metrics():
             .filter(
                 ClusterMetrics.user_id == user_id,
                 ClusterMetrics.cluster_id == cluster_id,
-                ClusterMetrics.window_end > start_time,    
-                ClusterMetrics.window_start < end_time,  
+                ClusterMetrics.window_end > start_time,
+                ClusterMetrics.window_start < end_time,
             )
             .all()
         )
@@ -298,21 +298,29 @@ def get_latest_timestamp_route():
     try:
 
         latest_record = (
-        session.query(ClusterMetrics.window_end, ClusterMetrics.window_duration)
-        .filter(ClusterMetrics.cluster_id == cluster_id)
-        .order_by(desc(ClusterMetrics.window_end))
-        .first()
+            session.query(ClusterMetrics.window_end, ClusterMetrics.window_duration)
+            .filter(ClusterMetrics.cluster_id == cluster_id)
+            .order_by(desc(ClusterMetrics.window_end))
+            .first()
         )
 
-        print(latest_record , "--------")
+        print(latest_record, "--------")
         if not latest_record:
             return (
                 jsonify({"message": f"No records found for cluster_id={cluster_id}"}),
                 404,
             )
 
-        return jsonify({"latest_timestamp": latest_record.window_end.isoformat() , "window_duration":latest_record.window_duration}), 200
-    
+        return (
+            jsonify(
+                {
+                    "latest_timestamp": latest_record.window_end.isoformat(),
+                    "window_duration": latest_record.window_duration,
+                }
+            ),
+            200,
+        )
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -345,8 +353,8 @@ def dashboard_summary():
             session.query(ClusterMetrics)
             .filter(
                 ClusterMetrics.user_id == user_id,
-                ClusterMetrics.window_end > start_time,    
-                ClusterMetrics.window_start < end_time,  
+                ClusterMetrics.window_end > start_time,
+                ClusterMetrics.window_start < end_time,
             )
             .all()
         )
@@ -416,9 +424,8 @@ def dashboard_summary():
                 .filter(
                     NodeMetrics.user_id == user_id,
                     NodeMetrics.cluster_id == cluster_id,
-                    NodeMetrics.window_end > start_time,    
-                    NodeMetrics.window_start < end_time,  
-                    
+                    NodeMetrics.window_end > start_time,
+                    NodeMetrics.window_start < end_time,
                 )
                 .all()
             )
@@ -429,9 +436,8 @@ def dashboard_summary():
                 .filter(
                     PodMetrics.user_id == user_id,
                     PodMetrics.cluster_id == cluster_id,
-                    PodMetrics.end_time > start_time,    
-                    PodMetrics.start_time < end_time,  
-                   
+                    PodMetrics.end_time > start_time,
+                    PodMetrics.start_time < end_time,
                 )
                 .all()
             )
@@ -524,7 +530,12 @@ def fetch_metrics():
         snapshots = data.get("snapshots", [])
         user_id = data.get("user_id")
         cluster_id = data.get("cluster_id")
-        print("kjhghjkl;'-------------------------cluster_i", cluster_id , snapshots , "---------------END-----------------")
+        print(
+            "kjhghjkl;'-------------------------cluster_i",
+            cluster_id,
+            snapshots,
+            "---------------END-----------------",
+        )
         for snapshot in snapshots:
             allocations = snapshot.get("allocations", {})
             window_info = snapshot.get("window", {})
@@ -630,8 +641,8 @@ def fetch_metrics():
                                     try:
                                         # Create NodeMetrics entry with cluster_id foreign key
                                         node_entry = {
-                                            "cluster_relation_id":cluster_obj.id,
-                                            "cluster_id": cluster_id, 
+                                            "cluster_relation_id": cluster_obj.id,
+                                            "cluster_id": cluster_id,
                                             "node_name": node_allocation.get(
                                                 "node_name"
                                             ),
@@ -996,53 +1007,53 @@ def get_instance():
                 "updated_at": "2025-08-12T11:55:18.884028",
                 "user_id": 1,
             },
-            {
-                "cluster_type": "gcp",
-                "config": {
-                    "availabilityZones": ["asia-south1-a", "asia-south1-b"],
-                    "bucketConfig": {
-                        "gcsBucketName": "bkt-ai-platform-gke-test",
-                        "prefixPath": "july291",
-                    },
-                    "clusterName": "gcp-cls2-sify-test",
-                    "cpuPools": [
-                        {
-                            "cpu_np_capacity_type": "on-demand",
-                            "cpu_np_instance_type": "e2medium",
-                            "cpu_np_max_node_count": "2",
-                            "cpu_np_min_node_count": "0",
-                            "cpu_np_name": "cpu2x",
-                        }
-                    ],
-                    "gcpProjectId": "sify-ai-poc",
-                    "gcpRegion": "asia-south1",
-                    "gpuPools": [
-                        {
-                            "gpu_np_capacity_type": "on-demand",
-                            "gpu_np_instance_type": "e2medium",
-                            "gpu_np_max_node_count": "2",
-                            "gpu_np_min_node_count": "0",
-                            "gpu_np_name": "gpu2x",
-                        }
-                    ],
-                    "ipv4CidrBlock": "10.3.0.0/28",
-                    "ipv4CidrPods": "10.1.0.0/21",
-                    "ipv4CidrPrivateSubnet": "10.128.0.0/20",
-                    "ipv4CidrServices": "10.2.0.0/21",
-                    "kubernetesVersion": "1.31",
-                    "networkConfig": "create-new",
-                    "platformFeatures": ["blobStorage", "clusterIntegration"],
-                    "podRangeName": "kubernetes-pod-range",
-                    "serviceRangeName": "kubernetes-services-range",
-                    "user_id": 1,
-                },
-                "created_at": "2025-08-12T11:40:47.650503",
-                "id": 2,
-                "status": 1,
-                "terraform_file": "terraform_123.tfvars",
-                "updated_at": "2025-08-12T11:40:47.650507",
-                "user_id": 1,
-            },
+            # {
+            #     "cluster_type": "gcp",
+            #     "config": {
+            #         "availabilityZones": ["asia-south1-a", "asia-south1-b"],
+            #         "bucketConfig": {
+            #             "gcsBucketName": "bkt-ai-platform-gke-test",
+            #             "prefixPath": "july291",
+            #         },
+            #         "clusterName": "gcp-cls2-sify-test",
+            #         "cpuPools": [
+            #             {
+            #                 "cpu_np_capacity_type": "on-demand",
+            #                 "cpu_np_instance_type": "e2medium",
+            #                 "cpu_np_max_node_count": "2",
+            #                 "cpu_np_min_node_count": "0",
+            #                 "cpu_np_name": "cpu2x",
+            #             }
+            #         ],
+            #         "gcpProjectId": "sify-ai-poc",
+            #         "gcpRegion": "asia-south1",
+            #         "gpuPools": [
+            #             {
+            #                 "gpu_np_capacity_type": "on-demand",
+            #                 "gpu_np_instance_type": "e2medium",
+            #                 "gpu_np_max_node_count": "2",
+            #                 "gpu_np_min_node_count": "0",
+            #                 "gpu_np_name": "gpu2x",
+            #             }
+            #         ],
+            #         "ipv4CidrBlock": "10.3.0.0/28",
+            #         "ipv4CidrPods": "10.1.0.0/21",
+            #         "ipv4CidrPrivateSubnet": "10.128.0.0/20",
+            #         "ipv4CidrServices": "10.2.0.0/21",
+            #         "kubernetesVersion": "1.31",
+            #         "networkConfig": "create-new",
+            #         "platformFeatures": ["blobStorage", "clusterIntegration"],
+            #         "podRangeName": "kubernetes-pod-range",
+            #         "serviceRangeName": "kubernetes-services-range",
+            #         "user_id": 1,
+            #     },
+            #     "created_at": "2025-08-12T11:40:47.650503",
+            #     "id": 2,
+            #     "status": 1,
+            #     "terraform_file": "terraform_123.tfvars",
+            #     "updated_at": "2025-08-12T11:40:47.650507",
+            #     "user_id": 1,
+            # },
         ]
         return jsonify({"message": "Metrics ingested", "data": data}), 200
     except Exception as e:
