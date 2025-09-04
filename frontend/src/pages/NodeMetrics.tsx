@@ -578,7 +578,9 @@ const NodeMetricsDashboard = () => {
 
     console.log(cluster_id, "cluster_id in NodeMetrics");
     setTimeRange(rangeFromUrl);
-
+    if (!cluster_id) {
+      return;
+    }
     const queryParams = {
       accumulate: true,
       aggregate: "node",

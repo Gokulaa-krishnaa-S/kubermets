@@ -596,7 +596,7 @@ export default function ClusterMetrics() {
 
   // Auto-refresh interval effect
   useEffect(() => {
-    if (refreshInterval > 0 && !isAutoRefreshPaused) {
+    if (refreshInterval > 0 && !isAutoRefreshPaused && cluster_id) {
       console.log(`Setting up auto-refresh every ${refreshInterval}ms`);
 
       intervalRef.current = setInterval(() => {
