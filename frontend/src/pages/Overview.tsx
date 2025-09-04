@@ -172,14 +172,12 @@ export default function Overview() {
 
   if (loading) {
     return (
-      <Layout title="Overview" subtitle="Loading Kubernetes cost metrics...">
         <ResponsiveLoader
           title="Overview"
           subtitle={`Loading Kubernetes metrics across ${
             aggregated?.clusterCount || 0
           } clusters...`}
         />
-      </Layout>
     );
   }
 
