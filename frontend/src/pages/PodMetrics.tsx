@@ -1606,8 +1606,8 @@ const KubecostDashboard = () => {
                     {paginatedPods.map((pod) => (
                       <tr
                         key={pod.id}
-                        className="hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => handlePodDetails(pod.name)}
+                        className="hover:bg-gray-50 transition-colors "
+                        // onClick={() => handlePodDetails(pod.name)}
                       >
                         <td className="px-4 py-4">
                           <div className="flex items-center min-w-0">
