@@ -226,7 +226,7 @@ class PodMetrics(Base):
     cluster_id = Column(Integer, nullable=True)
     # Identification
     key = Column(String(255), nullable=False)
-    namespace = Column(String(100), nullable=True)  # Added (index exists)
+    namespace = Column(String(100), nullable=True)  
     name = Column(String(100), nullable=True)  
     deployment_name = Column(String(100), nullable=True)  
     node_name = Column(String(100), nullable=True)  

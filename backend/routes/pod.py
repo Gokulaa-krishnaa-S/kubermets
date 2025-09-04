@@ -133,8 +133,8 @@ def get_pod_details(pod_name):
             PodMetrics.cluster_id == cluster_id,
             PodMetrics.user_id == user_id,
             PodMetrics.name == pod_name,
-            PodMetrics.start_time >= start_time,
-            PodMetrics.start_time <= end_time,
+            PodMetrics.window_end > start_time,    
+            PodMetrics.window_start < end_time,  
         )
 
         if namespace:

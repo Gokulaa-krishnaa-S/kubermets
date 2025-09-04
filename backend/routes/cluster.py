@@ -38,13 +38,13 @@ def get_cluster_metrics():
     session = db_manager.get_session()
     try:
         API_URL = os.getenv("BACKEND_API_URL")
-        # 1️⃣ Get cluster_id from request
+        # 1️ Get cluster_id from request
         cluster_id = request.args.get("cluster_id")
         user_id = request.args.get("user_id", "1")
         if not cluster_id:
             return jsonify({"error": "cluster_id is required"}), 400
 
-        # 2️⃣ Get duration (default: 24h)
+        # 2️ Get duration (default: 24h)
         duration = request.args.get("window", "24h")
         print(duration, "--------------DURATION")
 
@@ -56,7 +56,7 @@ def get_cluster_metrics():
         elif duration.endswith("d"):
             days = int(duration[:-1])
             start_time = end_time - timedelta(days=days)
-        elif duration.endswith("m"):  # months → approx 30 days each
+        elif duration.endswith("m"): 
             months = int(duration[:-1])
             start_time = end_time - timedelta(days=months * 30)
         else:
@@ -64,14 +64,14 @@ def get_cluster_metrics():
 
         print(start_time, "---START TIME------", end_time)
 
-        # 3️⃣ Fetch rows within time window
+        # 3️ Fetch rows within time window
         rows = (
             session.query(ClusterMetrics)
             .filter(
                 ClusterMetrics.user_id == user_id,
                 ClusterMetrics.cluster_id == cluster_id,
-                ClusterMetrics.timestamp >= start_time,
-                ClusterMetrics.timestamp <= end_time,
+                ClusterMetrics.window_end > start_time,    
+                ClusterMetrics.window_start < end_time,  
             )
             .all()
         )
@@ -92,7 +92,7 @@ def get_cluster_metrics():
 
         print(f"Found {len(rows)} rows")
 
-        # 4️⃣ Aggregate by (cluster_id, cluster_name) - separate idle and active
+        # 4️ Aggregate by (cluster_id, cluster_name) - separate idle and active
         aggregated = {}
 
         for row in rows:
@@ -173,7 +173,7 @@ def get_cluster_metrics():
 
             agg["timestamps"].append(row.timestamp.isoformat())
 
-        # 5️⃣ Finalize averages
+        # 5️ Finalize averages
         for agg in aggregated.values():
 
             def avg(values):
