@@ -78,8 +78,8 @@ def get_node_data(
     filters = [
         model.user_id == user_id,
         model.cluster_id == cluster_id,
-        model.timestamp >= start_time,
-        model.timestamp <= end_time,
+        model.window_end > start_time,    
+        model.window_start < end_time,  
     ]
 
     query = build_metrics_query(session, model, filters, group_by_fields, aggregates)

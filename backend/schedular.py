@@ -247,13 +247,6 @@ def build_mapping_tables(multi_agg_data: Dict) -> Tuple[Dict[str, Dict], Dict[st
                     "cluster": cluster,
                     "node": node
                 }
-            print("===================================================")
-            print("===================NODE MAPPING ==============================")
-            print(node_mapping)
-            print("===================== POD MAPPING ============================")
-            print(pod_mapping)
-            print("===================================================")
-
     return node_mapping, pod_mapping
 
 
@@ -706,7 +699,8 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
             start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
             windows.append((start_time, end_time))
             end_time = start_time
-        return windows
+        
+        return list(reversed(windows))
 
     # Normal case - catch up from latest_timestamp to now
     # Ensure latest_timestamp is timezone-aware
@@ -720,7 +714,6 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
             break
         windows.append((current_start, current_end))
         current_start = current_end
-    
     return windows
 
 
