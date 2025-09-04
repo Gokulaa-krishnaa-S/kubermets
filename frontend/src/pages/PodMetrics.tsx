@@ -24,22 +24,22 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (
-    <div
-      className={`relative group inline-block ${className}`}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-    >
+    <div className={`relative group inline-block ${className}`}>
       {/* Wrapped content */}
       {children}
 
       {/* Info icon (hover only) */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <div
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
         <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" />
       </div>
 
       {/* Tooltip */}
       {showTooltip && tooltip && (
-        <div className="absolute top-8 right-0 z-50 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border">
+        <div className="absolute top-8 right-0 z-50 w-44 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border">
           <div className="relative">
             {tooltip}
             <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
