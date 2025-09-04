@@ -97,11 +97,8 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (
-    <div className={`relative group inline-block ${className}`}>
-      {/* Wrapped content */}
+    <div className={`relative ${className}`}>
       {children}
-
-      {/* Info icon (only visible on hover of parent) */}
       <div
         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         onMouseEnter={() => setShowTooltip(true)}
@@ -109,13 +106,10 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
       >
         <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" />
       </div>
-
-      {/* Tooltip */}
       {showTooltip && tooltip && (
-        <div className="absolute top-8 right-0 z-50 w-44 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border">
+        <div className="absolute top-8 right-0 z-50 w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-lg border">
           <div className="relative">
             {tooltip}
-            {/* Tooltip arrow */}
             <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
           </div>
         </div>
@@ -123,6 +117,7 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
     </div>
   );
 };
+
 export default function ClusterMetrics() {
   const { selectedInstance }: any = useCluster();
   console.log(selectedInstance?.id, "-------------");
@@ -601,7 +596,7 @@ export default function ClusterMetrics() {
 
   // Auto-refresh interval effect
   useEffect(() => {
-    if (refreshInterval > 0 && !isAutoRefreshPaused && cluster_id) {
+    if (refreshInterval > 0 && !isAutoRefreshPaused) {
       console.log(`Setting up auto-refresh every ${refreshInterval}ms`);
 
       intervalRef.current = setInterval(() => {
