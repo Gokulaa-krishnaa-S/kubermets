@@ -112,11 +112,11 @@ def parse_allocation_key(allocation_key: str) -> Tuple[str, str, str, str, str]:
     """
     if allocation_key in ["__idle__", "__unallocated__"]:
         return "", "", allocation_key, "", ""
-    
+
     # Handle the full allocation key format
     if allocation_key.startswith("__idle__/"):
         return "", "", allocation_key, "", ""
-    
+
     parts = allocation_key.split("/")
     if len(parts) >= 5:
         return parts[0], parts[1], parts[2], parts[3], parts[4]
@@ -140,10 +140,10 @@ def extract_namespace_and_name(
 
     # Parse the new allocation key format
     cluster, node, pod, namespace, controller = parse_allocation_key(allocation_key)
-    
+
     if namespace:
         return namespace, pod or controller or allocation_key
-    
+
     # Fallback to original logic for backward compatibility
     parts = allocation_key.split("/")
     if len(parts) == 2:
@@ -169,7 +169,7 @@ def fetch_multi_aggregation_data(
     This provides the mapping data for enriching our node and pod metrics.
     """
     window_param = format_kubecost_window(start_time, end_time)
-    
+
     params = {
         "accumulate": "true",
         "aggregate": "cluster,node,pod,namespace,controller",
@@ -188,16 +188,16 @@ def fetch_multi_aggregation_data(
         "shareTenancyCosts": "true",
         "sortByOrder": "desc",
         "sortBy": "pvCost",
-        "window": window_param
+        "window": window_param,
     }
 
     try:
         log.info(
             "Fetching multi-aggregation data | cluster=%s window=%s",
             cluster_name,
-            window_param
+            window_param,
         )
-        
+
         r = requests.get(
             f"{kubecost_url}/model/allocation/summary",
             params=params,
@@ -212,40 +212,45 @@ def fetch_multi_aggregation_data(
         return {}
 
 
-def build_mapping_tables(multi_agg_data: Dict) -> Tuple[Dict[str, Dict], Dict[str, Dict]]:
+def build_mapping_tables(
+    multi_agg_data: Dict,
+) -> Tuple[Dict[str, Dict], Dict[str, Dict]]:
     """
     Build mapping tables from multi-aggregation data.
     Returns: (node_mapping, pod_mapping)
-    
+
     node_mapping: {node_name: {namespace: ..., deployment: ...}}
     pod_mapping: {pod_name: {namespace: ..., deployment: ...}}
     """
     node_mapping = {}
     pod_mapping = {}
-    
+
     for allocation_set in multi_agg_data.get("data", {}).get("sets", []):
-        for allocation_key, allocation_data in allocation_set.get("allocations", {}).items():
+        for allocation_key, allocation_data in allocation_set.get(
+            "allocations", {}
+        ).items():
             # Skip idle and unallocated
             if allocation_key.startswith("__"):
                 continue
-                
-            # Parse the allocation key
-            cluster, node, pod, namespace, controller = parse_allocation_key(allocation_key)
 
-            
+            # Parse the allocation key
+            cluster, node, pod, namespace, controller = parse_allocation_key(
+                allocation_key
+            )
+
             if node and node not in node_mapping:
                 node_mapping[node] = {
                     "namespace": namespace,
                     "deployment": controller,
-                    "cluster": cluster
+                    "cluster": cluster,
                 }
-            
+
             if pod and pod not in pod_mapping:
                 pod_mapping[pod] = {
                     "namespace": namespace,
                     "deployment": controller,
                     "cluster": cluster,
-                    "node": node
+                    "node": node,
                 }
     return node_mapping, pod_mapping
 
@@ -328,10 +333,10 @@ def format_cluster_metrics(allocation_data: Dict, cluster_name: str = None) -> D
 
 
 def format_node_metrics(
-    allocation_data: Dict, 
-    node_name: str, 
+    allocation_data: Dict,
+    node_name: str,
     cluster_name: str = None,
-    node_mapping: Dict = None
+    node_mapping: Dict = None,
 ) -> Dict:
     """Format node allocation data to match NodeMetrics schema with namespace/deployment info"""
 
@@ -416,19 +421,19 @@ def format_node_metrics(
 
 
 def format_pod_metrics(
-    allocation_data: Dict, 
-    pod_key: str, 
+    allocation_data: Dict,
+    pod_key: str,
     cluster_name: str = None,
-    pod_mapping: Dict = None
+    pod_mapping: Dict = None,
 ) -> Dict:
     """Format pod allocation data to match PodMetrics schema with namespace/deployment info"""
 
     start_time = allocation_data.get("start", "")
     end_time = allocation_data.get("end", "")
-    
+
     # Get enhanced info from mapping or parse from key
     mapping_info = pod_mapping.get(pod_key, {}) if pod_mapping else {}
-    
+
     # Try to get from mapping first, then parse from key
     if mapping_info:
         namespace = mapping_info.get("namespace")
@@ -519,11 +524,11 @@ def format_pod_metrics(
 
 
 def format_kubecost_response(
-    kubecost_data: Dict, 
-    user_id: int, 
+    kubecost_data: Dict,
+    user_id: int,
     cluster_id: int,
     node_mapping: Dict = None,
-    pod_mapping: Dict = None
+    pod_mapping: Dict = None,
 ) -> Dict:
     """Format the complete kubecost response according to schema structure with enhanced mapping"""
 
@@ -556,7 +561,10 @@ def format_kubecost_response(
                         ).items():
                             formatted_node_allocations[node_name] = {
                                 **format_node_metrics(
-                                    node_allocation, node_name, allocation_name, node_mapping
+                                    node_allocation,
+                                    node_name,
+                                    allocation_name,
+                                    node_mapping,
                                 ),
                                 "pod_data": None,
                             }
@@ -574,7 +582,10 @@ def format_kubecost_response(
                                     ).items():
                                         formatted_pod_allocations[pod_key] = (
                                             format_pod_metrics(
-                                                pod_allocation, pod_key, allocation_name, pod_mapping
+                                                pod_allocation,
+                                                pod_key,
+                                                allocation_name,
+                                                pod_mapping,
                                             )
                                         )
 
@@ -644,7 +655,7 @@ def get_latest_timestamp(cluster_id: int) -> Optional[datetime]:
         resp = requests.get(url, params=params, timeout=REQUEST_TIMEOUT_SEC)
         resp.raise_for_status()
         data = resp.json()
-        
+
         # Handle different possible response formats
         if data.get("latest_timestamp"):
             timestamp_str = data["latest_timestamp"]
@@ -675,7 +686,7 @@ def round_down_time(dt: datetime, delta: timedelta) -> datetime:
     # Ensure timezone-aware datetime
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
-    
+
     delta_seconds = int(delta.total_seconds())
     epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
     seconds_since_epoch = int((dt - epoch).total_seconds())
@@ -690,8 +701,10 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     """
     windows = []
     latest_timestamp = get_latest_timestamp(cluster_id)
-    now = round_down_time(datetime.now(timezone.utc), timedelta(hours=COLLECTION_WINDOW_HOURS))
-    
+    now = round_down_time(
+        datetime.now(timezone.utc), timedelta(hours=COLLECTION_WINDOW_HOURS)
+    )
+
     if latest_timestamp is None:
         # First run - collect up to MAX_BACKFILL_WINDOWS windows (default = 7)
         end_time = now
@@ -699,14 +712,14 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
             start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
             windows.append((start_time, end_time))
             end_time = start_time
-        
+
         return list(reversed(windows))
 
     # Normal case - catch up from latest_timestamp to now
     # Ensure latest_timestamp is timezone-aware
     if latest_timestamp.tzinfo is None:
         latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
-    
+
     current_start = latest_timestamp
     while current_start < now:
         current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
@@ -721,32 +734,32 @@ def calculate_next_run_time(cluster_id: int) -> Optional[datetime]:
     """Calculate when the next collection should run based on last saved timestamp."""
     latest_timestamp = get_latest_timestamp(cluster_id)
     now = datetime.now(timezone.utc)
-    
+
     if latest_timestamp is None:
         # First run - schedule immediately
         return now + timedelta(seconds=30)
-    
+
     # Ensure timezone-aware comparison
     if latest_timestamp.tzinfo is None:
         latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
-    
+
     # Next collection should happen at latest_timestamp + window_hours
     next_expected_window = latest_timestamp + timedelta(hours=COLLECTION_WINDOW_HOURS)
-    
+
     # If that time has already passed, schedule immediately to catch up
     if next_expected_window <= now:
         return now + timedelta(seconds=30)
-    
+
     # Don't schedule too far into the future (safety check)
     max_future = now + timedelta(hours=COLLECTION_WINDOW_HOURS * 2)
     if next_expected_window > max_future:
         log.warning(
             "Next run time too far in future for cluster_id=%d, scheduling in %d minutes",
             cluster_id,
-            MIN_SCHEDULE_INTERVAL_MIN
+            MIN_SCHEDULE_INTERVAL_MIN,
         )
         return now + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
-    
+
     return next_expected_window
 
 
@@ -760,13 +773,13 @@ def get_active_clusters() -> List[Dict]:
         # For now, using hardcoded data as in original
         resp = [
             {
-                "cluster_id": 1,
+                "cluster_id": 2,
                 "user_id": 1,
                 "cluster_name": "cluster-one",
-                "kubecost_api_url": "http://172.16.20.110/kubecost",
-                # "kubecost_api_url": "https://34.100.251.207",
-                # "password": "Admin@12#$",
-                # "username": "admin",
+                # "kubecost_api_url": "http://172.16.20.110/kubecost",
+                "kubecost_api_url": "https://34.100.251.207",
+                "password": "Admin@12#$",
+                "username": "admin",
             }
         ]
         data = resp
@@ -907,7 +920,7 @@ def format_kubecost_window(start_time: datetime, end_time: datetime) -> str:
         start_time = start_time.replace(tzinfo=timezone.utc)
     if end_time.tzinfo is None:
         end_time = end_time.replace(tzinfo=timezone.utc)
-    
+
     return f"{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')},{end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}"
 
 
@@ -967,11 +980,11 @@ def fetch_kubecost_window(
         )
         r.raise_for_status()
         cluster_data = r.json()
-        
+
         # Initialize mapping tables
         node_mapping = {}
         pod_mapping = {}
-        
+
         # Fetch multi-aggregation data for each cluster to build mapping tables
         for i in cluster_data.get("data", {}).get("sets", []):
             for cluster_name in i.get("allocations", {}):
@@ -981,12 +994,14 @@ def fetch_kubecost_window(
                         multi_agg_data = fetch_multi_aggregation_data(
                             kubecost_url, cluster_name, start_time, end_time, headers
                         )
-                        
+
                         # Build mapping tables
-                        cluster_node_mapping, cluster_pod_mapping = build_mapping_tables(multi_agg_data)
+                        cluster_node_mapping, cluster_pod_mapping = (
+                            build_mapping_tables(multi_agg_data)
+                        )
                         node_mapping.update(cluster_node_mapping)
                         pod_mapping.update(cluster_pod_mapping)
-                        
+
                         # Fetch node data with enhanced mapping
                         node_data = fetchNodeData(
                             kubecost_url,
@@ -996,7 +1011,7 @@ def fetch_kubecost_window(
                             headers=headers,
                         )
                         i["allocations"][cluster_name]["node_data"] = node_data
-                        
+
                     except Exception as e:
                         log.error(
                             "Failed to fetch enhanced data for cluster %s: %s",
@@ -1048,7 +1063,7 @@ def send_snapshots_to_backend(
         "Sending to backend | payload_size=%d bytes | nodes_mapped=%d | pods_mapped=%d",
         len(str(formatted_payload)),
         len(node_mapping) if node_mapping else 0,
-        len(pod_mapping) if pod_mapping else 0
+        len(pod_mapping) if pod_mapping else 0,
     )
 
     try:
@@ -1075,7 +1090,7 @@ def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime) 
     kubecost_url = cluster_cfg["kubecost_api_url"]
     username = cluster_cfg.get("username", "")
     password = cluster_cfg.get("password", "")
-    
+
     for attempt in range(1, RETRY_ATTEMPTS + 1):
         try:
             log.info(
@@ -1103,7 +1118,13 @@ def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime) 
 
             # Send to backend with mapping data
             send_snapshots_to_backend(
-                user_id, cluster_id, data, start_time, end_time, node_mapping, pod_mapping
+                user_id,
+                cluster_id,
+                data,
+                start_time,
+                end_time,
+                node_mapping,
+                pod_mapping,
             )
             log.info(
                 "Window collection success | cluster=%s window=%s-%s | mapped_nodes=%d | mapped_pods=%d",
@@ -1111,7 +1132,7 @@ def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime) 
                 start_time.strftime("%Y-%m-%d %H:%M:%S"),
                 end_time.strftime("%Y-%m-%d %H:%M:%S"),
                 len(node_mapping),
-                len(pod_mapping)
+                len(pod_mapping),
             )
             return True
 
@@ -1185,30 +1206,31 @@ def collect_cluster_data(cluster_cfg: Dict) -> None:
 # -------------------- Scheduler Management --------------------
 JOB_PREFIX = "cluster-"
 
+
 def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) -> None:
     """Collect data and schedule the next run based on the new timestamp."""
     cluster_id = cluster_cfg["cluster_id"]
     cluster_name = cluster_cfg.get("cluster_name", f"id-{cluster_id}")
-    
+
     try:
         # Collect missing data
         collect_cluster_data(cluster_cfg)
-        
+
         # Calculate and schedule next run
         next_run_time = calculate_next_run_time(cluster_id)
         if next_run_time:
             # Avoid scheduling if next run is too soon (prevents infinite loops)
             now = datetime.now(timezone.utc)
             min_interval = now + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
-            
+
             if next_run_time < min_interval:
                 next_run_time = min_interval
                 log.info(
                     "Adjusted next run time to respect minimum interval | cluster=%s next_run=%s",
                     cluster_name,
-                    next_run_time.strftime("%Y-%m-%d %H:%M:%S")
+                    next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
                 )
-            
+
             job_id = f"{JOB_PREFIX}{cluster_id}"
             scheduler.add_job(
                 func=collect_and_reschedule,
@@ -1221,13 +1243,17 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
             log.info(
                 "Rescheduled next collection | cluster=%s next_run=%s",
                 cluster_name,
-                next_run_time.strftime("%Y-%m-%d %H:%M:%S")
+                next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
             )
-            
+
     except Exception as e:
-        log.error("Collection and reschedule failed | cluster=%s err=%s", cluster_name, e)
+        log.error(
+            "Collection and reschedule failed | cluster=%s err=%s", cluster_name, e
+        )
         # Retry in minimum interval on error
-        retry_time = datetime.now(timezone.utc) + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
+        retry_time = datetime.now(timezone.utc) + timedelta(
+            minutes=MIN_SCHEDULE_INTERVAL_MIN
+        )
         job_id = f"{JOB_PREFIX}{cluster_id}"
         scheduler.add_job(
             func=collect_and_reschedule,
@@ -1240,7 +1266,7 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
         log.info(
             "Scheduled retry after error | cluster=%s retry_at=%s",
             cluster_name,
-            retry_time.strftime("%Y-%m-%d %H:%M:%S")
+            retry_time.strftime("%Y-%m-%d %H:%M:%S"),
         )
 
 
@@ -1254,17 +1280,19 @@ def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: List[Dict]):
         # figure out when this cluster should next run
         next_run_time = calculate_next_run_time(cfg["cluster_id"])
         if not next_run_time:
-            log.warning("No next run time calculated for cluster_id=%s", cfg["cluster_id"])
+            log.warning(
+                "No next run time calculated for cluster_id=%s", cfg["cluster_id"]
+            )
             continue
 
         job_id = f"{JOB_PREFIX}{cfg['cluster_id']}"
         scheduler.add_job(
-            func=collect_and_reschedule,      
+            func=collect_and_reschedule,
             id=job_id,
-            args=[cfg, scheduler],            
-            trigger="date",                   
+            args=[cfg, scheduler],
+            trigger="date",
             run_date=next_run_time,
-            replace_existing=True,            
+            replace_existing=True,
         )
         log.info(
             "Scheduled smart collection job | %s at %s",
