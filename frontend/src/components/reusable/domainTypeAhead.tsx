@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Search, ChevronDown, Pencil } from "lucide-react";
 import { useCluster } from "../context/ClusterContext";
+import { useSearchParams } from "react-router-dom";
 import {
   Cloud,
   CloudCog,
@@ -11,6 +12,7 @@ import {
   Server,
   Database,
 } from "lucide-react";
+import { json } from "stream/consumers";
 
 interface DomainTypeAheadProps {
   onSelect?: (uniqueHash: string) => void;
@@ -19,10 +21,10 @@ interface DomainTypeAheadProps {
 const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
   const { instances, loading, selectedInstance, setSelectedInstance }: any =
     useCluster();
-  console.log(instances, "-------");
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const providers = [
     {
@@ -72,16 +74,13 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
     },
   ];
 
-  // Helper function to get provider icon by client name
   const getProviderIcon = (clientName: string) => {
-    console.log(providers);
     const provider = providers.find(
       (p) => p?.value?.toLowerCase() === clientName?.toLowerCase()
     );
     return provider?.icon || <Server className="w-5 h-5 text-gray-500" />;
   };
 
-  // Helper function to get provider for selected instance
   const getSelectedProviderIcon = () => {
     if (!selectedInstance) return null;
     return getProviderIcon(selectedInstance.client_name);
@@ -92,15 +91,23 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
     setSelectedInstance(instance);
     setSearchTerm("");
     setOpen(false);
+    console.log(instance);
+    // 🔑 update query param when cluster changes
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set("cluster_id", String(instance.id));
+      return newParams;
+    });
+
     onSelect?.(instance.id);
   };
 
   const filteredInstances = instances.filter((instance: any) =>
     instance?.config?.clusterName
-      .toLowerCase()
+      ?.toLowerCase()
       .includes(searchTerm.toLowerCase())
   );
-  console.log(filteredInstances, "----------");
+
   if (loading) return <p className="text-gray-500">Loading...</p>;
 
   return (
@@ -159,7 +166,7 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
                     className="flex items-center gap-3 px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm transition-colors"
                   >
                     <div className="flex-shrink-0">
-                      {getProviderIcon(instance?.config?.clusterName)}
+                      {getProviderIcon(instance?.client_name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="font-medium text-gray-900">
@@ -167,9 +174,6 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
                         {"_"}
                         {instance?.id}
                       </span>
-                      {/* <span className="text-gray-500 ml-2">
-                        | {instance?.config?.clusterName}
-                      </span> */}
                     </div>
                   </div>
                 ))
@@ -187,158 +191,3 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
 };
 
 export default DomainTypeAhead;
-// import React, { useState, useRef } from "react";
-// import { Search, ChevronDown, Pencil } from "lucide-react";
-// import { useCluster } from "../context/ClusterContext";
-// import {
-//   Cloud,
-//   CloudCog,
-//   CloudSun,
-//   CloudLightning,
-//   CloudRain,
-//   CloudSnow,
-//   Server,
-//   Database,
-// } from "lucide-react";
-// interface DomainTypeAheadProps {
-//   onSelect?: (uniqueHash: string) => void;
-// }
-
-// const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
-//   const { instances, loading, selectedInstance, setSelectedInstance } =
-//     useCluster();
-//   const [searchTerm, setSearchTerm] = useState("");
-//   const [open, setOpen] = useState(false);
-//   const dropdownRef = useRef<HTMLDivElement>(null);
-//   const providers = [
-//     {
-//       value: "AWS",
-//       label: "AWS",
-//       icon: <CloudCog className="w-5 h-5 text-orange-500" />,
-//     },
-//     {
-//       value: "Azure",
-//       label: "Azure",
-//       icon: <Cloud className="w-5 h-5 text-blue-500" />,
-//     },
-//     {
-//       value: "GCP",
-//       label: "Google Cloud Platform",
-//       icon: <CloudSun className="w-5 h-5 text-yellow-500" />,
-//     },
-//     {
-//       value: "Cloudflare",
-//       label: "Cloudflare",
-//       icon: <CloudLightning className="w-5 h-5 text-orange-400" />,
-//     },
-//     {
-//       value: "IBM Cloud",
-//       label: "IBM Cloud",
-//       icon: <CloudRain className="w-5 h-5 text-blue-400" />,
-//     },
-//     {
-//       value: "Oracle Cloud",
-//       label: "Oracle Cloud",
-//       icon: <Server className="w-5 h-5 text-red-500" />,
-//     },
-//     {
-//       value: "DigitalOcean",
-//       label: "DigitalOcean",
-//       icon: <Cloud className="w-5 h-5 text-sky-500" />,
-//     },
-//     {
-//       value: "Linode",
-//       label: "Linode",
-//       icon: <Database className="w-5 h-5 text-green-500" />,
-//     },
-//     {
-//       value: "SIFY",
-//       label: "SIFY",
-//       icon: <CloudSnow className="w-5 h-5 text-blue-300" />,
-//     },
-//   ];
-//   const handleSelect = (instance: typeof selectedInstance) => {
-//     if (!instance) return;
-//     setSelectedInstance(instance);
-//     setSearchTerm("");
-//     setOpen(false);
-//     onSelect?.(instance.unique_hash);
-//   };
-
-//   const filteredInstances = instances.filter((instance) =>
-//     instance.name.toLowerCase().includes(searchTerm.toLowerCase())
-//   );
-
-//   if (loading) return <p className="text-gray-500">Loading...</p>;
-
-//   return (
-//     <div className="flex items-center gap-3" ref={dropdownRef}>
-//       <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
-//         Select a Cluster:
-//       </span>
-//       <div className="relative w-72">
-//         <button
-//           type="button"
-//           onClick={() => setOpen((prev) => !prev)}
-//           className="flex items-center justify-between w-full border rounded-lg bg-white px-3 py-2 shadow-sm"
-//         >
-//           {selectedInstance ? (
-//             <>
-//               <span className="truncate">
-//                 {selectedInstance.client_name} | {selectedInstance.name}
-//               </span>
-//               <div className="flex items-center gap-2 flex-shrink-0">
-//                 <Pencil className="w-3.5 h-3.5 text-gray-400" />
-//                 <ChevronDown className="w-4 h-4 text-gray-500" />
-//               </div>
-//             </>
-//           ) : (
-//             <>
-//               <span className="text-gray-400">Select instance...</span>
-//               <ChevronDown className="w-4 h-4 text-gray-500" />
-//             </>
-//           )}
-//         </button>
-
-//         {open && (
-//           <div className="absolute w-full bg-white border rounded-lg mt-1 shadow-lg z-10">
-//             <div className="relative p-2 border-b">
-//               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-//               <input
-//                 type="text"
-//                 placeholder="Search instance..."
-//                 className="w-full pl-9 pr-2 py-1 border rounded-md focus:outline-none text-sm"
-//                 value={searchTerm}
-//                 onChange={(e) => setSearchTerm(e.target.value)}
-//                 autoFocus
-//               />
-//             </div>
-
-//             <div className="max-h-48 overflow-y-auto">
-//               {filteredInstances.length > 0 ? (
-//                 filteredInstances.map((instance) => (
-//                   <div
-//                     key={instance.id}
-//                     onClick={() => handleSelect(instance)}
-//                     className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-sm"
-//                   >
-//                     {instance.name}{" "}
-//                     <span className="text-gray-500">
-//                       | {instance.client_name}
-//                     </span>
-//                   </div>
-//                 ))
-//               ) : (
-//                 <div className="px-3 py-2 text-gray-500 text-sm">
-//                   No matches found
-//                 </div>
-//               )}
-//             </div>
-//           </div>
-//         )}
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default DomainTypeAhead;
