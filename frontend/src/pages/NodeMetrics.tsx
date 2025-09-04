@@ -19,13 +19,17 @@ import {
 
 const NODE_METRIC_TOOLTIPS = {
   // Overall node metrics
-  activeNodes: "Total number of nodes currently counted (including idle nodes) in the cluster",
+  activeNodes:
+    "Total number of nodes currently counted (including idle nodes) in the cluster",
   totalNodeCost: "Sum of all node costs during the selected time period",
-  avgCpuUsage: "Average CPU usage across all nodes: (sum of node CPU usage %) ÷ total nodes",
-  avgEfficiency: "Average efficiency across all nodes: (sum of node efficiency %) ÷ total nodes",
+  avgCpuUsage:
+    "Average CPU usage across all nodes: (sum of node CPU usage %) ÷ total nodes",
+  avgEfficiency:
+    "Average efficiency across all nodes: (sum of node efficiency %) ÷ total nodes",
 
   // Node status distribution
-  healthyNodes: "Number of nodes in a healthy state (default from node_status unless overridden by CPU/Memory thresholds)",
+  healthyNodes:
+    "Number of nodes in a healthy state (default from node_status unless overridden by CPU/Memory thresholds)",
   warningNodes: "Number of nodes in warning state (CPU > 80% or RAM > 85%)",
   criticalNodes: "Number of nodes in critical state (CPU > 90% or RAM > 95%)",
 
@@ -36,18 +40,25 @@ const NODE_METRIC_TOOLTIPS = {
   pvCost: "Persistent volume cost (if applicable) attributed to nodes",
 
   // Resource utilization
-  nodeCpuUsage: "CPU usage percentage per node = (CPU cores used ÷ CPU cores requested) × 100",
-  nodeRamUsage: "RAM usage percentage per node = (Memory used ÷ Memory requested) × 100 (capped at 100%)",
+  nodeCpuUsage:
+    "CPU usage percentage per node = (CPU cores used ÷ CPU cores requested) × 100",
+  nodeRamUsage:
+    "RAM usage percentage per node = (Memory used ÷ Memory requested) × 100 (capped at 100%)",
   nodeEfficiency: "Efficiency percentage per node = efficiency_percent × 100",
 
   // Node details
-  nodeStatus: "Current operational state of the node (overridden to Warning or Critical based on utilization thresholds)",
-  nodeCpu: "Node CPU utilization percentage = (CPU cores used ÷ CPU cores requested) × 100",
-  nodeMemory: "Node memory utilization percentage = (Memory used ÷ Memory requested) × 100",
+  nodeStatus:
+    "Current operational state of the node (overridden to Warning or Critical based on utilization thresholds)",
+  nodeCpu:
+    "Node CPU utilization percentage = (CPU cores used ÷ CPU cores requested) × 100",
+  nodeMemory:
+    "Node memory utilization percentage = (Memory used ÷ Memory requested) × 100",
   nodeCost: "Total cost incurred by this node during the selected time period",
-  nodeEfficiencyUsage: "Efficiency usage percentage for this node = efficiency_percent × 100",
-  nodeUptime: "Time since node became active, calculated from start and end timestamps",
-  totalNodes: "Total number of nodes currently active in the cluster"
+  nodeEfficiencyUsage:
+    "Efficiency usage percentage for this node = efficiency_percent × 100",
+  nodeUptime:
+    "Time since node became active, calculated from start and end timestamps",
+  totalNodes: "Total number of nodes currently active in the cluster",
 };
 
 // Tooltip Component
@@ -187,7 +198,7 @@ const NodeMetricsDashboard = () => {
   const [filters, setFilters] = useState({
     pod: [],
     deployment: [],
-    namespace: []
+    namespace: [],
   });
 
   // Search state
@@ -197,32 +208,32 @@ const NodeMetricsDashboard = () => {
   // Mock filter data for nodes page - you should replace this with actual data
   const nodeFilterConfig = {
     pod: [
-      { value: 'nginx-pod-1', label: 'nginx-pod-1', count: 15 },
-      { value: 'redis-pod-2', label: 'redis-pod-2', count: 8 },
-      { value: 'api-pod-3', label: 'api-pod-3', count: 22 },
-      { value: 'database-pod-1', label: 'database-pod-1', count: 5 },
-      { value: 'web-pod-1', label: 'web-pod-1', count: 12 }
+      { value: "nginx-pod-1", label: "nginx-pod-1", count: 15 },
+      { value: "redis-pod-2", label: "redis-pod-2", count: 8 },
+      { value: "api-pod-3", label: "api-pod-3", count: 22 },
+      { value: "database-pod-1", label: "database-pod-1", count: 5 },
+      { value: "web-pod-1", label: "web-pod-1", count: 12 },
     ],
     deployment: [
-      { value: 'nginx-deployment', label: 'nginx-deployment', count: 15 },
-      { value: 'redis-deployment', label: 'redis-deployment', count: 8 },
-      { value: 'api-deployment', label: 'api-deployment', count: 22 },
-      { value: 'database-deployment', label: 'database-deployment', count: 5 },
-      { value: 'web-deployment', label: 'web-deployment', count: 12 }
+      { value: "nginx-deployment", label: "nginx-deployment", count: 15 },
+      { value: "redis-deployment", label: "redis-deployment", count: 8 },
+      { value: "api-deployment", label: "api-deployment", count: 22 },
+      { value: "database-deployment", label: "database-deployment", count: 5 },
+      { value: "web-deployment", label: "web-deployment", count: 12 },
     ],
     namespace: [
-      { value: 'default', label: 'default', count: 45 },
-      { value: 'kube-system', label: 'kube-system', count: 12 },
-      { value: 'production', label: 'production', count: 38 },
-      { value: 'staging', label: 'staging', count: 20 },
-      { value: 'monitoring', label: 'monitoring', count: 8 }
-    ]
+      { value: "default", label: "default", count: 45 },
+      { value: "kube-system", label: "kube-system", count: 12 },
+      { value: "production", label: "production", count: 38 },
+      { value: "staging", label: "staging", count: 20 },
+      { value: "monitoring", label: "monitoring", count: 8 },
+    ],
   };
 
   const handleFiltersChange = (newFilters) => {
     setFilters(newFilters);
-    console.log('Node Filters changed:', newFilters);
-    
+    console.log("Node Filters changed:", newFilters);
+
     // Apply filters to your API call
     // fetchNodeData({ ...queryParams, filters: newFilters });
   };
@@ -336,7 +347,7 @@ const NodeMetricsDashboard = () => {
 
         // Apply search filter
         if (searchTerm) {
-          filteredAllocations = filteredAllocations.filter(node =>
+          filteredAllocations = filteredAllocations.filter((node) =>
             node.node_name.toLowerCase().includes(searchTerm.toLowerCase())
           );
         }
@@ -473,8 +484,8 @@ const NodeMetricsDashboard = () => {
   // Filter nodes based on selected filters and search term
   const filteredNodeData = useMemo(() => {
     if (!nodeData.length) return [];
-    
-    return nodeData.filter(node => {
+
+    return nodeData.filter((node) => {
       // Apply search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
@@ -486,7 +497,7 @@ const NodeMetricsDashboard = () => {
       // Apply pod filter
       if (filters.pod?.length > 0) {
         const nodePods = node.pods || []; // Assuming node has pods array
-        const hasMatchingPod = nodePods.some(pod => 
+        const hasMatchingPod = nodePods.some((pod) =>
           filters.pod.includes(pod.name || pod)
         );
         if (!hasMatchingPod) return false;
@@ -495,7 +506,7 @@ const NodeMetricsDashboard = () => {
       // Apply namespace filter
       if (filters.namespace?.length > 0) {
         const nodeNamespaces = node.namespaces || [];
-        const hasMatchingNamespace = nodeNamespaces.some(ns => 
+        const hasMatchingNamespace = nodeNamespaces.some((ns) =>
           filters.namespace.includes(ns)
         );
         if (!hasMatchingNamespace) return false;
@@ -504,7 +515,7 @@ const NodeMetricsDashboard = () => {
       // Apply deployment filter
       if (filters.deployment?.length > 0) {
         const nodeDeployments = node.deployments || [];
-        const hasMatchingDeployment = nodeDeployments.some(deployment => 
+        const hasMatchingDeployment = nodeDeployments.some((deployment) =>
           filters.deployment.includes(deployment)
         );
         if (!hasMatchingDeployment) return false;
@@ -1024,14 +1035,24 @@ const NodeMetricsDashboard = () => {
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => navigate("/metric/cluster")}
+                  onClick={() => {
+                    navigate({
+                      pathname: "/metric/cluster",
+                      search: `?cluster_id=${selectedInstance.id}`,
+                    });
+                  }}
                 >
                   Cluster
                 </Button>
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => navigate("/metric/pods")}
+                  onClick={() => {
+                    navigate({
+                      pathname: "/metric/pods",
+                      search: `?cluster_id=${selectedInstance.id}`,
+                    });
+                  }}
                 >
                   Pod
                 </Button>
@@ -1048,7 +1069,7 @@ const NodeMetricsDashboard = () => {
           </div>
 
           {/* Search and Filter Results Info */}
-          {(searchTerm || Object.values(filters).some(f => f.length > 0)) && (
+          {(searchTerm || Object.values(filters).some((f) => f.length > 0)) && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between text-sm text-gray-600">
                 <div className="flex items-center gap-4">
@@ -1058,29 +1079,35 @@ const NodeMetricsDashboard = () => {
                       : filteredNodeData.length === 1
                       ? "1 node found"
                       : `${filteredNodeData.length} nodes found`}
-                    {(searchTerm || Object.values(filters).some(f => f.length > 0)) && " with current filters"}
+                    {(searchTerm ||
+                      Object.values(filters).some((f) => f.length > 0)) &&
+                      " with current filters"}
                   </span>
-                  
+
                   {/* Show active filters */}
-                  {Object.values(filters).some(f => f.length > 0) && (
+                  {Object.values(filters).some((f) => f.length > 0) && (
                     <div className="flex items-center gap-2">
                       <span>Filters:</span>
-                      {Object.entries(filters).map(([filterType, filterValues]) => {
-                        if (!filterValues || filterValues.length === 0) return null;
-                        return (
-                          <span
-                            key={filterType}
-                            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                          >
-                            {filterType}: {filterValues.length}
-                          </span>
-                        );
-                      })}
+                      {Object.entries(filters).map(
+                        ([filterType, filterValues]) => {
+                          if (!filterValues || filterValues.length === 0)
+                            return null;
+                          return (
+                            <span
+                              key={filterType}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                            >
+                              {filterType}: {filterValues.length}
+                            </span>
+                          );
+                        }
+                      )}
                     </div>
                   )}
                 </div>
-                
-                {(searchTerm || Object.values(filters).some(f => f.length > 0)) && (
+
+                {(searchTerm ||
+                  Object.values(filters).some((f) => f.length > 0)) && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1113,7 +1140,6 @@ const NodeMetricsDashboard = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
-          
           <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.activeNodes}>
             <MetricCard
               title="Active Nodes"
@@ -1128,7 +1154,11 @@ const NodeMetricsDashboard = () => {
           <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.totalNodeCost}>
             <MetricCard
               title="Total Cost"
-              value={`${filteredNodeData.reduce((sum, node) => sum + parseFloat(node.totalCost), 0).toFixed(2) || "0.00"}`}
+              value={`${
+                filteredNodeData
+                  .reduce((sum, node) => sum + parseFloat(node.totalCost), 0)
+                  .toFixed(2) || "0.00"
+              }`}
               subtitle={`Last ${timeRange}`}
               icon={
                 <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
@@ -1141,11 +1171,26 @@ const NodeMetricsDashboard = () => {
           <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgCpuUsage}>
             <MetricCard
               title="Avg CPU Usage"
-              value={`${filteredNodeData.length > 0 ? (filteredNodeData.reduce((sum, node) => sum + parseFloat(node.cpuUsage), 0) / filteredNodeData.length).toFixed(1) : "0.0"}%`}
+              value={`${
+                filteredNodeData.length > 0
+                  ? (
+                      filteredNodeData.reduce(
+                        (sum, node) => sum + parseFloat(node.cpuUsage),
+                        0
+                      ) / filteredNodeData.length
+                    ).toFixed(1)
+                  : "0.0"
+              }%`}
               subtitle="Across filtered nodes"
               icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />}
               status={
-                filteredNodeData.length > 0 && (filteredNodeData.reduce((sum, node) => sum + parseFloat(node.cpuUsage), 0) / filteredNodeData.length) > thresholds.cpuUsageWarning
+                filteredNodeData.length > 0 &&
+                filteredNodeData.reduce(
+                  (sum, node) => sum + parseFloat(node.cpuUsage),
+                  0
+                ) /
+                  filteredNodeData.length >
+                  thresholds.cpuUsageWarning
                   ? "warning"
                   : "healthy"
               }
@@ -1156,18 +1201,32 @@ const NodeMetricsDashboard = () => {
           <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgEfficiency}>
             <MetricCard
               title="Avg Efficiency"
-              value={`${filteredNodeData.length > 0 ? (filteredNodeData.reduce((sum, node) => sum + parseFloat(node.efficiency), 0) / filteredNodeData.length).toFixed(1) : "0.0"}%`}
+              value={`${
+                filteredNodeData.length > 0
+                  ? (
+                      filteredNodeData.reduce(
+                        (sum, node) => sum + parseFloat(node.efficiency),
+                        0
+                      ) / filteredNodeData.length
+                    ).toFixed(1)
+                  : "0.0"
+              }%`}
               subtitle="Resource utilization"
               icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
               status={
-                filteredNodeData.length > 0 && (filteredNodeData.reduce((sum, node) => sum + parseFloat(node.efficiency), 0) / filteredNodeData.length) < thresholds.efficiencyWarning
+                filteredNodeData.length > 0 &&
+                filteredNodeData.reduce(
+                  (sum, node) => sum + parseFloat(node.efficiency),
+                  0
+                ) /
+                  filteredNodeData.length <
+                  thresholds.efficiencyWarning
                   ? "warning"
                   : "healthy"
               }
               trend={undefined}
             />
           </TooltipWrapper>
-
         </div>
 
         {/* Charts Grid */}
@@ -1404,42 +1463,74 @@ const NodeMetricsDashboard = () => {
           </CardHeader>
           <CardContent className="pt-0">
             <div className="hidden lg:block overflow-x-auto">
-              <table className={`w-full ${serverStatus === "down" ? "opacity-75" : ""}`}>
+              <table
+                className={`w-full ${
+                  serverStatus === "down" ? "opacity-75" : ""
+                }`}
+              >
                 <thead>
-                  <tr className="border-b" style={{ color: "hsl(var(--primary))" }}>
+                  <tr
+                    className="border-b"
+                    style={{ color: "hsl(var(--primary))" }}
+                  >
                     <th className="text-left p-4 font-medium">Node</th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeStatus}>Status</TooltipWrapper>
+                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeStatus}>
+                        Status
+                      </TooltipWrapper>
                     </th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCpu}>CPU</TooltipWrapper>
+                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCpu}>
+                        CPU
+                      </TooltipWrapper>
                     </th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeMemory}>Memory</TooltipWrapper>
+                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeMemory}>
+                        Memory
+                      </TooltipWrapper>
                     </th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCost}>Cost</TooltipWrapper>
+                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCost}>
+                        Cost
+                      </TooltipWrapper>
                     </th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeEfficiencyUsage}>Efficiency</TooltipWrapper>
+                      <TooltipWrapper
+                        tooltip={NODE_METRIC_TOOLTIPS.nodeEfficiencyUsage}
+                      >
+                        Efficiency
+                      </TooltipWrapper>
                     </th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeUptime}>Uptime</TooltipWrapper>
+                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeUptime}>
+                        Uptime
+                      </TooltipWrapper>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentNodes.map((node, index) => (
-                    <tr key={startIndex + index} className="border-b transition-colors">
+                    <tr
+                      key={startIndex + index}
+                      className="border-b transition-colors"
+                    >
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg" style={{ background: "hsl(var(--primary) / 0.1)" }}>
-                            <Server className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
+                          <div
+                            className="p-2 rounded-lg"
+                            style={{ background: "hsl(var(--primary) / 0.1)" }}
+                          >
+                            <Server
+                              className="w-4 h-4"
+                              style={{ color: "hsl(var(--primary))" }}
+                            />
                           </div>
                           <span className="font-medium">{node.name}</span>
                         </div>
                       </td>
-                      <td className="p-4"><StatusBadge status={node.status} /></td>
+                      <td className="p-4">
+                        <StatusBadge status={node.status} />
+                      </td>
                       <td className="p-4">{node.cpuUsage}%</td>
                       <td className="p-4">{node.ramUtilization}%</td>
                       <td className="p-4">${node.totalCost}</td>
@@ -1450,12 +1541,11 @@ const NodeMetricsDashboard = () => {
                 </tbody>
               </table>
             </div>
-            
+
             {/* Pagination */}
             <Pagination />
           </CardContent>
         </Card>
-
       </div>
     </div>
   );

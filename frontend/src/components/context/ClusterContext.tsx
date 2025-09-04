@@ -42,14 +42,24 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
         const data = await ClusterService.getInstanceList();
         const instanceList = data?.data || [];
         setInstances(instanceList);
-        console.log(queryClusterId, "-----------------------");
+        console.log(
+          queryClusterId,
+          "-----------------------",
+          selectedInstance
+        );
         if (instanceList.length > 0) {
           // Try to match cluster_id from query param
           const matched =
             queryClusterId &&
             instanceList.find((inst) => String(inst.id) === queryClusterId);
 
-          setSelectedInstance(matched || instanceList[0]); // fallback to first
+          setSelectedInstance(
+            matched
+              ? matched
+              : selectedInstance
+              ? selectedInstance
+              : instanceList[0]
+          ); // fallback to first
         }
       } catch (error) {
         console.error("Error fetching instances:", error);
