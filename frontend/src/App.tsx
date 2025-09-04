@@ -8,6 +8,7 @@ import {
   Route,
   useLocation,
   Outlet,
+  useSearchParams,
 } from "react-router-dom";
 import Overview from "./pages/Overview";
 import Settings from "./pages/Settings";
@@ -27,16 +28,23 @@ import SifyClusterPage from "./pages/cluster-creation/SifyClusterPage";
 import { Layout } from "@/components/layout/Layout";
 import { Header } from "@/components/layout/Header";
 import { useState } from "react";
+
 const queryClient = new QueryClient();
 
 function MetricLayout() {
   const [selectedHash, setSelectedHash] = useState<string>("");
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Handle domain selection from Header - this will be shared across all metric pages
   const handleDomainSelect = (hash: string) => {
     console.log("Selected Hash in MetricRoutes:", hash);
     setSelectedHash(hash);
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      newParams.set("cluster_id", String(hash));
+      return newParams;
+    });
   };
 
   // Get current page info based on route

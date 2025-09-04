@@ -29,8 +29,10 @@ import { useOutletContext } from "react-router-dom";
 // Overview page metric tooltips
 const OVERVIEW_METRIC_TOOLTIPS = {
   // Overall metrics
-  totalClusterCost: "Sum of all cluster costs from API response. Total cost across all clusters for selected time period",
-  avgEfficiency: "Mean efficiency across all clusters calculated as (Actual resource usage / Requested resources) * 100",
+  totalClusterCost:
+    "Sum of all cluster costs from API response. Total cost across all clusters for selected time period",
+  avgEfficiency:
+    "Mean efficiency across all clusters calculated as (Actual resource usage / Requested resources) * 100",
   totalNodes: "Total count of all nodes across clusters",
   healthyNodes: "Count of nodes with healthy status",
   warningNodes: "Count of nodes requiring attention",
@@ -38,23 +40,27 @@ const OVERVIEW_METRIC_TOOLTIPS = {
   totalPods: "Total pod count across all clusters",
   idlePods: "Count of pods with idle status",
   clusterCount: "Number of active clusters being monitored",
-  
+
   // Cost breakdown
-  cpuCost: "Calculated as 63% of total cost based on typical Kubernetes resource allocation",
+  cpuCost:
+    "Calculated as 63% of total cost based on typical Kubernetes resource allocation",
   memoryCost: "Calculated as 33% of total cost for memory resources",
   storageCost: "Calculated as 4% of total cost for persistent storage",
-  
+
   // Efficiency insights
   overallEfficiency: "Average efficiency across all clusters",
   idleResourcesCost: "Cost of unused/idle resources from API response",
-  optimizationPotential: "Assessment of potential cost savings: High (< 50%), Medium (50-80%), Low (> 80%)",
-  
+  optimizationPotential:
+    "Assessment of potential cost savings: High (< 50%), Medium (50-80%), Low (> 80%)",
+
   // Cluster details
   clusterName: "Display name and configuration name of the cluster",
-  clusterCost: "Total cost incurred by this cluster during the selected time period",
-  clusterEfficiency: "Efficiency percentage for this cluster = efficiency_percent × 100",
+  clusterCost:
+    "Total cost incurred by this cluster during the selected time period",
+  clusterEfficiency:
+    "Efficiency percentage for this cluster = efficiency_percent × 100",
   clusterNodes: "Total number of nodes in this specific cluster",
-  clusterPods: "Total number of pods running in this specific cluster"
+  clusterPods: "Total number of pods running in this specific cluster",
 };
 
 // Tooltip Component
@@ -123,7 +129,7 @@ export default function Overview() {
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
   }, []);
-  
+
   const fetchDashboardSummary = async () => {
     try {
       const res = await ClusterService.getAllMetrics(); // New API method
@@ -154,17 +160,19 @@ export default function Overview() {
   const handleRowClick = (clusterId: string) => {
     console.log("cluster id", clusterId);
     if (!clusterId) return;
+
     onDomainSelect(clusterId);
-    navigate("/metric/cluster");
+
+    // ✅ Navigate with query param
+    navigate({
+      pathname: "/metric/cluster",
+      search: `?cluster_id=${clusterId}`,
+    });
   };
-  
+
   if (loading) {
     return (
       <Layout title="Overview" subtitle="Loading Kubernetes cost metrics...">
-        <TopBar
-          title="Overview"
-          subtitle="Loading Kubernetes cost metrics..."
-        />
         <ResponsiveLoader
           title="Overview"
           subtitle={`Loading Kubernetes metrics across ${
@@ -312,7 +320,9 @@ export default function Overview() {
         <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.runningPods}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Running Pods</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Running Pods
+              </CardTitle>
               <Layers className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -445,7 +455,10 @@ export default function Overview() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.cpuCost} className="w-full">
+              <TooltipWrapper
+                tooltip={OVERVIEW_METRIC_TOOLTIPS.cpuCost}
+                className="w-full"
+              >
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <Cpu className="w-4 h-4 text-blue-500" />
@@ -459,8 +472,11 @@ export default function Overview() {
                   </span>
                 </div>
               </TooltipWrapper>
-              
-              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.memoryCost} className="w-full">
+
+              <TooltipWrapper
+                tooltip={OVERVIEW_METRIC_TOOLTIPS.memoryCost}
+                className="w-full"
+              >
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <MemoryStick className="w-4 h-4 text-green-500" />
@@ -474,8 +490,11 @@ export default function Overview() {
                   </span>
                 </div>
               </TooltipWrapper>
-              
-              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.storageCost} className="w-full">
+
+              <TooltipWrapper
+                tooltip={OVERVIEW_METRIC_TOOLTIPS.storageCost}
+                className="w-full"
+              >
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <HardDrive className="w-4 h-4 text-purple-500" />
@@ -499,7 +518,10 @@ export default function Overview() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.overallEfficiency} className="w-full">
+              <TooltipWrapper
+                tooltip={OVERVIEW_METRIC_TOOLTIPS.overallEfficiency}
+                className="w-full"
+              >
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Overall Efficiency</span>
                   <div className="flex items-center gap-2">
@@ -518,8 +540,11 @@ export default function Overview() {
                   </div>
                 </div>
               </TooltipWrapper>
-              
-              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.idleResourcesCost} className="w-full">
+
+              <TooltipWrapper
+                tooltip={OVERVIEW_METRIC_TOOLTIPS.idleResourcesCost}
+                className="w-full"
+              >
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Idle Resources</span>
                   <span className="font-medium text-red-600">
@@ -527,8 +552,11 @@ export default function Overview() {
                   </span>
                 </div>
               </TooltipWrapper>
-              
-              <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.optimizationPotential} className="w-full">
+
+              <TooltipWrapper
+                tooltip={OVERVIEW_METRIC_TOOLTIPS.optimizationPotential}
+                className="w-full"
+              >
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Optimization Potential</span>
                   <span className="font-medium text-green-600">
@@ -570,27 +598,37 @@ export default function Overview() {
                   >
                     <th className="text-left p-4 font-medium">S.No</th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterName}>
+                      <TooltipWrapper
+                        tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterName}
+                      >
                         <span>Cluster</span>
                       </TooltipWrapper>
                     </th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterCost}>
+                      <TooltipWrapper
+                        tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterCost}
+                      >
                         <span>Cost</span>
                       </TooltipWrapper>
                     </th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterEfficiency}>
+                      <TooltipWrapper
+                        tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterEfficiency}
+                      >
                         <span>Efficiency</span>
                       </TooltipWrapper>
                     </th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterNodes}>
+                      <TooltipWrapper
+                        tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterNodes}
+                      >
                         <span>Nodes</span>
                       </TooltipWrapper>
                     </th>
                     <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterPods}>
+                      <TooltipWrapper
+                        tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterPods}
+                      >
                         <span>Pods</span>
                       </TooltipWrapper>
                     </th>

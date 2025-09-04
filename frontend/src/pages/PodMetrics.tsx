@@ -441,7 +441,11 @@ const KubecostDashboard = () => {
     const rangeFromUrl = searchParams.get("window") || "24h";
     setIsInitialLoading(true);
     setSelectedTimeRange(rangeFromUrl);
-    setSearchParams({ window: rangeFromUrl });
+
+    // ✅ Merge instead of overwrite
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("window", rangeFromUrl);
+    setSearchParams(newParams);
 
     if (cluster_id && user_id) {
       fetchData();
@@ -475,7 +479,9 @@ const KubecostDashboard = () => {
   // Time range change effect
   useEffect(() => {
     if (cluster_id) {
-      setSearchParams({ window: selectedTimeRange });
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set("window", selectedTimeRange);
+      setSearchParams(newParams);
       fetchData();
     }
   }, [selectedTimeRange]);
@@ -795,14 +801,24 @@ const KubecostDashboard = () => {
                     <Button
                       variant="primary"
                       size="sm"
-                      onClick={() => navigate("/metric/cluster")}
+                      onClick={() => {
+                        navigate({
+                          pathname: "/metric/cluster",
+                          search: `?cluster_id=${selectedInstance.id}`,
+                        });
+                      }}
                     >
                       Cluster
                     </Button>
                     <Button
                       variant="primary"
                       size="sm"
-                      onClick={() => navigate("/metric/nodes")}
+                      onClick={() => {
+                        navigate({
+                          pathname: "/metric/nodes",
+                          search: `?cluster_id=${selectedInstance.id}`,
+                        });
+                      }}
                     >
                       Node
                     </Button>
