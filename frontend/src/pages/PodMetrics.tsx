@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   TrendingUp,
@@ -174,32 +173,31 @@ const KubecostDashboard = () => {
   const [filters, setFilters] = useState({
     node: [],
     namespace: [],
-    deployment: []
+    deployment: [],
   });
 
   // Mock filter data for pods page
   const podFilterConfig = {
     node: [
-      { value: 'node-1', label: 'node-1', count: 30 },
-      { value: 'node-2', label: 'node-2', count: 25 },
-      { value: 'node-3', label: 'node-3', count: 20 }
+      { value: "node-1", label: "node-1", count: 30 },
+      { value: "node-2", label: "node-2", count: 25 },
+      { value: "node-3", label: "node-3", count: 20 },
     ],
     namespace: [
-      { value: 'default', label: 'default', count: 45 },
-      { value: 'kube-system', label: 'kube-system', count: 12 },
-      { value: 'production', label: 'production', count: 38 }
+      { value: "default", label: "default", count: 45 },
+      { value: "kube-system", label: "kube-system", count: 12 },
+      { value: "production", label: "production", count: 38 },
     ],
     deployment: [
-      { value: 'nginx-deployment', label: 'nginx-deployment', count: 15 },
-      { value: 'redis-deployment', label: 'redis-deployment', count: 8 },
-      { value: 'api-deployment', label: 'api-deployment', count: 22 }
-    ]
-
+      { value: "nginx-deployment", label: "nginx-deployment", count: 15 },
+      { value: "redis-deployment", label: "redis-deployment", count: 8 },
+      { value: "api-deployment", label: "api-deployment", count: 22 },
+    ],
   };
 
   const handleFiltersChange = (newFilters) => {
     setFilters(newFilters);
-    console.log('Pod Filters changed:', newFilters);
+    console.log("Pod Filters changed:", newFilters);
 
     // Apply filters to your API call
     // fetchPodData({ ...queryParams, filters: newFilters });
@@ -363,8 +361,6 @@ const KubecostDashboard = () => {
               cpuEfficiency: pod?.cpuEfficiency || 0,
               ramEfficiency: pod.ramEfficiency || 0,
               isIdle: pod.isIdle || false,
-
-
             };
           });
         }
@@ -396,7 +392,8 @@ const KubecostDashboard = () => {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying... (${retryAttempts + 1
+              `Connection failed, retrying... (${
+                retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -635,7 +632,7 @@ const KubecostDashboard = () => {
     let totalCost = 0;
 
     // Mock nodes array to randomly assign to pods
-    const mockNodes = ['node-1', 'node-2', 'node-3'];
+    const mockNodes = ["node-1", "node-2", "node-3"];
 
     Object.entries(allocations).forEach(([key, allocationRaw], index) => {
       const allocation = allocationRaw as any;
@@ -680,7 +677,7 @@ const KubecostDashboard = () => {
   const filteredPods = useMemo(() => {
     if (!processedData?.pods) return [];
 
-    return processedData.pods.filter(pod => {
+    return processedData.pods.filter((pod) => {
       // Apply node filter
       if (filters.node?.length > 0) {
         if (!filters.node.includes(pod.node)) {
@@ -697,7 +694,8 @@ const KubecostDashboard = () => {
 
       // Apply deployment filter
       if (filters.deployment?.length > 0) {
-        const podDeployment = pod.deployment || pod.name.split('-').slice(0, -2).join('-');
+        const podDeployment =
+          pod.deployment || pod.name.split("-").slice(0, -2).join("-");
         if (!filters.deployment.includes(podDeployment)) {
           return false;
         }
@@ -920,7 +918,8 @@ const KubecostDashboard = () => {
               </div>
 
               {/* Search and Filter Results Info */}
-              {(searchTerm || Object.values(filters).some(f => f.length > 0)) && (
+              {(searchTerm ||
+                Object.values(filters).some((f) => f.length > 0)) && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between text-sm text-gray-600">
                     <div className="flex items-center gap-4">
@@ -928,37 +927,47 @@ const KubecostDashboard = () => {
                         {filteredAndSortedPods.length === 0
                           ? "No pods found"
                           : filteredAndSortedPods.length === 1
-                            ? "1 pod found"
-                            : `${filteredAndSortedPods.length} pods found`}
-                        {(searchTerm || Object.values(filters).some(f => f.length > 0)) && " with current filters"}
+                          ? "1 pod found"
+                          : `${filteredAndSortedPods.length} pods found`}
+                        {(searchTerm ||
+                          Object.values(filters).some((f) => f.length > 0)) &&
+                          " with current filters"}
                       </span>
 
                       {/* Show active filters */}
-                      {Object.values(filters).some(f => f.length > 0) && (
+                      {Object.values(filters).some((f) => f.length > 0) && (
                         <div className="flex items-center gap-2">
                           <span>Filters:</span>
-                          {Object.entries(filters).map(([filterType, filterValues]) => {
-                            if (!filterValues || filterValues.length === 0) return null;
-                            return (
-                              <span
-                                key={filterType}
-                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                              >
-                                {filterType}: {filterValues.length}
-                              </span>
-                            );
-                          })}
+                          {Object.entries(filters).map(
+                            ([filterType, filterValues]) => {
+                              if (!filterValues || filterValues.length === 0)
+                                return null;
+                              return (
+                                <span
+                                  key={filterType}
+                                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                                >
+                                  {filterType}: {filterValues.length}
+                                </span>
+                              );
+                            }
+                          )}
                         </div>
                       )}
                     </div>
 
-                    {(searchTerm || Object.values(filters).some(f => f.length > 0)) && (
+                    {(searchTerm ||
+                      Object.values(filters).some((f) => f.length > 0)) && (
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
                           setSearchTerm("");
-                          setFilters({ node: [], namespace: [], deployment: [] });
+                          setFilters({
+                            node: [],
+                            namespace: [],
+                            deployment: [],
+                          });
                         }}
                         className="text-blue-600 hover:text-blue-700"
                       >
@@ -980,8 +989,9 @@ const KubecostDashboard = () => {
                 className="w-full"
               >
                 <div
-                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === "down" ? "opacity-75" : ""
-                    }`}
+                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${
+                    serverStatus === "down" ? "opacity-75" : ""
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -1015,8 +1025,9 @@ const KubecostDashboard = () => {
                 className="w-full"
               >
                 <div
-                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === "down" ? "opacity-75" : ""
-                    }`}
+                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${
+                    serverStatus === "down" ? "opacity-75" : ""
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -1068,13 +1079,13 @@ const KubecostDashboard = () => {
                       <p className="text-2xl font-bold text">
                         {filteredAndSortedPods.length > 0
                           ? (
-                            (filteredAndSortedPods.reduce(
-                              (sum, pod) => sum + (pod.totalEfficiency || 0),
-                              0
-                            ) /
-                              filteredAndSortedPods.length) *
-                            100
-                          ).toFixed(1)
+                              (filteredAndSortedPods.reduce(
+                                (sum, pod) => sum + (pod.totalEfficiency || 0),
+                                0
+                              ) /
+                                filteredAndSortedPods.length) *
+                              100
+                            ).toFixed(1)
                           : "0"}
                         %
                       </p>
@@ -1484,7 +1495,6 @@ const KubecostDashboard = () => {
               </div>
             </div>
 
-
             {/* Pod Details Table with Enhanced Tooltips */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
               <div className="p-4 sm:p-6 border-b border-gray-200">
@@ -1596,8 +1606,8 @@ const KubecostDashboard = () => {
                     {paginatedPods.map((pod) => (
                       <tr
                         key={pod.id}
-                        className="hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => handlePodDetails(pod.name)}
+                        className="hover:bg-gray-50 transition-colors "
+                        // onClick={() => handlePodDetails(pod.name)}
                       >
                         <td className="px-4 py-4">
                           <div className="flex items-center min-w-0">
@@ -1633,7 +1643,7 @@ const KubecostDashboard = () => {
                           >
                             <div className="text-xs text-gray-500">
                               {typeof pod?.cpuEfficiency === "number" &&
-                                !isNaN(pod.cpuEfficiency)
+                              !isNaN(pod.cpuEfficiency)
                                 ? parseFloat(pod.cpuEfficiency).toFixed(1)
                                 : "0.0"}
                               % used
@@ -1670,12 +1680,13 @@ const KubecostDashboard = () => {
                             tooltip={POD_METRIC_TOOLTIPS.podTotalEfficiency}
                           >
                             <div
-                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${(pod.totalEfficiency || 0) * 100 > 50
-                                ? "bg-green-100 text-green-800"
-                                : (pod.totalEfficiency || 0) * 100 > 20
+                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
+                                (pod.totalEfficiency || 0) * 100 > 50
+                                  ? "bg-green-100 text-green-800"
+                                  : (pod.totalEfficiency || 0) * 100 > 20
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-red-100 text-red-800"
-                                }`}
+                              }`}
                             >
                               {((pod.totalEfficiency || 0) * 100).toFixed(1)}%
                             </div>
@@ -1759,10 +1770,11 @@ const KubecostDashboard = () => {
                               <button
                                 key={pageNum}
                                 onClick={() => handlePageChange(pageNum)}
-                                className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
-                                  ? "bg-blue-500 text-white border-blue-500"
-                                  : "border-gray-300 hover:bg-gray-100"
-                                  }`}
+                                className={`px-3 py-1 text-sm border rounded ${
+                                  currentPage === pageNum
+                                    ? "bg-blue-500 text-white border-blue-500"
+                                    : "border-gray-300 hover:bg-gray-100"
+                                }`}
                               >
                                 {pageNum}
                               </button>
