@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   TrendingUp,
@@ -17,40 +18,7 @@ import {
   Info,
 } from "lucide-react";
 
-const POD_METRIC_TOOLTIPS = {
-  // Overall pod metrics
-  totalCost:
-    "Total pod cost (CPU + Memory + Storage + Network + Shared). Key KPI for cost tracking.",
-  activePods: "Number of running pods with allocated resources.",
-  idleCost: "Cost of unused cluster capacity (waste).",
-  avgEfficiency: "Average resource efficiency = Usage ÷ Requests.",
-
-  // Pod cost breakdown
-  totalCpuCost: "Total CPU cost based on requests and runtime.",
-  totalMemoryCost: "Total memory cost from requested GB-hours.",
-  totalStorageCost: "Persistent + ephemeral storage costs.",
-  podCount: "Number of pods with allocated cost.",
-  computeCost: "CPU + Memory cost (excludes storage & extras).",
-
-  // Pod cost distribution
-  cpuDistribution: "CPU cost share of total cluster cost.",
-  memoryDistribution: "Memory cost share of total cluster cost.",
-  storageDistribution: "Storage cost share of total cluster cost.",
-  sharedDistribution: "Shared infra costs (e.g., LBs, services).",
-
-  // Individual pod details
-  podName: "Kubernetes pod identifier (namespace/pod-name).",
-  podCpuCost: "Pod CPU cost = Request × Time × Rate.",
-  podCpuUsage: "Actual CPU usage vs requested cores.",
-  podCpuEfficiency: "CPU efficiency = Usage ÷ Request.",
-  podMemoryCost: "Pod memory cost = Request × Time × Rate.",
-  podMemoryUsage: "Actual vs requested memory (GB).",
-  podMemoryRequest: "Requested memory (GB).",
-  podMemoryEfficiency: "Memory efficiency = Usage ÷ Request.",
-  podStorageCost: "Pod storage cost from PV claims.",
-  podTotalEfficiency: "Overall efficiency (CPU + Memory).",
-  podTotalCost: "Full pod cost (CPU + Memory + Storage + Network + Shared).",
-};
+import AdvancedFilter from "@/components/reusable/advancedFilter";
 
 // Tooltip Component
 const TooltipWrapper = ({ children, tooltip, className = "" }) => {
@@ -112,6 +80,41 @@ import {
   LoadingBanner,
 } from "./ConnectionStatusBanner";
 
+const POD_METRIC_TOOLTIPS = {
+  // Overall pod metrics
+  totalCost:
+    "Total pod cost (CPU + Memory + Storage + Network + Shared). Key KPI for cost tracking.",
+  activePods: "Number of running pods with allocated resources.",
+  idleCost: "Cost of unused cluster capacity (waste).",
+  avgEfficiency: "Average resource efficiency = Usage ÷ Requests.",
+
+  // Pod cost breakdown
+  totalCpuCost: "Total CPU cost based on requests and runtime.",
+  totalMemoryCost: "Total memory cost from requested GB-hours.",
+  totalStorageCost: "Persistent + ephemeral storage costs.",
+  podCount: "Number of pods with allocated cost.",
+  computeCost: "CPU + Memory cost (excludes storage & extras).",
+
+  // Pod cost distribution
+  cpuDistribution: "CPU cost share of total cluster cost.",
+  memoryDistribution: "Memory cost share of total cluster cost.",
+  storageDistribution: "Storage cost share of total cluster cost.",
+  sharedDistribution: "Shared infra costs (e.g., LBs, services).",
+
+  // Individual pod details
+  podName: "Kubernetes pod identifier (namespace/pod-name).",
+  podCpuCost: "Pod CPU cost = Request × Time × Rate.",
+  podCpuUsage: "Actual CPU usage vs requested cores.",
+  podCpuEfficiency: "CPU efficiency = Usage ÷ Request.",
+  podMemoryCost: "Pod memory cost = Request × Time × Rate.",
+  podMemoryUsage: "Actual vs requested memory (GB).",
+  podMemoryRequest: "Requested memory (GB).",
+  podMemoryEfficiency: "Memory efficiency = Usage ÷ Request.",
+  podStorageCost: "Pod storage cost from PV claims.",
+  podTotalEfficiency: "Overall efficiency (CPU + Memory).",
+  podTotalCost: "Full pod cost (CPU + Memory + Storage + Network + Shared).",
+};
+
 // Search Component
 interface SearchProps {
   searchTerm: string;
@@ -166,6 +169,41 @@ const KubecostDashboard = () => {
   const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
     return searchParams.get("window") || "24h";
   });
+
+  // Advanced Filter States
+  const [filters, setFilters] = useState({
+    node: [],
+    namespace: [],
+    deployment: []
+  });
+
+  // Mock filter data for pods page
+  const podFilterConfig = {
+    node: [
+      { value: 'node-1', label: 'node-1', count: 30 },
+      { value: 'node-2', label: 'node-2', count: 25 },
+      { value: 'node-3', label: 'node-3', count: 20 }
+    ],
+    namespace: [
+      { value: 'default', label: 'default', count: 45 },
+      { value: 'kube-system', label: 'kube-system', count: 12 },
+      { value: 'production', label: 'production', count: 38 }
+    ],
+    deployment: [
+      { value: 'nginx-deployment', label: 'nginx-deployment', count: 15 },
+      { value: 'redis-deployment', label: 'redis-deployment', count: 8 },
+      { value: 'api-deployment', label: 'api-deployment', count: 22 }
+    ]
+
+  };
+
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters);
+    console.log('Pod Filters changed:', newFilters);
+
+    // Apply filters to your API call
+    // fetchPodData({ ...queryParams, filters: newFilters });
+  };
 
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
@@ -325,6 +363,8 @@ const KubecostDashboard = () => {
               cpuEfficiency: pod?.cpuEfficiency || 0,
               ramEfficiency: pod.ramEfficiency || 0,
               isIdle: pod.isIdle || false,
+
+
             };
           });
         }
@@ -356,8 +396,7 @@ const KubecostDashboard = () => {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying... (${
-                retryAttempts + 1
+              `Connection failed, retrying... (${retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -584,12 +623,15 @@ const KubecostDashboard = () => {
       return { pods: [], idle: null, totalCost: 0 };
 
     const allocations = data.sets[0].allocations;
-    console.log("allocatipns,----------------", allocations);
+    console.log("allocations,----------------", allocations);
     const pods = [];
     let idle = null;
     let totalCost = 0;
 
-    Object.entries(allocations).forEach(([key, allocationRaw]) => {
+    // Mock nodes array to randomly assign to pods
+    const mockNodes = ['node-1', 'node-2', 'node-3'];
+
+    Object.entries(allocations).forEach(([key, allocationRaw], index) => {
       const allocation = allocationRaw as any;
       console.log(allocation);
       if (key === "__idle__") {
@@ -599,6 +641,8 @@ const KubecostDashboard = () => {
           ...allocation,
           id: key,
           namespace: key.split("-")[0] || "default",
+          // Add mock node assignment - this makes the filter work
+          node: mockNodes[index % mockNodes.length], // Cycles through node-1, node-2, node-3
           ramUsageGB: (
             allocation.ramByteUsageAverage /
             (1024 * 1024 * 1024)
@@ -613,7 +657,6 @@ const KubecostDashboard = () => {
                 allocation?.cpuCoreRequestAverage) *
               100
             ).toFixed(1) || 0,
-
           ramEfficiency: (
             (allocation.ramByteUsageAverage /
               allocation.ramByteRequestAverage) *
@@ -627,9 +670,40 @@ const KubecostDashboard = () => {
     return { pods, idle, totalCost };
   }, [data]);
 
+  // Filter pods based on selected filters
+  const filteredPods = useMemo(() => {
+    if (!processedData?.pods) return [];
+
+    return processedData.pods.filter(pod => {
+      // Apply node filter
+      if (filters.node?.length > 0) {
+        if (!filters.node.includes(pod.node)) {
+          return false;
+        }
+      }
+
+      // Apply namespace filter
+      if (filters.namespace?.length > 0) {
+        if (!filters.namespace.includes(pod.namespace)) {
+          return false;
+        }
+      }
+
+      // Apply deployment filter
+      if (filters.deployment?.length > 0) {
+        const podDeployment = pod.deployment || pod.name.split('-').slice(0, -2).join('-');
+        if (!filters.deployment.includes(podDeployment)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [processedData.pods, filters]); // Fixed: Complete dependency array
+
   const filteredAndSortedPods = useMemo(() => {
-    console.log(processedData);
-    const filtered = processedData.pods.filter((pod) => {
+    console.log(filteredPods);
+    const filtered = filteredPods.filter((pod) => {
       if (!searchTerm) return true;
       const searchLower = searchTerm.toLowerCase();
       return (
@@ -647,11 +721,11 @@ const KubecostDashboard = () => {
     });
 
     return sorted;
-  }, [processedData.pods, sortField, sortDirection, searchTerm]);
+  }, [filteredPods, sortField, sortDirection, searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, filters]);
 
   const totalItems = filteredAndSortedPods.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -789,8 +863,19 @@ const KubecostDashboard = () => {
                   />
                 </div>
 
-                {/* Right side - Refresh Controls and Network Status */}
+                {/* Right side - Filters, Navigation and Refresh Controls */}
                 <div className="flex items-center gap-3">
+                  {/* New Advanced Filter */}
+                  <AdvancedFilter
+                    pageType="pod"
+                    filterConfig={podFilterConfig}
+                    filters={filters}
+                    onFiltersChange={handleFiltersChange}
+                    isLoading={loading}
+                    showClearAll={true}
+                  />
+
+                  {/* Navigation buttons */}
                   <div className="flex items-center gap-2">
                     <Button
                       variant="primary"
@@ -807,6 +892,7 @@ const KubecostDashboard = () => {
                       Node
                     </Button>
                   </div>
+
                   <Refresh
                     onRefresh={refreshAllData}
                     refreshInterval={refreshInterval}
@@ -817,26 +903,50 @@ const KubecostDashboard = () => {
                 </div>
               </div>
 
-              {/* Search Results Info */}
-              {searchTerm && (
+              {/* Search and Filter Results Info */}
+              {(searchTerm || Object.values(filters).some(f => f.length > 0)) && (
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex items-center justify-between text-sm text-gray-600">
-                    <span>
-                      {totalItems === 0
-                        ? "No pods found"
-                        : totalItems === 1
-                        ? "1 pod found"
-                        : `${totalItems} pods found`}
-                      {searchTerm && ` matching "${searchTerm}"`}
-                    </span>
-                    {searchTerm && (
+                    <div className="flex items-center gap-4">
+                      <span>
+                        {filteredAndSortedPods.length === 0
+                          ? "No pods found"
+                          : filteredAndSortedPods.length === 1
+                            ? "1 pod found"
+                            : `${filteredAndSortedPods.length} pods found`}
+                        {(searchTerm || Object.values(filters).some(f => f.length > 0)) && " with current filters"}
+                      </span>
+
+                      {/* Show active filters */}
+                      {Object.values(filters).some(f => f.length > 0) && (
+                        <div className="flex items-center gap-2">
+                          <span>Filters:</span>
+                          {Object.entries(filters).map(([filterType, filterValues]) => {
+                            if (!filterValues || filterValues.length === 0) return null;
+                            return (
+                              <span
+                                key={filterType}
+                                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                              >
+                                {filterType}: {filterValues.length}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {(searchTerm || Object.values(filters).some(f => f.length > 0)) && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setSearchTerm("")}
+                        onClick={() => {
+                          setSearchTerm("");
+                          setFilters({ node: [], namespace: [], deployment: [] });
+                        }}
                         className="text-blue-600 hover:text-blue-700"
                       >
-                        Clear search
+                        Clear all
                       </Button>
                     )}
                   </div>
@@ -854,9 +964,8 @@ const KubecostDashboard = () => {
                 className="w-full"
               >
                 <div
-                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${
-                    serverStatus === "down" ? "opacity-75" : ""
-                  }`}
+                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === "down" ? "opacity-75" : ""
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -890,9 +999,8 @@ const KubecostDashboard = () => {
                 className="w-full"
               >
                 <div
-                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${
-                    serverStatus === "down" ? "opacity-75" : ""
-                  }`}
+                  className={`bg-white rounded-xl p-6 border border-slate-200 shadow-sm hover:shadow-md transition-shadow ${serverStatus === "down" ? "opacity-75" : ""
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -944,13 +1052,13 @@ const KubecostDashboard = () => {
                       <p className="text-2xl font-bold text">
                         {filteredAndSortedPods.length > 0
                           ? (
-                              (filteredAndSortedPods.reduce(
-                                (sum, pod) => sum + (pod.totalEfficiency || 0),
-                                0
-                              ) /
-                                filteredAndSortedPods.length) *
-                              100
-                            ).toFixed(1)
+                            (filteredAndSortedPods.reduce(
+                              (sum, pod) => sum + (pod.totalEfficiency || 0),
+                              0
+                            ) /
+                              filteredAndSortedPods.length) *
+                            100
+                          ).toFixed(1)
                           : "0"}
                         %
                       </p>
@@ -1360,6 +1468,7 @@ const KubecostDashboard = () => {
               </div>
             </div>
 
+
             {/* Pod Details Table with Enhanced Tooltips */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
               <div className="p-4 sm:p-6 border-b border-gray-200">
@@ -1508,7 +1617,7 @@ const KubecostDashboard = () => {
                           >
                             <div className="text-xs text-gray-500">
                               {typeof pod?.cpuEfficiency === "number" &&
-                              !isNaN(pod.cpuEfficiency)
+                                !isNaN(pod.cpuEfficiency)
                                 ? parseFloat(pod.cpuEfficiency).toFixed(1)
                                 : "0.0"}
                               % used
@@ -1545,13 +1654,12 @@ const KubecostDashboard = () => {
                             tooltip={POD_METRIC_TOOLTIPS.podTotalEfficiency}
                           >
                             <div
-                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
-                                (pod.totalEfficiency || 0) * 100 > 50
-                                  ? "bg-green-100 text-green-800"
-                                  : (pod.totalEfficiency || 0) * 100 > 20
+                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${(pod.totalEfficiency || 0) * 100 > 50
+                                ? "bg-green-100 text-green-800"
+                                : (pod.totalEfficiency || 0) * 100 > 20
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-red-100 text-red-800"
-                              }`}
+                                }`}
                             >
                               {((pod.totalEfficiency || 0) * 100).toFixed(1)}%
                             </div>
@@ -1635,11 +1743,10 @@ const KubecostDashboard = () => {
                               <button
                                 key={pageNum}
                                 onClick={() => handlePageChange(pageNum)}
-                                className={`px-3 py-1 text-sm border rounded ${
-                                  currentPage === pageNum
-                                    ? "bg-blue-500 text-white border-blue-500"
-                                    : "border-gray-300 hover:bg-gray-100"
-                                }`}
+                                className={`px-3 py-1 text-sm border rounded ${currentPage === pageNum
+                                  ? "bg-blue-500 text-white border-blue-500"
+                                  : "border-gray-300 hover:bg-gray-100"
+                                  }`}
                               >
                                 {pageNum}
                               </button>
