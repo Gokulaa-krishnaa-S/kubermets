@@ -418,6 +418,7 @@ def dashboard_summary():
                     NodeMetrics.cluster_id == cluster_id,
                     NodeMetrics.window_end > start_time,    
                     NodeMetrics.window_start < end_time,  
+                    
                 )
                 .all()
             )
@@ -428,8 +429,8 @@ def dashboard_summary():
                 .filter(
                     PodMetrics.user_id == user_id,
                     PodMetrics.cluster_id == cluster_id,
-                    PodMetrics.window_end > start_time,    
-                    PodMetrics.window_start < end_time,  
+                    PodMetrics.end_time > start_time,    
+                    PodMetrics.start_time < end_time,  
                    
                 )
                 .all()
