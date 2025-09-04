@@ -870,14 +870,14 @@ const KubecostDashboard = () => {
                 {/* Right side - Filters, Navigation and Refresh Controls */}
                 <div className="flex items-center gap-3">
                   {/* New Advanced Filter */}
-                  <AdvancedFilter
+                  {/* <AdvancedFilter
                     pageType="pod"
                     filterConfig={podFilterConfig}
                     filters={filters}
                     onFiltersChange={handleFiltersChange}
                     isLoading={loading}
                     showClearAll={true}
-                  />
+                  /> */}
 
                   {/* Navigation buttons */}
                   <div className="flex items-center gap-2">

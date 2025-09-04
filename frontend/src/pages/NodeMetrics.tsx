@@ -1023,14 +1023,14 @@ const NodeMetricsDashboard = () => {
             {/* Right side - Filters, Navigation and Refresh Controls */}
             <div className="flex items-center gap-3">
               {/* Advanced Filter */}
-              <AdvancedFilter
+              {/* <AdvancedFilter
                 pageType="node"
                 filterConfig={nodeFilterConfig}
                 filters={filters}
                 onFiltersChange={handleFiltersChange}
                 isLoading={loading}
                 showClearAll={true}
-              />
+              /> */}
 
               {/* Navigation buttons */}
               <div className="flex items-center gap-2">
