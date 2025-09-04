@@ -107,7 +107,7 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
         <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" />
       </div>
       {showTooltip && tooltip && (
-        <div className="absolute top-8 right-0 z-50 w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-lg border">
+        <div className="absolute top-8 right-0 z-50 w-44 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-lg border">
           <div className="relative">
             {tooltip}
             <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
