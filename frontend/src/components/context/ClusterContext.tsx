@@ -45,7 +45,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
         // const data = await ClusterService.getInstanceList();
         // checkClusterExists();
         const data = await getInstanceList();
-        console.log(data);
+        console.log(data , "-------check");
         const instanceList = data || [];
         setInstances(instanceList);
         setBackendError(null);
