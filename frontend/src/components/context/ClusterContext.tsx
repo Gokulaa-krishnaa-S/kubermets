@@ -42,10 +42,9 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const fetchInstances = async () => {
       try {
-        // const data = await ClusterService.getInstanceList();
-        // checkClusterExists();
-        const data = await getInstanceList();
-        console.log(data , "-------check");
+        const data = await ClusterService.getInstanceList();
+
+        console.log(data, "-------check");
         const instanceList = data || [];
         setInstances(instanceList);
         setBackendError(null);
