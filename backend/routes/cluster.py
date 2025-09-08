@@ -1462,7 +1462,7 @@ def save_new_cluster():
                                             "cluster_id": cluster_id,
                                             "user_id": cluster_obj.user_id
                                             or user_id
-                                            or "unknown",
+                                            or "dev-user",
                                             # Node identification with defaults
                                             "node_name": node_allocation.get(
                                                 "node_name", node_key
