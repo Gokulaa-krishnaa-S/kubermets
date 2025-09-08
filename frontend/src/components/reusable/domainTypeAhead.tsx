@@ -103,9 +103,7 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
   };
 
   const filteredInstances = instances.filter((instance: any) =>
-    instance?.config?.clusterName
-      ?.toLowerCase()
-      .includes(searchTerm.toLowerCase())
+    instance?.clusterName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) return <p className="text-gray-500">Loading...</p>;
@@ -126,7 +124,7 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
               <div className="flex items-center gap-2 truncate">
                 {getSelectedProviderIcon()}
                 <span className="truncate">
-                  {selectedInstance?.config?.clusterName} {"_"}
+                  {selectedInstance?.clusterName} {"_"}
                   {selectedInstance?.id}
                 </span>
               </div>
@@ -170,7 +168,7 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="font-medium text-gray-900">
-                        {instance?.config?.clusterName}
+                        {instance?.clusterName}
                         {"_"}
                         {instance?.id}
                       </span>

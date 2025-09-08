@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from models.model import NodeMetrics, db_manager, PodMetrics, ClusterMetrics
+
 # from cluster import get_cluster_data
 from sqlalchemy import func
 
@@ -39,12 +40,18 @@ def get_filter_params():
 def getclusternames():
     session = db_manager.get_session()
 
-    existing_cluster_names = session.query(
-        func.distinct(ClusterMetrics.cluster_name)
-    ).all()
+    # Query distinct cluster_id + cluster_name, omit "__idle__"
+    existing_clusters = (
+        session.query(ClusterMetrics.cluster_id, ClusterMetrics.cluster_name)
+        .filter(ClusterMetrics.cluster_name != "__idle__")
+        .distinct()
+        .all()
+    )
 
-    print(existing_cluster_names)
+    # Format as list of dicts
+    cluster_list = [
+        {"id": row.cluster_id, "clusterName": row.cluster_name}
+        for row in existing_clusters
+    ]
 
-    cluster_names = [row[0] for row in existing_cluster_names]
-
-    return jsonify(cluster_names), 200
+    return jsonify(cluster_list), 200
