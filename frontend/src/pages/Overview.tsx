@@ -149,7 +149,7 @@ export default function Overview() {
         if (match) {
           return {
             ...match,
-            clusterName: inst?.config?.clusterName || match?.name,
+            clusterName: inst?.clusterName || match?.name,
           };
         }
 
@@ -157,8 +157,7 @@ export default function Overview() {
         return {
           id: inst?.id,
           unique_hash: inst?.unique_hash || "",
-          clusterName:
-            inst?.config?.clusterName || inst?.name || "Unknown Cluster",
+          clusterName: inst?.clusterName || inst?.name || "Unknown Cluster",
           name: inst?.name || "",
           cluster: {
             cpuUsage: 0,
