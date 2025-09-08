@@ -761,20 +761,20 @@ export default function ClusterMetrics() {
       } else {
         const error = await response.json();
         console.error("Error inserting cluster:", error);
-        toast({
-          title: "Error",
-          description: "Failed to add cluster to monitoring system",
-          variant: "destructive",
-        });
+        // toast({
+        //   title: "Error",
+        //   description: "Failed to add cluster to monitoring system",
+        //   variant: "destructive",
+        // });
         return null;
       }
     } catch (error) {
       console.error("Error calling insertCluster API:", error);
-      toast({
-        title: "Error",
-        description: "Failed to connect to monitoring system",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Error",
+      //   description: "Failed to connect to monitoring system",
+      //   variant: "destructive",
+      // });
       return null;
     }
   }, []);

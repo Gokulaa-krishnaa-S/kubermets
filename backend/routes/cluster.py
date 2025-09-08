@@ -40,7 +40,7 @@ def get_cluster_metrics():
         API_URL = os.getenv("BACKEND_API_URL")
         # 1️ Get cluster_id from request
         cluster_id = request.args.get("cluster_id")
-        user_id = request.args.get("user_id", "1")
+        user_id = request.args.get("user_id", "dev-user")
         if not cluster_id:
             return jsonify({"error": "cluster_id is required"}), 400
 
@@ -1203,8 +1203,10 @@ def get_cluster_data(cluster_id: int = 1) -> dict:
         print(f"Error fetching cluster {cluster_id}: {e}")
         return {"error": str(e)}
 
+
 @clusters_bp.route("/saveNewCluster", methods=["POST"])
 def save_new_cluster():
+    session = db_manager.get_session()
     """
     New entry insert metrics for clusters, nodes, and pods from nested JSON structure.
     Expects JSON with user_id, cluster_id, and snapshots array.
@@ -1216,25 +1218,28 @@ def save_new_cluster():
         return jsonify({"error": "No data provided"}), 400
 
     results = {"cluster_metrics": 0, "node_metrics": 0, "pod_metrics": 0, "errors": []}
-    session = db_manager.get_session()
+
     unique_id = generate_uuid()
-    
+
     print(f"DEBUG: Starting cluster creation for cluster_id: {data.get('cluster_id')}")
     print(f"DEBUG: Input data keys: {list(data.keys())}")
-    
+
     try:
         # Extract and validate required fields
         snapshots = data.get("snapshots", [])
         cluster_id = data.get("cluster_id")
-        
+
         if not cluster_id:
             return jsonify({"error": "cluster_id is required"}), 400
-            
+
         if not snapshots:
-            return jsonify({"error": "snapshots array is required and cannot be empty"}), 400
-            
+            return (
+                jsonify({"error": "snapshots array is required and cannot be empty"}),
+                400,
+            )
+
         print(f"DEBUG: Processing {len(snapshots)} snapshots")
-        
+
         # Check for existing cluster
         existing_cluster = (
             session.query(ClusterMetrics)
@@ -1250,50 +1255,72 @@ def save_new_cluster():
             cluster_info = get_cluster_data(cluster_id)
             if cluster_info and "error" not in cluster_info:
                 user_id = cluster_info.get("data", {}).get("config", {}).get("user_id")
-                clusterName = cluster_info.get("data", {}).get("config", {}).get("clusterName", f"cluster-{cluster_id}")
-                print(f"DEBUG: Retrieved cluster info - user_id: {user_id}, clusterName: {clusterName}")
+                clusterName = (
+                    cluster_info.get("data", {})
+                    .get("config", {})
+                    .get("clusterName", f"cluster-{cluster_id}")
+                )
+                print(
+                    f"DEBUG: Retrieved cluster info - user_id: {user_id}, clusterName: {clusterName}"
+                )
             else:
                 raise Exception("Cluster info not available")
         except Exception as e:
             # Use fallback values if cluster info fetch fails
             user_id = data.get("user_id", "unknown")
             clusterName = data.get("cluster_name", f"cluster-{cluster_id}")
-            print(f"DEBUG: Using fallback values - user_id: {user_id}, clusterName: {clusterName}")
-            results["errors"].append(f"Failed to fetch cluster info, using fallback values: {str(e)}")
+            print(
+                f"DEBUG: Using fallback values - user_id: {user_id}, clusterName: {clusterName}"
+            )
+            results["errors"].append(
+                f"Failed to fetch cluster info, using fallback values: {str(e)}"
+            )
 
         # Set default time values
         now = datetime.now(timezone.utc).replace(microsecond=0, second=0, minute=0)
         today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
         yesterday_start = today_start - timedelta(days=1)
 
-        print(f"DEBUG: Time values - now: {now}, window_start: {yesterday_start}, window_end: {today_start}")
+        print(
+            f"DEBUG: Time values - now: {now}, window_start: {yesterday_start}, window_end: {today_start}"
+        )
 
         for snapshot_idx, snapshot in enumerate(snapshots):
             print(f"DEBUG: Processing snapshot {snapshot_idx + 1}/{len(snapshots)}")
-            
+
             allocations = snapshot.get("allocations", {})
             window_info = snapshot.get("window", {})
-            
+
             print(f"DEBUG: Snapshot has {len(allocations)} allocations")
-            
+
             # Use window info or defaults for time values
             timestamp = window_info.get("timestamp") or now.isoformat()
-            window_start = window_info.get("window_start") or yesterday_start.isoformat()
+            window_start = (
+                window_info.get("window_start") or yesterday_start.isoformat()
+            )
             window_end = window_info.get("window_end") or today_start.isoformat()
             window_duration = window_info.get("window_duration", "24h")
 
-            for allocation_idx, (allocation_key, allocation_data) in enumerate(allocations.items()):
-                print(f"DEBUG: Processing allocation {allocation_idx + 1}: {allocation_key}")
+            for allocation_idx, (allocation_key, allocation_data) in enumerate(
+                allocations.items()
+            ):
+                print(
+                    f"DEBUG: Processing allocation {allocation_idx + 1}: {allocation_key}"
+                )
                 cluster_obj = None
 
                 try:
                     # Ensure allocation_data is a dictionary
                     if not isinstance(allocation_data, dict):
-                        print(f"DEBUG: Skipping allocation {allocation_key} - data is not a dictionary")
+                        print(
+                            f"DEBUG: Skipping allocation {allocation_key} - data is not a dictionary"
+                        )
                         continue
-                        
-                    print(f"DEBUG: Allocation data keys: {list(allocation_data.keys())}")
-                    
+
+                    print(
+                        f"DEBUG: Allocation data keys: {list(allocation_data.keys())}"
+                    )
+
                     # Create ClusterMetrics entry with comprehensive defaults
                     cluster_entry = {
                         "unique_id": unique_id,
@@ -1302,47 +1329,83 @@ def save_new_cluster():
                         "window_start": window_start,
                         "window_end": window_end,
                         "window_duration": window_duration,
-                        
                         # Cost metrics with defaults
                         "total_cost": float(allocation_data.get("total_cost", 0.0)),
                         "cpu_cost": float(allocation_data.get("cpu_cost", 0.0)),
-                        "cpu_cost_idle": float(allocation_data.get("cpu_cost_idle", 0.0)),
+                        "cpu_cost_idle": float(
+                            allocation_data.get("cpu_cost_idle", 0.0)
+                        ),
                         "ram_cost": float(allocation_data.get("ram_cost", 0.0)),
-                        "ram_cost_idle": float(allocation_data.get("ram_cost_idle", 0.0)),
+                        "ram_cost_idle": float(
+                            allocation_data.get("ram_cost_idle", 0.0)
+                        ),
                         "pv_cost": float(allocation_data.get("pv_cost", 0.0)),
                         "network_cost": float(allocation_data.get("network_cost", 0.0)),
                         "gpu_cost": float(allocation_data.get("gpu_cost", 0.0)),
-                        "gpu_cost_idle": float(allocation_data.get("gpu_cost_idle", 0.0)),
-                        "load_balancer_cost": float(allocation_data.get("load_balancer_cost", 0.0)),
-                        "external_cost": float(allocation_data.get("external_cost", 0.0)),
+                        "gpu_cost_idle": float(
+                            allocation_data.get("gpu_cost_idle", 0.0)
+                        ),
+                        "load_balancer_cost": float(
+                            allocation_data.get("load_balancer_cost", 0.0)
+                        ),
+                        "external_cost": float(
+                            allocation_data.get("external_cost", 0.0)
+                        ),
                         "shared_cost": float(allocation_data.get("shared_cost", 0.0)),
-                        
                         # Resource metrics with defaults
-                        "cpu_core_request_average": float(allocation_data.get("cpu_core_request_average", 0.0)),
-                        "cpu_core_usage_average": float(allocation_data.get("cpu_core_usage_average", 0.0)),
-                        "ram_byte_request_average": float(allocation_data.get("ram_byte_request_average", 0.0)),
-                        "ram_byte_usage_average": float(allocation_data.get("ram_byte_usage_average", 0.0)),
-                        "gpu_request_average": float(allocation_data.get("gpu_request_average", 0.0)),
-                        "gpu_usage_average": float(allocation_data.get("gpu_usage_average", 0.0)),
-                        
+                        "cpu_core_request_average": float(
+                            allocation_data.get("cpu_core_request_average", 0.0)
+                        ),
+                        "cpu_core_usage_average": float(
+                            allocation_data.get("cpu_core_usage_average", 0.0)
+                        ),
+                        "ram_byte_request_average": float(
+                            allocation_data.get("ram_byte_request_average", 0.0)
+                        ),
+                        "ram_byte_usage_average": float(
+                            allocation_data.get("ram_byte_usage_average", 0.0)
+                        ),
+                        "gpu_request_average": float(
+                            allocation_data.get("gpu_request_average", 0.0)
+                        ),
+                        "gpu_usage_average": float(
+                            allocation_data.get("gpu_usage_average", 0.0)
+                        ),
                         # Efficiency metrics with defaults
-                        "total_efficiency": float(allocation_data.get("total_efficiency", 0.0)),
-                        "cpu_usage_percent": float(allocation_data.get("cpu_usage_percent", 0.0)),
-                        "memory_usage_percent": float(allocation_data.get("memory_usage_percent", 0.0)),
-                        "memory_gb_used": float(allocation_data.get("memory_gb_used", 0.0)),
-                        "memory_gb_requested": float(allocation_data.get("memory_gb_requested", 0.0)),
-                        "efficiency_percent": float(allocation_data.get("efficiency_percent", 0.0)),
-                        
+                        "total_efficiency": float(
+                            allocation_data.get("total_efficiency", 0.0)
+                        ),
+                        "cpu_usage_percent": float(
+                            allocation_data.get("cpu_usage_percent", 0.0)
+                        ),
+                        "memory_usage_percent": float(
+                            allocation_data.get("memory_usage_percent", 0.0)
+                        ),
+                        "memory_gb_used": float(
+                            allocation_data.get("memory_gb_used", 0.0)
+                        ),
+                        "memory_gb_requested": float(
+                            allocation_data.get("memory_gb_requested", 0.0)
+                        ),
+                        "efficiency_percent": float(
+                            allocation_data.get("efficiency_percent", 0.0)
+                        ),
                         # Status fields with defaults
-                        "cluster_status": allocation_data.get("cluster_status", "running"),
-                        "cluster_version": allocation_data.get("cluster_version", "N/A"),
+                        "cluster_status": allocation_data.get(
+                            "cluster_status", "running"
+                        ),
+                        "cluster_version": allocation_data.get(
+                            "cluster_version", "N/A"
+                        ),
                         "node_count": int(allocation_data.get("node_count", 0)),
                         "pod_count": int(allocation_data.get("pod_count", 0)),
-                        "efficiency_category": allocation_data.get("efficiency_category", "unknown"),
-                        
+                        "efficiency_category": allocation_data.get(
+                            "efficiency_category", "unknown"
+                        ),
                         # Boolean flags with defaults
-                        "is_idle_allocation": bool(allocation_data.get("is_idle_allocation", False)),
-                        
+                        "is_idle_allocation": bool(
+                            allocation_data.get("is_idle_allocation", False)
+                        ),
                         # Metadata with defaults
                         "cluster_id": cluster_id,
                         "user_id": user_id,
@@ -1351,207 +1414,480 @@ def save_new_cluster():
                         "raw_api_response": allocation_data,
                     }
 
-                    print(f"DEBUG: Creating cluster entry with total_cost: {cluster_entry['total_cost']}")
-                    
+                    print(
+                        f"DEBUG: Creating cluster entry with total_cost: {cluster_entry['total_cost']}"
+                    )
+
                     cluster_obj = ClusterMetrics(**cluster_entry)
                     session.add(cluster_obj)
                     session.flush()  # This assigns the ID to cluster_obj
                     results["cluster_metrics"] += 1
-                    
+
                     print(f"DEBUG: Created cluster object with ID: {cluster_obj.id}")
 
                     # Process node data if available (only for non-idle cluster allocations)
                     if allocation_key != "__idle__":
                         node_data = allocation_data.get("node_data", {})
-                        print(f"DEBUG: Node data available: {'Yes' if node_data and node_data.get('data') else 'No'}")
-                        
+                        print(
+                            f"DEBUG: Node data available: {'Yes' if node_data and node_data.get('data') else 'No'}"
+                        )
+
                         if node_data and node_data.get("data"):
                             node_sets = node_data["data"].get("sets", [])
                             print(f"DEBUG: Processing {len(node_sets)} node sets")
 
                             for node_set_idx, node_set in enumerate(node_sets):
                                 node_allocations = node_set.get("allocations", {})
-                                print(f"DEBUG: Node set {node_set_idx + 1} has {len(node_allocations)} node allocations")
+                                print(
+                                    f"DEBUG: Node set {node_set_idx + 1} has {len(node_allocations)} node allocations"
+                                )
 
-                                for node_key, node_allocation in node_allocations.items():
+                                for (
+                                    node_key,
+                                    node_allocation,
+                                ) in node_allocations.items():
                                     node_obj = None
                                     print(f"DEBUG: Processing node: {node_key}")
 
                                     try:
                                         # Ensure node_allocation is a dictionary
                                         if not isinstance(node_allocation, dict):
-                                            print(f"DEBUG: Skipping node {node_key} - data is not a dictionary")
+                                            print(
+                                                f"DEBUG: Skipping node {node_key} - data is not a dictionary"
+                                            )
                                             continue
-                                            
                                         # Create NodeMetrics entry with comprehensive defaults
                                         node_entry = {
                                             "cluster_relation_id": cluster_obj.id,
                                             "cluster_id": cluster_id,
-                                            "user_id": user_id,
-                                            
+                                            "user_id": cluster_obj.user_id
+                                            or user_id
+                                            or "unknown",
                                             # Node identification with defaults
-                                            "node_name": node_allocation.get("node_name", node_key),
+                                            "node_name": node_allocation.get(
+                                                "node_name", node_key
+                                            ),
                                             "cluster_name": clusterName,
-                                            "namespace": node_allocation.get("namespace"),
-                                            "deployment_name": node_allocation.get("deployment_name"),
-                                            
+                                            "namespace": node_allocation.get(
+                                                "namespace"
+                                            ),
+                                            "deployment_name": node_allocation.get(
+                                                "deployment_name"
+                                            ),
                                             # Time fields
                                             "timestamp": timestamp,
                                             "window_start": window_start,
                                             "window_end": window_end,
                                             "window_duration": window_duration,
-                                            
                                             # Cost metrics with defaults
-                                            "total_cost": float(node_allocation.get("total_cost", 0.0)),
-                                            "cpu_cost": float(node_allocation.get("cpu_cost", 0.0)),
-                                            "cpu_cost_idle": float(node_allocation.get("cpu_cost_idle", 0.0)),
-                                            "ram_cost": float(node_allocation.get("ram_cost", 0.0)),
-                                            "ram_cost_idle": float(node_allocation.get("ram_cost_idle", 0.0)),
-                                            "pv_cost": float(node_allocation.get("pv_cost", 0.0)),
-                                            "network_cost": float(node_allocation.get("network_cost", 0.0)),
-                                            "gpu_cost": float(node_allocation.get("gpu_cost", 0.0)),
-                                            "gpu_cost_idle": float(node_allocation.get("gpu_cost_idle", 0.0)),
-                                            "load_balancer_cost": float(node_allocation.get("load_balancer_cost", 0.0)),
-                                            "external_cost": float(node_allocation.get("external_cost", 0.0)),
-                                            "shared_cost": float(node_allocation.get("shared_cost", 0.0)),
-                                            
+                                            "total_cost": float(
+                                                node_allocation.get("total_cost", 0.0)
+                                            ),
+                                            "cpu_cost": float(
+                                                node_allocation.get("cpu_cost", 0.0)
+                                            ),
+                                            "cpu_cost_idle": float(
+                                                node_allocation.get(
+                                                    "cpu_cost_idle", 0.0
+                                                )
+                                            ),
+                                            "ram_cost": float(
+                                                node_allocation.get("ram_cost", 0.0)
+                                            ),
+                                            "ram_cost_idle": float(
+                                                node_allocation.get(
+                                                    "ram_cost_idle", 0.0
+                                                )
+                                            ),
+                                            "pv_cost": float(
+                                                node_allocation.get("pv_cost", 0.0)
+                                            ),
+                                            "network_cost": float(
+                                                node_allocation.get("network_cost", 0.0)
+                                            ),
+                                            "gpu_cost": float(
+                                                node_allocation.get("gpu_cost", 0.0)
+                                            ),
+                                            "gpu_cost_idle": float(
+                                                node_allocation.get(
+                                                    "gpu_cost_idle", 0.0
+                                                )
+                                            ),
+                                            "load_balancer_cost": float(
+                                                node_allocation.get(
+                                                    "load_balancer_cost", 0.0
+                                                )
+                                            ),
+                                            "external_cost": float(
+                                                node_allocation.get(
+                                                    "external_cost", 0.0
+                                                )
+                                            ),
+                                            "shared_cost": float(
+                                                node_allocation.get("shared_cost", 0.0)
+                                            ),
                                             # Resource metrics with defaults
-                                            "cpu_core_request_average": float(node_allocation.get("cpu_core_request_average", 0.0)),
-                                            "cpu_core_usage_average": float(node_allocation.get("cpu_core_usage_average", 0.0)),
-                                            "ram_byte_request_average": float(node_allocation.get("ram_byte_request_average", 0.0)),
-                                            "ram_byte_usage_average": float(node_allocation.get("ram_byte_usage_average", 0.0)),
-                                            "gpu_request_average": float(node_allocation.get("gpu_request_average", 0.0)),
-                                            "gpu_usage_average": float(node_allocation.get("gpu_usage_average", 0.0)),
-                                            
+                                            "cpu_core_request_average": float(
+                                                node_allocation.get(
+                                                    "cpu_core_request_average", 0.0
+                                                )
+                                            ),
+                                            "cpu_core_usage_average": float(
+                                                node_allocation.get(
+                                                    "cpu_core_usage_average", 0.0
+                                                )
+                                            ),
+                                            "ram_byte_request_average": float(
+                                                node_allocation.get(
+                                                    "ram_byte_request_average", 0.0
+                                                )
+                                            ),
+                                            "ram_byte_usage_average": float(
+                                                node_allocation.get(
+                                                    "ram_byte_usage_average", 0.0
+                                                )
+                                            ),
+                                            "gpu_request_average": float(
+                                                node_allocation.get(
+                                                    "gpu_request_average", 0.0
+                                                )
+                                            ),
+                                            "gpu_usage_average": float(
+                                                node_allocation.get(
+                                                    "gpu_usage_average", 0.0
+                                                )
+                                            ),
                                             # Efficiency metrics with defaults
-                                            "total_efficiency": float(node_allocation.get("total_efficiency", 0.0)),
-                                            "cpu_usage_percent": float(node_allocation.get("cpu_usage_percent", 0.0)),
-                                            "memory_usage_percent": float(node_allocation.get("memory_usage_percent", 0.0)),
-                                            "memory_gb_used": float(node_allocation.get("memory_gb_used", 0.0)),
-                                            "memory_gb_requested": float(node_allocation.get("memory_gb_requested", 0.0)),
-                                            "efficiency_percent": float(node_allocation.get("efficiency_percent", 0.0)),
-                                            
+                                            "total_efficiency": float(
+                                                node_allocation.get(
+                                                    "total_efficiency", 0.0
+                                                )
+                                            ),
+                                            "cpu_usage_percent": float(
+                                                node_allocation.get(
+                                                    "cpu_usage_percent", 0.0
+                                                )
+                                            ),
+                                            "memory_usage_percent": float(
+                                                node_allocation.get(
+                                                    "memory_usage_percent", 0.0
+                                                )
+                                            ),
+                                            "memory_gb_used": float(
+                                                node_allocation.get(
+                                                    "memory_gb_used", 0.0
+                                                )
+                                            ),
+                                            "memory_gb_requested": float(
+                                                node_allocation.get(
+                                                    "memory_gb_requested", 0.0
+                                                )
+                                            ),
+                                            "efficiency_percent": float(
+                                                node_allocation.get(
+                                                    "efficiency_percent", 0.0
+                                                )
+                                            ),
                                             # Node-specific fields with defaults
-                                            "node_status": node_allocation.get("node_status", "Healthy"),
-                                            "node_health_score": float(node_allocation.get("node_health_score", 100.0)),
-                                            "node_instance_type": node_allocation.get("node_instance_type"),
-                                            "node_zone": node_allocation.get("node_zone"),
-                                            
+                                            "node_status": node_allocation.get(
+                                                "node_status", "Healthy"
+                                            ),
+                                            "node_health_score": float(
+                                                node_allocation.get(
+                                                    "node_health_score", 100.0
+                                                )
+                                            ),
+                                            "node_instance_type": node_allocation.get(
+                                                "node_instance_type"
+                                            ),
+                                            "node_zone": node_allocation.get(
+                                                "node_zone"
+                                            ),
                                             # Boolean flags with defaults
-                                            "is_idle_allocation": bool(node_allocation.get("is_idle_allocation", False)),
-                                            "is_unallocated": bool(node_allocation.get("is_unallocated", False)),
-                                            "is_system_allocation": bool(node_allocation.get("is_system_allocation", False)),
-                                            "is_active": bool(node_allocation.get("is_active", True)),
-                                            
+                                            "is_idle_allocation": bool(
+                                                node_allocation.get(
+                                                    "is_idle_allocation", False
+                                                )
+                                            ),
+                                            "is_unallocated": bool(
+                                                node_allocation.get(
+                                                    "is_unallocated", False
+                                                )
+                                            ),
+                                            "is_system_allocation": bool(
+                                                node_allocation.get(
+                                                    "is_system_allocation", False
+                                                )
+                                            ),
+                                            "is_active": bool(
+                                                node_allocation.get("is_active", True)
+                                            ),
                                             # Lifecycle fields
-                                            "first_seen": node_allocation.get("first_seen", now),
-                                            "last_seen": node_allocation.get("last_seen", now),
+                                            "first_seen": node_allocation.get(
+                                                "first_seen", now
+                                            ),
+                                            "last_seen": node_allocation.get(
+                                                "last_seen", now
+                                            ),
                                         }
 
                                         node_obj = NodeMetrics(**node_entry)
                                         session.add(node_obj)
                                         session.flush()  # This assigns the ID to node_obj
                                         results["node_metrics"] += 1
-                                        
-                                        print(f"DEBUG: Created node object with ID: {node_obj.id}")
+
+                                        print(
+                                            f"DEBUG: Created node object with ID: {node_obj.id}"
+                                        )
 
                                         # Process pod data if available
                                         pod_data = node_allocation.get("pod_data", {})
-                                        print(f"DEBUG: Pod data available for node {node_key}: {'Yes' if pod_data and pod_data.get('data') else 'No'}")
-                                        
+                                        print(
+                                            f"DEBUG: Pod data available for node {node_key}: {'Yes' if pod_data and pod_data.get('data') else 'No'}"
+                                        )
+
                                         if pod_data and pod_data.get("data"):
                                             pod_sets = pod_data["data"].get("sets", [])
-                                            print(f"DEBUG: Processing {len(pod_sets)} pod sets for node {node_key}")
+                                            print(
+                                                f"DEBUG: Processing {len(pod_sets)} pod sets for node {node_key}"
+                                            )
 
-                                            for pod_set_idx, pod_set in enumerate(pod_sets):
-                                                pod_allocations = pod_set.get("allocations", {})
-                                                print(f"DEBUG: Pod set {pod_set_idx + 1} has {len(pod_allocations)} pod allocations")
+                                            for pod_set_idx, pod_set in enumerate(
+                                                pod_sets
+                                            ):
+                                                pod_allocations = pod_set.get(
+                                                    "allocations", {}
+                                                )
+                                                print(
+                                                    f"DEBUG: Pod set {pod_set_idx + 1} has {len(pod_allocations)} pod allocations"
+                                                )
 
-                                                for pod_key, pod_allocation in pod_allocations.items():
-                                                    print(f"DEBUG: Processing pod: {pod_key}")
-                                                    
+                                                for (
+                                                    pod_key,
+                                                    pod_allocation,
+                                                ) in pod_allocations.items():
+                                                    print(
+                                                        f"DEBUG: Processing pod: {pod_key}"
+                                                    )
+
                                                     try:
                                                         # Ensure pod_allocation is a dictionary
-                                                        if not isinstance(pod_allocation, dict):
-                                                            print(f"DEBUG: Skipping pod {pod_key} - data is not a dictionary")
+                                                        if not isinstance(
+                                                            pod_allocation, dict
+                                                        ):
+                                                            print(
+                                                                f"DEBUG: Skipping pod {pod_key} - data is not a dictionary"
+                                                            )
                                                             continue
-                                                            
+
                                                         # Create PodMetrics entry with comprehensive defaults
                                                         pod_entry = {
                                                             "node_id": node_obj.id,  # Foreign key to node
                                                             "user_id": user_id,
                                                             "cluster_id": cluster_id,
-                                                            
                                                             # Pod identification with defaults
-                                                            "key": pod_allocation.get("key", pod_key),
-                                                            "namespace": pod_allocation.get("namespace"),
-                                                            "name": pod_allocation.get("name"),
-                                                            "deployment_name": pod_allocation.get("deployment_name"),
-                                                            "node_name": pod_allocation.get("node_name"),
-                                                            
+                                                            "key": pod_allocation.get(
+                                                                "key", pod_key
+                                                            ),
+                                                            "namespace": pod_allocation.get(
+                                                                "namespace"
+                                                            ),
+                                                            "name": pod_allocation.get(
+                                                                "name"
+                                                            ),
+                                                            "deployment_name": pod_allocation.get(
+                                                                "deployment_name"
+                                                            ),
+                                                            "node_name": pod_allocation.get(
+                                                                "node_name"
+                                                            ),
                                                             # Time fields
                                                             "timestamp": timestamp,
                                                             "start_time": window_start,
                                                             "end_time": window_end,
                                                             "window": window_duration,
-                                                            
                                                             # CPU metrics with defaults
-                                                            "cpu_core_usage_average": float(pod_allocation.get("cpu_core_usage_average", 0.0)),
-                                                            "cpu_core_request_average": float(pod_allocation.get("cpu_core_request_average", 0.0)),
-                                                            "cpu_cost": float(pod_allocation.get("cpu_cost", 0.0)),
-                                                            "cpu_cost_idle": float(pod_allocation.get("cpu_cost_idle", 0.0)),
-                                                            
+                                                            "cpu_core_usage_average": float(
+                                                                pod_allocation.get(
+                                                                    "cpu_core_usage_average",
+                                                                    0.0,
+                                                                )
+                                                            ),
+                                                            "cpu_core_request_average": float(
+                                                                pod_allocation.get(
+                                                                    "cpu_core_request_average",
+                                                                    0.0,
+                                                                )
+                                                            ),
+                                                            "cpu_cost": float(
+                                                                pod_allocation.get(
+                                                                    "cpu_cost", 0.0
+                                                                )
+                                                            ),
+                                                            "cpu_cost_idle": float(
+                                                                pod_allocation.get(
+                                                                    "cpu_cost_idle", 0.0
+                                                                )
+                                                            ),
                                                             # Memory metrics with defaults
-                                                            "ram_byte_usage_average": float(pod_allocation.get("ram_byte_usage_average", 0.0)),
-                                                            "ram_byte_request_average": float(pod_allocation.get("ram_byte_request_average", 0.0)),
-                                                            "ram_cost": float(pod_allocation.get("ram_cost", 0.0)),
-                                                            "ram_cost_idle": float(pod_allocation.get("ram_cost_idle", 0.0)),
-                                                            "ram_usage_gb": float(pod_allocation.get("ram_usage_gb", 0.0)),
-                                                            "ram_request_gb": float(pod_allocation.get("ram_request_gb", 0.0)),
-                                                            
+                                                            "ram_byte_usage_average": float(
+                                                                pod_allocation.get(
+                                                                    "ram_byte_usage_average",
+                                                                    0.0,
+                                                                )
+                                                            ),
+                                                            "ram_byte_request_average": float(
+                                                                pod_allocation.get(
+                                                                    "ram_byte_request_average",
+                                                                    0.0,
+                                                                )
+                                                            ),
+                                                            "ram_cost": float(
+                                                                pod_allocation.get(
+                                                                    "ram_cost", 0.0
+                                                                )
+                                                            ),
+                                                            "ram_cost_idle": float(
+                                                                pod_allocation.get(
+                                                                    "ram_cost_idle", 0.0
+                                                                )
+                                                            ),
+                                                            "ram_usage_gb": float(
+                                                                pod_allocation.get(
+                                                                    "ram_usage_gb", 0.0
+                                                                )
+                                                            ),
+                                                            "ram_request_gb": float(
+                                                                pod_allocation.get(
+                                                                    "ram_request_gb",
+                                                                    0.0,
+                                                                )
+                                                            ),
                                                             # GPU metrics with defaults
-                                                            "gpu_cost": float(pod_allocation.get("gpu_cost", 0.0)),
-                                                            "gpu_cost_idle": float(pod_allocation.get("gpu_cost_idle", 0.0)),
-                                                            "gpu_request_average": float(pod_allocation.get("gpu_request_average", 0.0)),
-                                                            "gpu_usage_average": float(pod_allocation.get("gpu_usage_average", 0.0)),
-                                                            
+                                                            "gpu_cost": float(
+                                                                pod_allocation.get(
+                                                                    "gpu_cost", 0.0
+                                                                )
+                                                            ),
+                                                            "gpu_cost_idle": float(
+                                                                pod_allocation.get(
+                                                                    "gpu_cost_idle", 0.0
+                                                                )
+                                                            ),
+                                                            "gpu_request_average": float(
+                                                                pod_allocation.get(
+                                                                    "gpu_request_average",
+                                                                    0.0,
+                                                                )
+                                                            ),
+                                                            "gpu_usage_average": float(
+                                                                pod_allocation.get(
+                                                                    "gpu_usage_average",
+                                                                    0.0,
+                                                                )
+                                                            ),
                                                             # Storage and other costs with defaults
-                                                            "pv_cost": float(pod_allocation.get("pv_cost", 0.0)),
-                                                            "pv_bytes": float(pod_allocation.get("pv_bytes", 0.0)) if pod_allocation.get("pv_bytes") is not None else None,
-                                                            "external_cost": float(pod_allocation.get("external_cost", 0.0)),
-                                                            "load_balancer_cost": float(pod_allocation.get("load_balancer_cost", 0.0)),
-                                                            "network_cost": float(pod_allocation.get("network_cost", 0.0)),
-                                                            "shared_cost": float(pod_allocation.get("shared_cost", 0.0)),
-                                                            "total_cost": float(pod_allocation.get("total_cost", 0.0)),
-                                                            
+                                                            "pv_cost": float(
+                                                                pod_allocation.get(
+                                                                    "pv_cost", 0.0
+                                                                )
+                                                            ),
+                                                            "pv_bytes": (
+                                                                float(
+                                                                    pod_allocation.get(
+                                                                        "pv_bytes", 0.0
+                                                                    )
+                                                                )
+                                                                if pod_allocation.get(
+                                                                    "pv_bytes"
+                                                                )
+                                                                is not None
+                                                                else None
+                                                            ),
+                                                            "external_cost": float(
+                                                                pod_allocation.get(
+                                                                    "external_cost", 0.0
+                                                                )
+                                                            ),
+                                                            "load_balancer_cost": float(
+                                                                pod_allocation.get(
+                                                                    "load_balancer_cost",
+                                                                    0.0,
+                                                                )
+                                                            ),
+                                                            "network_cost": float(
+                                                                pod_allocation.get(
+                                                                    "network_cost", 0.0
+                                                                )
+                                                            ),
+                                                            "shared_cost": float(
+                                                                pod_allocation.get(
+                                                                    "shared_cost", 0.0
+                                                                )
+                                                            ),
+                                                            "total_cost": float(
+                                                                pod_allocation.get(
+                                                                    "total_cost", 0.0
+                                                                )
+                                                            ),
                                                             # Efficiency metrics with defaults
-                                                            "cpu_efficiency": float(pod_allocation.get("cpu_efficiency", 0.0)),
-                                                            "ram_efficiency": float(pod_allocation.get("ram_efficiency", 0.0)),
-                                                            "total_efficiency": float(pod_allocation.get("total_efficiency", 0.0)),
-                                                            
+                                                            "cpu_efficiency": float(
+                                                                pod_allocation.get(
+                                                                    "cpu_efficiency",
+                                                                    0.0,
+                                                                )
+                                                            ),
+                                                            "ram_efficiency": float(
+                                                                pod_allocation.get(
+                                                                    "ram_efficiency",
+                                                                    0.0,
+                                                                )
+                                                            ),
+                                                            "total_efficiency": float(
+                                                                pod_allocation.get(
+                                                                    "total_efficiency",
+                                                                    0.0,
+                                                                )
+                                                            ),
                                                             # Flags and metadata with defaults
-                                                            "is_idle": bool(pod_allocation.get("is_idle", False)),
-                                                            "domain": pod_allocation.get("domain"),
+                                                            "is_idle": bool(
+                                                                pod_allocation.get(
+                                                                    "is_idle", False
+                                                                )
+                                                            ),
+                                                            "domain": pod_allocation.get(
+                                                                "domain"
+                                                            ),
                                                             "raw_allocation_data": pod_allocation,
                                                         }
 
-                                                        pod_obj = PodMetrics(**pod_entry)
+                                                        pod_obj = PodMetrics(
+                                                            **pod_entry
+                                                        )
                                                         session.add(pod_obj)
                                                         results["pod_metrics"] += 1
-                                                        
-                                                        print(f"DEBUG: Added pod to session: {pod_key}")
+
+                                                        print(
+                                                            f"DEBUG: Added pod to session: {pod_key}"
+                                                        )
 
                                                     except Exception as e:
                                                         error_msg = f"PodMetrics {pod_key}: {str(e)}"
-                                                        print(f"DEBUG ERROR: {error_msg}")
-                                                        results["errors"].append(error_msg)
+                                                        print(
+                                                            f"DEBUG ERROR: {error_msg}"
+                                                        )
+                                                        results["errors"].append(
+                                                            error_msg
+                                                        )
 
                                     except Exception as e:
                                         error_msg = f"NodeMetrics {node_key}: {str(e)}"
                                         print(f"DEBUG ERROR: {error_msg}")
                                         results["errors"].append(error_msg)
                     else:
-                        print(f"DEBUG: Skipping node processing for idle allocation: {allocation_key}")
+                        print(
+                            f"DEBUG: Skipping node processing for idle allocation: {allocation_key}"
+                        )
 
                 except Exception as e:
                     error_msg = f"ClusterMetrics {allocation_key}: {str(e)}"
@@ -1561,13 +1897,16 @@ def save_new_cluster():
         print(f"DEBUG: About to commit. Results so far: {results}")
         session.commit()
         print("DEBUG: Commit successful!")
-        
+
         return jsonify({"message": "Metrics ingested successfully", **results}), 201
 
     except Exception as e:
         print(f"DEBUG: Rolling back due to error: {str(e)}")
         session.rollback()
-        return jsonify({"error": f"Failed to process metrics: {str(e)}", **results}), 500
+        return (
+            jsonify({"error": f"Failed to process metrics: {str(e)}", **results}),
+            500,
+        )
     finally:
         session.close()
         print("DEBUG: Session closed")

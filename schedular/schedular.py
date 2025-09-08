@@ -51,11 +51,11 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 MAX_BACKFILL_WINDOWS = int(os.getenv("MAX_BACKFILL_WINDOWS", "7"))
 MIN_SCHEDULE_INTERVAL_MIN = int(os.getenv("MIN_SCHEDULE_INTERVAL_MIN", "30"))
 CLUSTER_ID = int(os.getenv("CLUSTER_ID", "1"))
-CLUSTER_NAME = (os.getenv("CLUSTER_NAME", "cluster_one"))
-USER_ID = (os.getenv("USER_ID", "1"))
-USERNAME = (os.getenv("USERNAME", "admin"))
-PASSWORD = (os.getenv("PASSWORD", "Admin@12#$"))                  
-KUBECOST_API_URL = (os.getenv("KUBECOST_API_URL", ""))                  
+CLUSTER_NAME = os.getenv("CLUSTER_NAME", "cluster_one")
+USER_ID = os.getenv("USER_ID", "1")
+USERNAME = os.getenv("USERNAME", "admin")
+PASSWORD = os.getenv("PASSWORD", "Admin@12#$")
+KUBECOST_API_URL = os.getenv("KUBECOST_API_URL", "")
 
 
 # -------------------- Logging --------------------
@@ -120,6 +120,7 @@ def fetch_multi_aggregation_data(
     except Exception as e:
         log.error("Multi-aggregation fetch failed: %s", e)
         return {}
+
 
 def build_mapping_tables(
     multi_agg_data: Dict,
@@ -209,29 +210,61 @@ def get_latest_timestamp(cluster_id: int) -> Optional[datetime]:
         return None
 
 
+# def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
+#     """
+#     Get all missing time windows that need to be backfilled.
+#     Returns a list of (start_time, end_time) tuples.
+#     """
+#     windows = []
+#     latest_timestamp = get_latest_timestamp(cluster_id)
+#     now = helper.round_down_time(
+#         datetime.now(timezone.utc), timedelta(hours=COLLECTION_WINDOW_HOURS)
+#     )
+
+#     if latest_timestamp is None:
+#         # First run - collect up to MAX_BACKFILL_WINDOWS windows (default = 7)
+#         end_time = now
+#         for i in range(MAX_BACKFILL_WINDOWS, 0, -1):
+#             start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
+#             windows.append((start_time, end_time))
+#             end_time = start_time
+
+#         return list(reversed(windows))
+
+#     # Normal case - catch up from latest_timestamp to now
+#     # Ensure latest_timestamp is timezone-aware
+#     if latest_timestamp.tzinfo is None:
+#         latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
+
+#     current_start = latest_timestamp
+#     while current_start < now:
+#         current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
+#         if current_end > now:
+#             break
+#         windows.append((current_start, current_end))
+#         current_start = current_end
+#     return windows
+
+
 def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     """
     Get all missing time windows that need to be backfilled.
-    Returns a list of (start_time, end_time) tuples.
+    Returns a list of (start_time, end_time) tuples, always ending at 'now'.
     """
     windows = []
     latest_timestamp = get_latest_timestamp(cluster_id)
-    now = helper.round_down_time(
-        datetime.now(timezone.utc), timedelta(hours=COLLECTION_WINDOW_HOURS)
-    )
-
+    now = datetime.now(timezone.utc)  # ✅ exact current time
+    print("nooo timestamps here")
     if latest_timestamp is None:
-        # First run - collect up to MAX_BACKFILL_WINDOWS windows (default = 7)
-        end_time = now
-        for i in range(MAX_BACKFILL_WINDOWS, 0, -1):
-            start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
+        # First run - build windows backwards but ensure last one ends at "now"
+        start_time = now
+        for _ in range(MAX_BACKFILL_WINDOWS):
+            end_time = start_time + timedelta(hours=COLLECTION_WINDOW_HOURS)
             windows.append((start_time, end_time))
-            end_time = start_time
-
-        return list(reversed(windows))
-
+            start_time = end_time
+        return windows
+    print(":timestamp exitssssssssssssssssssssssss")
     # Normal case - catch up from latest_timestamp to now
-    # Ensure latest_timestamp is timezone-aware
     if latest_timestamp.tzinfo is None:
         latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
 
@@ -239,9 +272,11 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     while current_start < now:
         current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
         if current_end > now:
+            windows.append((current_start, now))  # ✅ end at now
             break
         windows.append((current_start, current_end))
         current_start = current_end
+    print(windows, "[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]")
     return windows
 
 
@@ -479,6 +514,7 @@ def fetch_kubecost_window(
             timeout=REQUEST_TIMEOUT_SEC,
             verify=False,
         )
+        print("Final request URL:", r.url)
         r.raise_for_status()
         cluster_data = r.json()
 
@@ -546,7 +582,6 @@ def send_snapshots_to_backend(
         kubecost_data, user_id, cluster_id, node_mapping, pod_mapping
     )
 
-
     # Add window metadata to payload
     formatted_payload["window_metadata"] = {
         "start_time": window_start.isoformat(),
@@ -567,7 +602,7 @@ def send_snapshots_to_backend(
         len(node_mapping) if node_mapping else 0,
         len(pod_mapping) if pod_mapping else 0,
     )
-
+    # log.info(formatted_payload, len(str(formatted_payload)))
     try:
         r = requests.post(url, json=formatted_payload, timeout=REQUEST_TIMEOUT_SEC)
         r.raise_for_status()
@@ -615,7 +650,7 @@ def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime) 
                     start_time.isoformat(),
                     end_time.isoformat(),
                 )
-                return True  
+                return True
 
             send_snapshots_to_backend(
                 user_id,

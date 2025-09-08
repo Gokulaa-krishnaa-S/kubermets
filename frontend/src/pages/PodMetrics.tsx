@@ -482,7 +482,7 @@ const KubecostDashboard = () => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set("window", rangeFromUrl);
     setSearchParams(newParams);
-
+    console.log(cluster_id, user_id);
     if (cluster_id && user_id) {
       fetchData();
     }

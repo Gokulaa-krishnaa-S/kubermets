@@ -3,6 +3,7 @@ import axios, { AxiosInstance, AxiosResponse } from "axios";
 
 // Use the correct env var and avoid throwing to keep UI rendering even if backend is missing
 const baseURL = (import.meta as any).env?.VITE_API_BASE_URL || "";
+console.log(baseURL, "-----------");
 if (!baseURL) {
   // Log a warning instead of throwing to allow app to load header/sidebar
   // Backend-related calls will fail gracefully and be handled by callers

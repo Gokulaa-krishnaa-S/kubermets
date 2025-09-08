@@ -40,9 +40,12 @@ def get_filter_params():
 def getclusternames():
     session = db_manager.get_session()
 
-    # Query distinct cluster_id + cluster_name, omit "__idle__"
     existing_clusters = (
-        session.query(ClusterMetrics.cluster_id, ClusterMetrics.cluster_name)
+        session.query(
+            ClusterMetrics.cluster_id,
+            ClusterMetrics.cluster_name,
+            ClusterMetrics.user_id,
+        )
         .filter(ClusterMetrics.cluster_name != "__idle__")
         .distinct()
         .all()
@@ -50,7 +53,7 @@ def getclusternames():
 
     # Format as list of dicts
     cluster_list = [
-        {"id": row.cluster_id, "clusterName": row.cluster_name}
+        {"id": row.cluster_id, "clusterName": row.cluster_name, "user_id": row.user_id}
         for row in existing_clusters
     ]
 
