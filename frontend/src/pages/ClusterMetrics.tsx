@@ -602,18 +602,151 @@ export default function ClusterMetrics() {
   }, []);
 
   // Function to call insertCluster API
-  const callInsertClusterAPI = useCallback(async (clusterId, clusterName) => {
+  const callInsertClusterAPI = useCallback(async (clusterId) => {
     try {
       const apiBaseUrl =
         import.meta.env.VITE_API_BASE_URL || "http://172.16.10.4:5007/v1";
-      const response = await fetch(`${apiBaseUrl}/insertCluster`, {
+      const response = await fetch(`${apiBaseUrl}/saveNewCluster`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           cluster_id: clusterId,
-          cluster_name: clusterName,
+          snapshots: [
+            {
+              window: {
+                timestamp: null,
+                window_start: null,
+                window_end: null,
+                window_duration: "24h",
+              },
+              allocations: {
+                "default-cluster": {
+                  timestamp: null,
+                  window_start: null,
+                  window_end: null,
+                  window_duration: "24h",
+                  total_cost: 0,
+                  cpu_cost: 0,
+                  cpu_cost_idle: 0,
+                  ram_cost: 0,
+                  ram_cost_idle: 0,
+                  pv_cost: 0,
+                  network_cost: 0,
+                  gpu_cost: 0,
+                  gpu_cost_idle: 0,
+                  load_balancer_cost: 0,
+                  external_cost: 0,
+                  shared_cost: 0,
+                  cpu_core_request_average: 0,
+                  cpu_core_usage_average: 0,
+                  ram_byte_request_average: 0,
+                  ram_byte_usage_average: 0,
+                  gpu_request_average: 0,
+                  gpu_usage_average: 0,
+                  total_efficiency: 0,
+                  cpu_usage_percent: 0,
+                  memory_usage_percent: 0,
+                  memory_gb_used: 0,
+                  memory_gb_requested: 0,
+                  efficiency_percent: 0,
+                  cluster_status: "running",
+                  cluster_version: "1.28",
+                  node_count: 1,
+                  pod_count: 1,
+                  efficiency_category: "unknown",
+                  is_idle_allocation: false,
+                  query_params: {},
+                  fetch_timestamp: null,
+
+                  node_data: {
+                    data: {
+                      sets: [
+                        {
+                          allocations: {
+                            "node-001": {
+                              node_name: "node-001",
+                              namespace: null,
+                              deployment_name: null,
+                              total_cost: 0,
+                              cpu_cost: 0,
+                              ram_cost: 0,
+                              gpu_cost: 0,
+                              pv_cost: 0,
+                              network_cost: 0,
+                              cpu_core_request_average: 0,
+                              cpu_core_usage_average: 0,
+                              ram_byte_request_average: 0,
+                              ram_byte_usage_average: 0,
+                              gpu_request_average: 0,
+                              gpu_usage_average: 0,
+                              total_efficiency: 0,
+                              cpu_usage_percent: 0,
+                              memory_usage_percent: 0,
+                              memory_gb_used: 0,
+                              memory_gb_requested: 0,
+                              efficiency_percent: 0,
+                              node_status: "Healthy",
+                              node_health_score: 100,
+                              is_idle_allocation: false,
+                              is_unallocated: false,
+                              is_system_allocation: false,
+                              is_active: true,
+
+                              pod_data: {
+                                data: {
+                                  sets: [
+                                    {
+                                      allocations: {
+                                        "pod-001": {
+                                          key: "pod-001",
+                                          namespace: "default",
+                                          name: "sample-pod",
+                                          deployment_name: "sample-deployment",
+                                          node_name: "node-001",
+                                          cpu_core_usage_average: 0,
+                                          cpu_core_request_average: 0,
+                                          cpu_cost: 0,
+                                          cpu_cost_idle: 0,
+                                          ram_byte_usage_average: 0,
+                                          ram_byte_request_average: 0,
+                                          ram_cost: 0,
+                                          ram_cost_idle: 0,
+                                          ram_usage_gb: 0,
+                                          ram_request_gb: 0,
+                                          gpu_cost: 0,
+                                          gpu_cost_idle: 0,
+                                          gpu_request_average: 0,
+                                          gpu_usage_average: 0,
+                                          pv_cost: 0,
+                                          pv_bytes: 0,
+                                          external_cost: 0,
+                                          load_balancer_cost: 0,
+                                          network_cost: 0,
+                                          shared_cost: 0,
+                                          total_cost: 0,
+                                          cpu_efficiency: 0,
+                                          ram_efficiency: 0,
+                                          total_efficiency: 0,
+                                          is_idle: false,
+                                          domain: null,
+                                        },
+                                      },
+                                    },
+                                  ],
+                                },
+                              },
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          ],
         }),
       });
 
@@ -683,6 +816,10 @@ export default function ClusterMetrics() {
     // Get initial time range from URL
     const rangeFromUrl = searchParams.get("window") || "24h";
     const creationType = searchParams.get("creation_type");
+    const clusterIdFromUrl = searchParams.get("cluster_id"); // ✅ extract from URL
+
+    // Fallback: use existing cluster_id if URL doesn't have one
+    const effectiveClusterId = clusterIdFromUrl || cluster_id;
 
     // Set initial time range if different
     if (rangeFromUrl !== timeRange) {
@@ -690,60 +827,66 @@ export default function ClusterMetrics() {
     }
 
     // Handle new cluster creation
-    if (creationType === "new" && cluster_id) {
+    if (creationType === "new" && effectiveClusterId) {
       console.log(
         "New cluster creation detected, checking cluster existence..."
       );
 
-      // Check if cluster exists and get cluster details
-      checkClusterExists(cluster_id).then((clusterData) => {
-        if (clusterData) {
-          // Extract cluster name from config
-          let clusterName = "Unknown Cluster";
-          if (clusterData.config) {
-            try {
-              const config =
-                typeof clusterData.config === "string"
-                  ? JSON.parse(clusterData.config)
-                  : clusterData.config;
-              clusterName =
-                config?.clusterName ||
-                config?.cluster?.clusterName ||
-                clusterName;
-            } catch (error) {
-              console.error("Error parsing cluster config:", error);
-            }
-          }
-
-          console.log(
-            `Inserting new cluster: ${clusterName} (ID: ${cluster_id})`
-          );
-
-          // Call insertCluster API
-          callInsertClusterAPI(cluster_id, clusterName).then((result) => {
-            if (result) {
-              console.log("Cluster successfully added to monitoring system");
-              // Load initial data after successful insertion
-              fetchAllData(rangeFromUrl, cluster_id);
-            } else {
-              console.error("Failed to add cluster to monitoring system");
-              // Still try to load data even if insertion failed
-              fetchAllData(rangeFromUrl, cluster_id);
-            }
-          });
+      callInsertClusterAPI(effectiveClusterId).then((result) => {
+        if (result) {
+          console.log("Cluster successfully added to monitoring system");
+          fetchAllData(rangeFromUrl, effectiveClusterId);
         } else {
-          console.error("Cluster not found, cannot add to monitoring system");
-          // Still try to load data
-          fetchAllData(rangeFromUrl, cluster_id);
+          console.error("Failed to add cluster to monitoring system");
+          fetchAllData(rangeFromUrl, effectiveClusterId);
         }
       });
+
+      // checkClusterExists(effectiveClusterId).then((clusterData) => {
+      //   if (clusterData) {
+      //     let clusterName = "Unknown Cluster";
+      //     if (clusterData.config) {
+      //       try {
+      //         const config =
+      //           typeof clusterData.config === "string"
+      //             ? JSON.parse(clusterData.config)
+      //             : clusterData.config;
+      //         clusterName =
+      //           config?.clusterName ||
+      //           config?.cluster?.clusterName ||
+      //           clusterName;
+      //       } catch (error) {
+      //         console.error("Error parsing cluster config:", error);
+      //       }
+      //     }
+
+      //     console.log(
+      //       `Inserting new cluster: ${clusterName} (ID: ${effectiveClusterId})`
+      //     );
+
+      //     callInsertClusterAPI(effectiveClusterId, clusterName).then(
+      //       (result) => {
+      //         if (result) {
+      //           console.log("Cluster successfully added to monitoring system");
+      //           fetchAllData(rangeFromUrl, effectiveClusterId);
+      //         } else {
+      //           console.error("Failed to add cluster to monitoring system");
+      //           fetchAllData(rangeFromUrl, effectiveClusterId);
+      //         }
+      //       }
+      //     );
+      //   } else {
+      //     console.error("Cluster not found, cannot add to monitoring system");
+      //     fetchAllData(rangeFromUrl, effectiveClusterId);
+      //   }
+      // });
     } else {
       // Load initial data for existing clusters
-      if (cluster_id) {
-        fetchAllData(rangeFromUrl, cluster_id);
+      if (effectiveClusterId) {
+        fetchAllData(rangeFromUrl, effectiveClusterId);
       }
     }
-  }, []); // Empty dependency array for initial load only
+  }, []); // Initial load only
 
   // Auto-refresh interval effect
   useEffect(() => {
