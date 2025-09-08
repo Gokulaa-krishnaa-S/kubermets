@@ -22,6 +22,7 @@ interface ClusterContextType {
   loading: boolean;
   selectedInstance: Instance | null;
   setSelectedInstance: (instance: Instance) => void;
+  backendError?: string | null;
 }
 
 const ClusterContext = createContext<ClusterContextType | undefined>(undefined);
@@ -32,6 +33,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
   const [selectedInstance, setSelectedInstance] = useState<Instance | null>(
     null
   );
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   const [searchParams] = useSearchParams();
   const queryClusterId = searchParams.get("cluster_id");
@@ -42,6 +44,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
         const data = await ClusterService.getInstanceList();
         const instanceList = data?.data || [];
         setInstances(instanceList);
+        setBackendError(null);
         console.log(
           queryClusterId,
           "-----------------------",
@@ -63,6 +66,9 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (error) {
         console.error("Error fetching instances:", error);
+        setBackendError(
+          (error as any)?.message || "Failed to connect to backend service."
+        );
       } finally {
         setLoading(false);
       }
@@ -73,7 +79,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <ClusterContext.Provider
-      value={{ instances, loading, selectedInstance, setSelectedInstance }}
+      value={{ instances, loading, selectedInstance, setSelectedInstance, backendError }}
     >
       {children}
     </ClusterContext.Provider>

@@ -154,7 +154,9 @@ class ClusterCreationApiService {
   // Create existing cluster import
   async createExistingCluster(clusterData: any): Promise<ApiResponse<ClusterData> & { workloads?: any }> {
     // Tag requests from existing cluster flow
-    const payload = { ...clusterData, isImported: 1 };
+    // Don't add isImported here - let the backend handle it
+    const payload = { ...clusterData };
+    console.log('API Service - Final payload being sent to backend:', JSON.stringify(payload, null, 2));
     return this.makeRequest<ClusterData>('/clusters/existing', {
       method: 'POST',
       body: JSON.stringify(payload),

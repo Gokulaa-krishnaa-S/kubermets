@@ -576,21 +576,131 @@ export default function ClusterMetrics() {
     console.log("Filter button clicked");
   }, []);
 
+  // Function to call insertCluster API
+  const callInsertClusterAPI = useCallback(async (clusterId, clusterName) => {
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://172.16.10.4:5007/v1';
+      const response = await fetch(`${apiBaseUrl}/insertCluster`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cluster_id: clusterId,
+          cluster_name: clusterName
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Cluster inserted successfully:', result);
+        toast({
+          title: "Cluster Added",
+          description: "New cluster has been added to monitoring system",
+        });
+        return result;
+      } else {
+        const error = await response.json();
+        console.error('Error inserting cluster:', error);
+        toast({
+          title: "Error",
+          description: "Failed to add cluster to monitoring system",
+          variant: "destructive",
+        });
+        return null;
+      }
+    } catch (error) {
+      console.error('Error calling insertCluster API:', error);
+      toast({
+        title: "Error",
+        description: "Failed to connect to monitoring system",
+        variant: "destructive",
+      });
+      return null;
+    }
+  }, []);
+
+  // Function to check if cluster exists and get cluster name
+  const checkClusterExists = useCallback(async (clusterId) => {
+    try {
+      const backendApiBaseUrl = import.meta.env.VITE_BACKEND_API_BASE_URL || 'http://172.16.10.4:5000/api';
+      const response = await fetch(`${backendApiBaseUrl}/clusters/${clusterId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Cluster found:', result);
+        return result.data;
+      } else {
+        console.error('Cluster not found or error:', response.status);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error checking cluster existence:', error);
+      return null;
+    }
+  }, []);
+
   // Initial data load effect
   useEffect(() => {
     console.log("Initial useEffect - loading data on component mount");
 
     // Get initial time range from URL
     const rangeFromUrl = searchParams.get("window") || "24h";
+    const creationType = searchParams.get("creation_type");
 
     // Set initial time range if different
     if (rangeFromUrl !== timeRange) {
       setTimeRange(rangeFromUrl);
     }
 
-    // Load initial data
-    if (cluster_id) {
-      fetchAllData(rangeFromUrl, cluster_id);
+    // Handle new cluster creation
+    if (creationType === "new" && cluster_id) {
+      console.log("New cluster creation detected, checking cluster existence...");
+      
+      // Check if cluster exists and get cluster details
+      checkClusterExists(cluster_id).then((clusterData) => {
+        if (clusterData) {
+          // Extract cluster name from config
+          let clusterName = "Unknown Cluster";
+          if (clusterData.config) {
+            try {
+              const config = typeof clusterData.config === 'string' ? JSON.parse(clusterData.config) : clusterData.config;
+              clusterName = config?.clusterName || config?.cluster?.clusterName || clusterName;
+            } catch (error) {
+              console.error('Error parsing cluster config:', error);
+            }
+          }
+          
+          console.log(`Inserting new cluster: ${clusterName} (ID: ${cluster_id})`);
+          
+          // Call insertCluster API
+          callInsertClusterAPI(cluster_id, clusterName).then((result) => {
+            if (result) {
+              console.log("Cluster successfully added to monitoring system");
+              // Load initial data after successful insertion
+              fetchAllData(rangeFromUrl, cluster_id);
+            } else {
+              console.error("Failed to add cluster to monitoring system");
+              // Still try to load data even if insertion failed
+              fetchAllData(rangeFromUrl, cluster_id);
+            }
+          });
+        } else {
+          console.error("Cluster not found, cannot add to monitoring system");
+          // Still try to load data
+          fetchAllData(rangeFromUrl, cluster_id);
+        }
+      });
+    } else {
+      // Load initial data for existing clusters
+      if (cluster_id) {
+        fetchAllData(rangeFromUrl, cluster_id);
+      }
     }
   }, []); // Empty dependency array for initial load only
 

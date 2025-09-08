@@ -1,11 +1,10 @@
 // services/DashboardService.ts
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL;
-
+const baseURL = (import.meta as any).env?.VITE_API_BASE_URL || "";
 if (!baseURL) {
-  throw new Error(
-    "REACT_APP_API_BASE_URL is not defined in the environment variables"
+  console.warn(
+    "VITE_API_BASE_URL is not defined; backend requests may fail (DashboardService)."
   );
 }
 
