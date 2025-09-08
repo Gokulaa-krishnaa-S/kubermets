@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta, timezone
 from helpers.hepler import HelperClass
+import os
 
 helper = HelperClass()
 
@@ -38,7 +39,7 @@ class dataFormatter:
         efficiency = allocation_data.get("totalEfficiency", 0)
         formatted_data = {
             # Identification
-            "cluster_name": cluster_name or "unknown",
+            "cluster_name": (os.getenv("CLUSTER_NAME", "cluster_one")),
             # Time window information
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "window_start": start_time,
@@ -123,7 +124,7 @@ class dataFormatter:
         formatted_data = {
             # Node identification
             "node_name": node_name,
-            "cluster_name": cluster_name or "unknown",
+            "cluster_name":  (os.getenv("CLUSTER_NAME", "cluster_one")),
             # Enhanced with namespace and deployment info
             "namespace": namespace,
             "deployment_name": deployment,
