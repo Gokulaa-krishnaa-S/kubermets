@@ -55,8 +55,6 @@ const OVERVIEW_METRIC_TOOLTIPS = {
 
   // Cluster details
   clusterName: "Display name and configuration name of the cluster",
-  clusterStatus:
-    "Current operational status of the cluster: Running (active) or Stopped (inactive)",
   clusterCost:
     "Total cost incurred by this cluster during the selected time period",
   clusterEfficiency:
@@ -102,60 +100,10 @@ export default function Overview() {
     clusters: [],
     aggregated: {},
   });
-  const [clusterTableData, setClusterTableData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [clusterTableLoading, setClusterTableLoading] = useState(true);
   const navigate = useNavigate();
   const { onDomainSelect }: any = useOutletContext();
   const { instances }: any = useCluster();
-
-  // Define loadClusterTableData function
-  const loadClusterTableData = async () => {
-    try {
-      const clusterData = await fetchClusterTableData();
-      console.log(clusterData, "--- Cluster Table Data ---");
-      setClusterTableData(clusterData);
-    } catch (error) {
-      console.error("Error loading cluster table data:", error);
-    } finally {
-      setClusterTableLoading(false);
-    }
-  };
-
-  // Handle scrolling to cluster details when hash is present
-  useEffect(() => {
-    const handleHashScroll = () => {
-      if (window.location.hash === "#cluster-details") {
-        // Refresh cluster data when coming from cluster creation
-        loadClusterTableData();
-
-        setTimeout(() => {
-          const element = document.getElementById("cluster-details");
-          if (element) {
-            element.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            });
-            // Add a subtle highlight effect
-            element.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.3)";
-            setTimeout(() => {
-              element.style.boxShadow = "";
-            }, 2000);
-          }
-        }, 1000); // Wait for data to load
-      }
-    };
-
-    // Check on mount
-    handleHashScroll();
-
-    // Listen for hash changes
-    window.addEventListener("hashchange", handleHashScroll);
-
-    return () => {
-      window.removeEventListener("hashchange", handleHashScroll);
-    };
-  }, []); // Only run once on mount
 
   useEffect(() => {
     const loadData = async () => {
@@ -172,12 +120,10 @@ export default function Overview() {
 
     // Initial load
     loadData();
-    loadClusterTableData();
 
     // Set up interval to fetch data every 30 seconds
     const interval = setInterval(() => {
       loadData();
-      loadClusterTableData();
     }, 10000);
 
     // Cleanup interval on component unmount
@@ -189,125 +135,59 @@ export default function Overview() {
       const res = await ClusterService.getAllMetrics(); // New API method
       console.log(instances);
       console.log(res, "------------------");
-      if (!res?.data?.aggregated) return { clusters: [], aggregated: {} };
+
+      if (!res?.data?.clusters) return { clusters: [], aggregated: {} };
+
+      // Step 1: Map API clusters and merge with local instances
+      const apiClusters = res.data.clusters;
+      const mergedClusters = instances.map((inst) => {
+        const match = apiClusters.find((cluster) => cluster?.id === inst?.id);
+
+        if (match) {
+          return {
+            ...match,
+            clusterName: inst?.config?.clusterName || match?.name,
+          };
+        }
+
+        // Step 2: If no match found in API response, add with default empty values
+        return {
+          id: inst?.id,
+          unique_hash: inst?.unique_hash || "",
+          clusterName:
+            inst?.config?.clusterName || inst?.name || "Unknown Cluster",
+          name: inst?.name || "",
+          cluster: {
+            cpuUsage: 0,
+            efficiency: 0,
+            memoryUsage: 0,
+            totalCost: 0,
+          },
+          node: {
+            avgCpuUsage: 0,
+            avgEfficiency: 0,
+            healthyNodes: 0,
+            totalCost: 0,
+            totalNodes: 0,
+            warningNodes: 0,
+          },
+          pod: {
+            idlePods: 0,
+            runningPods: 0,
+            totalCost: 0,
+            totalPods: 0,
+          },
+          idleCost: 0,
+        };
+      });
 
       return {
         aggregated: res?.data?.aggregated,
-        clusters: [], // We'll get clusters from separate API call
+        clusters: mergedClusters,
       };
     } catch (error) {
       console.error("Error fetching dashboard summary:", error);
       return { clusters: [], aggregated: {} };
-    }
-  };
-
-  const fetchClusterTableData = async () => {
-    try {
-      const res = await ClusterService.getClusterList({}); // Use getClusterDetails for cluster table
-      console.log(res, "--- getClusterDetails response ---");
-
-      // Support multiple response shapes
-      const rawList =
-        (Array.isArray(res) && res) ||
-        res?.data?.clusters ||
-        res?.data ||
-        res?.clusters ||
-        [];
-
-      console.log("Raw list extracted:", rawList);
-      console.log("Is array?", Array.isArray(rawList));
-
-      if (!Array.isArray(rawList)) return [];
-
-      const normalized = rawList.map((item: any) => {
-        const itemId = item?.id ?? item?.cluster_id ?? item?.domain_id;
-        const name = item?.name ?? item?.cluster_name ?? item?.cluster?.name;
-
-        const totalCost =
-          item?.cluster?.totalCost ??
-          item?.cluster?.total_cost ??
-          item?.total_cost ??
-          0;
-
-        const efficiency =
-          item?.cluster?.efficiency ??
-          item?.total_efficiency ??
-          item?.efficiency ??
-          item?.efficiency_percent ??
-          0;
-
-        const totalNodes =
-          item?.node?.totalNodes ?? item?.node_count ?? item?.nodes ?? 0;
-        const totalPods =
-          item?.pod?.totalPods ?? item?.pod_count ?? item?.pods ?? 0;
-
-        // Get status from API response
-        const status = item?.status ?? item?.cluster_status ?? 0;
-
-        // Extract cluster name directly from the API item's config
-        let clusterName = name; // fallback to name
-
-        if (item?.config) {
-          try {
-            const config =
-              typeof item.config === "string"
-                ? JSON.parse(item.config)
-                : item.config;
-            console.log(`Processing cluster ${itemId}:`, {
-              config: config,
-              originalName: name,
-              itemData: item,
-            });
-
-            // Check if this is an imported cluster
-            const isImported = config?.isImported === 1;
-
-            if (isImported) {
-              // For imported clusters, config structure might be different
-              clusterName =
-                config?.cluster?.clusterName ||
-                config?.clusterName ||
-                config?.cluster_name ||
-                config?.name ||
-                config?.displayName ||
-                name ||
-                `Cluster ${itemId}`;
-            } else {
-              // For non-imported clusters, use standard structure
-              clusterName =
-                config?.clusterName ||
-                config?.cluster_name ||
-                config?.name ||
-                name ||
-                `Cluster ${itemId}`;
-            }
-
-            console.log(`Extracted cluster name for ${itemId}:`, clusterName);
-          } catch (error) {
-            console.warn("Error parsing config for cluster:", itemId, error);
-            clusterName = name || `Cluster ${itemId}`;
-          }
-        } else {
-          // If no config, use name or fallback
-          clusterName = name || `Cluster ${itemId}`;
-        }
-
-        return {
-          id: itemId,
-          name: name || `Cluster ${itemId}`,
-          clusterName,
-          status,
-          cluster: { totalCost, efficiency },
-          node: { totalNodes },
-          pod: { totalPods },
-          error: item?.error,
-        };
-      });
-
-      return normalized;
-    } catch (error) {
-      console.error("Error fetching cluster table data:", error);
-      return [];
     }
   };
 
@@ -726,8 +606,8 @@ export default function Overview() {
         </Card>
       </div>
 
-      {clusterTableData?.length > 0 && (
-        <Card id="cluster-details">
+      {clusters?.length > 0 && (
+        <Card>
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-base sm:text-lg">
@@ -735,8 +615,7 @@ export default function Overview() {
                 Cluster Details
               </div>
               <div className="text-sm text-muted-foreground">
-                {clusterTableData.length} clusters total
-                {clusterTableLoading && " (Loading...)"}
+                {clusters.length} clusters total
               </div>
             </CardTitle>
           </CardHeader>
@@ -756,13 +635,6 @@ export default function Overview() {
                         tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterName}
                       >
                         <span>Cluster</span>
-                      </TooltipWrapper>
-                    </th>
-                    <th className="text-left p-4 font-medium">
-                      <TooltipWrapper
-                        tooltip={OVERVIEW_METRIC_TOOLTIPS.clusterStatus}
-                      >
-                        <span>Status</span>
                       </TooltipWrapper>
                     </th>
                     <th className="text-left p-4 font-medium">
@@ -796,7 +668,7 @@ export default function Overview() {
                   </tr>
                 </thead>
                 <tbody>
-                  {clusterTableData.map((cluster, index) => {
+                  {clusters.map((cluster, index) => {
                     if (cluster.error) {
                       return (
                         <tr key={index} className="border-b bg-red-50">
@@ -804,7 +676,7 @@ export default function Overview() {
                           <td className="p-4 font-semibold text-red-600">
                             {cluster.name}
                           </td>
-                          <td colSpan={5} className="p-4 text-red-500">
+                          <td colSpan={4} className="p-4 text-red-500">
                             Error: {cluster.error}
                           </td>
                         </tr>
@@ -820,23 +692,8 @@ export default function Overview() {
                       >
                         <td className="p-4">{index + 1}</td>
                         <td className="p-4 font-medium">
-                          {cluster?.clusterName ||
-                            cluster?.name ||
-                            `Cluster ${cluster?.id}`}
-                          {cluster?.name &&
-                            cluster?.clusterName &&
-                            cluster?.clusterName !== cluster?.name}
-                        </td>
-                        <td className="p-4">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              cluster?.status === 1
-                                ? "bg-green-100 text-green-700"
-                                : "bg-gray-100 text-gray-700"
-                            }`}
-                          >
-                            {cluster?.status === 1 ? "Running" : "Stopped"}
-                          </span>
+                          {/* {cluster?.name} */}
+                          <b>{cluster?.clusterName}</b>
                         </td>
                         <td className="p-4">
                           ${cluster.cluster?.totalCost?.toFixed(2) || "0.00"}
@@ -861,20 +718,13 @@ export default function Overview() {
                 </tbody>
               </table>
 
-              {clusterTableData.length === 0 && !clusterTableLoading && (
+              {clusters.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                   <Server className="w-16 h-16 mx-auto mb-4 opacity-50" />
                   <p className="text-lg font-medium mb-2">No clusters found</p>
                   <p className="text-sm">
                     Try refreshing or check your connection
                   </p>
-                </div>
-              )}
-
-              {clusterTableLoading && clusterTableData.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-sm">Loading cluster details...</p>
                 </div>
               )}
             </div>
