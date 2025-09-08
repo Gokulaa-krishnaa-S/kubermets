@@ -1,12 +1,12 @@
 // services/ClusterService.ts
 import axios, { AxiosInstance, AxiosResponse } from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL;
-
+// Use the correct env var and avoid throwing to keep UI rendering even if backend is missing
+const baseURL = (import.meta as any).env?.VITE_API_BASE_URL || "";
 if (!baseURL) {
-  throw new Error(
-    "VITE_API_BASE_URL is not defined in the environment variables"
-  );
+  // Log a warning instead of throwing to allow app to load header/sidebar
+  // Backend-related calls will fail gracefully and be handled by callers
+  console.warn("VITE_API_BASE_URL is not defined; backend requests may fail.");
 }
 
 interface QueryParams {
@@ -163,14 +163,41 @@ class ClusterService {
     }
   }
 
-  async getClusterDetails(queryParams: QueryParams): Promise<any> {
+  async getClusterList(queryParams: QueryParams): Promise<any> {
     try {
-      const response: AxiosResponse = await this.api.get("/clusters", {
-        params: queryParams,
-      });
+      const apiBaseUrl = import.meta.env.VITE_BACKEND_API_BASE_URL; // pulled from env
+      const response: AxiosResponse = await axios.get(
+        `${apiBaseUrl}/clusters`,
+        {
+          params: queryParams,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
       return response.data;
     } catch (error) {
-      console.error("Error fetching cluster summary:", error);
+      console.error("Error fetching cluster details:", error);
+      throw error;
+    }
+  }
+  async getClusterDetails(queryParams: QueryParams): Promise<any> {
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL; // pulled from env
+      const response: AxiosResponse = await axios.get(
+        `${apiBaseUrl}/clusters`,
+        {
+          params: queryParams,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching cluster details:", error);
       throw error;
     }
   }

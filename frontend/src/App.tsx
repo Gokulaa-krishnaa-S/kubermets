@@ -26,8 +26,8 @@ import AWSClusterPage from "./pages/cluster-creation/AWSClusterPage";
 import AzureClusterPage from "./pages/cluster-creation/AzureClusterPage";
 import SifyClusterPage from "./pages/cluster-creation/SifyClusterPage";
 import { Layout } from "@/components/layout/Layout";
-import { Header } from "@/components/layout/Header";
 import { useState } from "react";
+import { useCluster } from "./components/context/ClusterContext";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +35,7 @@ function MetricLayout() {
   const [selectedHash, setSelectedHash] = useState<string>("");
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { backendError } = useCluster();
 
   // Handle domain selection from Header - this will be shared across all metric pages
   const handleDomainSelect = (hash: string) => {
@@ -84,12 +85,16 @@ function MetricLayout() {
   const { title, subtitle } = getPageInfo();
 
   return (
-    <Layout title={title} subtitle={subtitle}>
-      <Header
-        title={title}
-        subtitle={subtitle}
-        onDomainSelect={handleDomainSelect}
-      />
+    <Layout 
+      title={title} 
+      subtitle={subtitle}
+      onDomainChange={handleDomainSelect}
+    >
+      {backendError ? (
+        <div className="p-4 m-4 rounded border border-red-300 bg-red-50 text-red-700">
+          Backend connection failed: {backendError}
+        </div>
+      ) : null}
       <Outlet context={{ selectedHash, onDomainSelect: handleDomainSelect }} />
     </Layout>
   );
@@ -100,7 +105,7 @@ const App = () => (
       <Toaster />
       <Sonner />
 
-      <BrowserRouter>
+      <BrowserRouter basename="/environment">
         <ClusterProvider>
           <Routes>
             {/* Direct routes */}

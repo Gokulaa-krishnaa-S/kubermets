@@ -1,5 +1,22 @@
+import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { BarChart3, Server, Box, Layers } from "lucide-react";
+import {
+  BarChart3,
+  Server,
+  Box,
+  Layers,
+  Settings,
+  Database,
+  Network,
+  HardDrive,
+  ChevronLeft,
+  LayoutDashboard,
+  Activity,
+  Shield,
+  TrendingUp,
+  DollarSign,
+  Plus,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -9,6 +26,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
@@ -17,6 +35,7 @@ import { useCluster } from "../../components/context/ClusterContext";
 const mainItems = [
   // { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Overview", url: "/overview", icon: BarChart3 },
+  { title: "Create Cluster", action: "create-cluster", icon: Server, description: "Create new Kubernetes cluster" },
 ];
 
 const metricItems = [
@@ -33,39 +52,18 @@ const metricItems = [
   // { title: "Alerts & Events", url: "/alerts-events", icon: BarChart3 },
 ];
 
-const clusterCreationItems = [
-  {
-    title: "GCP GKE",
-    url: "/cluster-creation/gcp",
-    icon: "/gcp.jpg",
-    description: "Google Kubernetes Engine",
-  },
-  {
-    title: "AWS EKS",
-    url: "/cluster-creation/aws",
-    icon: "/aws.jpg",
-    description: "Amazon Elastic Kubernetes Service",
-  },
-  {
-    title: "Azure AKS",
-    url: "/cluster-creation/azure",
-    icon: "/azure.jpg",
-    description: "Azure Kubernetes Service",
-  },
-  {
-    title: "Sify",
-    url: "/cluster-creation/sify",
-    icon: "/sify.jpg",
-    description: "Sify Cloud Platform",
-  },
-];
+// Cluster creation items moved to main navigation
 
 const platformItems = [
   // { title: "Billing & Cost", url: "/billing-cost", icon: DollarSign },
   // { title: "Settings", url: "/settings", icon: Settings },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  onCreateClusterClick?: () => void;
+}
+
+export function AppSidebar({ onCreateClusterClick }: AppSidebarProps) {
   const { state } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
@@ -101,9 +99,9 @@ export function AppSidebar() {
             </div>
             {!collapsed && (
               <div>
-                <h2 className="font-bold text-lg">K8s Monitor</h2>
+                <h2 className="font-bold text-lg">Environment</h2>
                 <p className="text-xs text-muted-foreground">
-                  Kubernetes Platform
+                  Cluster Management
                 </p>
               </div>
             )}
@@ -119,16 +117,26 @@ export function AppSidebar() {
             <SidebarMenu className="space-y-1">
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/"}
-                      className={({ isActive }) => getNavClassName(isActive)}
+                  {item.action ? (
+                    <SidebarMenuButton 
+                      onClick={() => onCreateClusterClick?.()}
+                      className={getNavClassName(false)}
                     >
                       <item.icon className="w-4 h-4" />
                       {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
+                    </SidebarMenuButton>
+                  ) : (
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        end={item.url === "/"}
+                        className={({ isActive }) => getNavClassName(isActive)}
+                      >
+                        <item.icon className="w-4 h-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -166,44 +174,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Cluster Creation Navigation */}
-        <SidebarGroup className="mt-6">
-          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Cluster Creation
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-2">
-              {clusterCreationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) => getNavClassName(isActive)}
-                    >
-                      <div className="w-4 h-4 rounded-sm bg-gray-100 overflow-hidden flex items-center justify-center">
-                        <img
-                          src={item.icon}
-                          alt={`${item.title} icon`}
-                          className="w-3 h-3 object-contain"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = "none";
-                          }}
-                        />
-                      </div>
-                      {!collapsed && (
-                        <div className="flex-1">
-                          <span className="text-sm">{item.title}</span>
-                          {/* <div className="text-xs text-muted-foreground">{item.description}</div> */}
-                        </div>
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Cluster Creation moved to Main navigation */}
 
         {/* Platform Navigation */}
         {platformItems.length > 0 && (

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { clusterCreationApi, ClusterData } from '../../services/clusterCreationApi';
 import FormRenderer from './FormRenderer';
 import formTemplate from '../../data/GCPClusterForm.template.json';
 import { gcpRegions, gcpZonesByRegion } from '../../data/regions';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import ExistingGCPCluster from './ExistingGCPCluster';
 
 interface GCPClusterFormProps {
   clusterId?: number;
@@ -12,12 +15,14 @@ interface GCPClusterFormProps {
 }
 
 export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClusterFormProps) {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<any>({});
   const [loading, setLoading] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error' | null; messages?: string[] }>({ type: null });
   const [errorMessage, setErrorMessage] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [computedTemplate, setComputedTemplate] = useState<any>(formTemplate);
+  const [showExistingCluster, setShowExistingCluster] = useState(false);
 
   // Load existing cluster data if editing
   useEffect(() => {
@@ -35,7 +40,7 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
     } catch (error) {
       console.error('Error loading cluster data:', error);
       setErrorMessage('Failed to load cluster data');
-      setSubmitStatus('error');
+      setSubmitStatus({ type: 'error', messages: ['Failed to load cluster data'] });
     } finally {
       setLoading(false);
     }
@@ -43,7 +48,7 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
 
   const handleFormChange = (data: any) => {
     setFormData(data);
-    setSubmitStatus('idle');
+    setSubmitStatus({ type: null });
     setErrorMessage('');
   };
 
@@ -54,6 +59,7 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
     const regionField = clone.fields.find((f: any) => f.name === 'gcpRegion');
     if (regionField) {
       regionField.options = gcpRegions;
+      regionField.className = "text-black";
     }
     // inject zones
     const zonesField = clone.fields.find((f: any) => f.name === 'availabilityZones');
@@ -68,7 +74,7 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
   const handleSubmit = async (data: any) => {
     try {
       setLoading(true);
-      setSubmitStatus('idle');
+      setSubmitStatus({ type: null });
       setErrorMessage('');
 
       // Prepare cluster data
@@ -81,24 +87,45 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
 
       const response = await clusterCreationApi.createOrUpdateCluster(clusterData);
       
-      setSubmitStatus('success');
+      // Show success status
+      setSubmitStatus({ 
+        type: 'success', 
+        messages: [isEditing ? 'Cluster updated successfully!' : 'Cluster creation is in progress...']
+      });
       
-      if (onSubmit) {
-        onSubmit(response.data, isEditing);
-      }
+      // Auto-redirect to cluster metrics after 5 seconds
+      setTimeout(() => {
+        if (onSubmit) {
+          onSubmit(response.data, isEditing);
+        }
+        
+        // Redirect to cluster metrics page with cluster details
+        const clusterId = response.data?.id;
+        const clusterType = 'gcp';
+        const creationType = 'new';
+        
+        navigate(`/metric/cluster?cluster_id=${clusterId}&cluster_type=${clusterType}&creation_type=${creationType}`);
+      }, 5000);
 
       // Reset form after successful creation (not update)
       if (!isEditing) {
         setTimeout(() => {
           setFormData({});
-          setSubmitStatus('idle');
-        }, 2000);
+          setSubmitStatus({ type: null });
+        }, 5500);
       }
 
     } catch (error) {
       console.error('Error submitting form:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'An error occurred');
-      setSubmitStatus('error');
+      const errorMsg = error instanceof Error ? error.message : 'Cluster creation failed';
+      setErrorMessage(errorMsg);
+      
+      // Show error status
+      setSubmitStatus({ 
+        type: 'error', 
+        messages: [errorMsg]
+      });
+      
     } finally {
       setLoading(false);
     }
@@ -115,8 +142,20 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
     );
   }
 
+  if (showExistingCluster) {
+    return (
+      <ExistingGCPCluster
+        onSubmit={(data) => {
+          console.log('Existing cluster submitted:', data);
+          setShowExistingCluster(false);
+        }}
+        onCancel={() => setShowExistingCluster(false)}
+      />
+    );
+  }
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="w-full">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -129,22 +168,18 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
             </p>
           </div>
           
-          {/* Status Indicator */}
-          {submitStatus === 'success' && (
-            <div className="flex items-center space-x-2 text-green-600">
-              <CheckCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">
-                {isEditing ? 'Cluster updated successfully!' : 'Cluster created successfully!'}
-              </span>
-            </div>
-          )}
-          
-          {submitStatus === 'error' && (
-            <div className="flex items-center space-x-2 text-destructive">
-              <AlertCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">Error occurred</span>
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            {/* Add Existing Button */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowExistingCluster(true)}
+              className="flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Add Existing
+            </Button>
+          </div>
         </div>
         
         {errorMessage && (
@@ -163,6 +198,7 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
         loading={loading}
         submitButtonText={isEditing ? 'Update Cluster' : 'Create Cluster'}
         onCancel={onCancel}
+        status={submitStatus}
       />
     </div>
   );

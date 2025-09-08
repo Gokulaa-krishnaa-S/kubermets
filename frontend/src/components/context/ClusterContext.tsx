@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useState,
   ReactNode,
+  useCallback,
 } from "react";
 import { useSearchParams } from "react-router-dom";
 import ClusterService from "@/services/ClusterService";
@@ -22,6 +23,7 @@ interface ClusterContextType {
   loading: boolean;
   selectedInstance: Instance | null;
   setSelectedInstance: (instance: Instance) => void;
+  backendError?: string | null;
 }
 
 const ClusterContext = createContext<ClusterContextType | undefined>(undefined);
@@ -32,6 +34,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
   const [selectedInstance, setSelectedInstance] = useState<Instance | null>(
     null
   );
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   const [searchParams] = useSearchParams();
   const queryClusterId = searchParams.get("cluster_id");
@@ -39,9 +42,13 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const fetchInstances = async () => {
       try {
-        const data = await ClusterService.getInstanceList();
-        const instanceList = data?.data || [];
+        // const data = await ClusterService.getInstanceList();
+        // checkClusterExists();
+        const data = await getInstanceList();
+        console.log(data);
+        const instanceList = data || [];
         setInstances(instanceList);
+        setBackendError(null);
         console.log(
           queryClusterId,
           "-----------------------",
@@ -63,6 +70,9 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
         }
       } catch (error) {
         console.error("Error fetching instances:", error);
+        setBackendError(
+          (error as any)?.message || "Failed to connect to backend service."
+        );
       } finally {
         setLoading(false);
       }
@@ -70,10 +80,40 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
 
     fetchInstances();
   }, [queryClusterId]); // refetch when query param changes
+  const getInstanceList = useCallback(async () => {
+    try {
+      const backendApiBaseUrl =
+        import.meta.env.VITE_BACKEND_API_BASE_URL ||
+        "http://172.16.10.4:5000/api";
+      const response = await fetch(`${backendApiBaseUrl}/clusters`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Cluster found:", result);
+        return result.data;
+      } else {
+        console.error("Cluster not found or error:", response.status);
+        return null;
+      }
+    } catch (error) {
+      console.error("Error checking cluster existence:", error);
+      return null;
+    }
+  }, []);
   return (
     <ClusterContext.Provider
-      value={{ instances, loading, selectedInstance, setSelectedInstance }}
+      value={{
+        instances,
+        loading,
+        selectedInstance,
+        setSelectedInstance,
+        backendError,
+      }}
     >
       {children}
     </ClusterContext.Provider>

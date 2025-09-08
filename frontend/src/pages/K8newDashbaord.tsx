@@ -451,8 +451,8 @@ const K8sDashboard = () => {
               <Cloud className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">K8s Monitor</h1>
-              <p className="text-xs text-gray-500">Kubernetes Platform</p>
+              <h1 className="text-lg font-bold text-gray-900">Environment</h1>
+              <p className="text-xs text-gray-500">Cluster Management</p>
             </div>
           </div>
         </div>

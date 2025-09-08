@@ -2,11 +2,16 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
-// https://vitejs.dev/config/
+
 export default defineConfig(({ mode }) => ({
+  base: "/environment",   // 👈 put it here, top-level
   server: {
     host: "::",
     port: 8080,
+  },
+  preview: {
+    allowedHosts: ["infinitai.sifymdp.digital"],
+    
   },
   plugins: [
     react()

@@ -83,9 +83,13 @@ export default function FormRenderer({
 
   useEffect(() => {
     if (!status || !status.type) return;
-    const msgs = status.messages && status.messages.length > 0 ? status.messages : [status.type === 'success' ? 'Submitted successfully' : 'Something went wrong'];
+    const msgs = status.messages && status.messages.length > 0 ? status.messages : [
+      status.type === 'success' ? 'Cluster created successfully!' : 'Cluster creation failed'
+    ];
     setModal({ type: status.type, messages: msgs });
-    if (status.type === 'success') {
+    
+    // Auto-close modal after 2 seconds for both success and error
+    if (status.type === 'success' || status.type === 'error') {
       const t = setTimeout(() => setModal({ type: null, messages: [] }), 2000);
       return () => clearTimeout(t);
     }
@@ -151,13 +155,29 @@ export default function FormRenderer({
         const fieldPath = prefix ? `${prefix}.${field.name}` : field.name;
         const value = prefix ? formData[prefix]?.[field.name] : formData[field.name];
         
-        const error = validateField(field, value);
-        if (error) {
-          newErrors[fieldPath] = error;
-        }
-        
-        if (field.fields) {
-          validateFields(field.fields, fieldPath);
+        // Handle dynamic-pool-group validation
+        if (field.type === 'dynamic-pool-group') {
+          const pools = formData[field.name] || [];
+          pools.forEach((pool: any, poolIndex: number) => {
+            field.fields?.forEach(poolField => {
+              const poolFieldPath = `${field.name}[${poolIndex}].${poolField.name}`;
+              const poolFieldValue = pool[poolField.name];
+              
+              const poolError = validateField(poolField, poolFieldValue);
+              if (poolError) {
+                newErrors[poolFieldPath] = poolError;
+              }
+            });
+          });
+        } else {
+          const error = validateField(field, value);
+          if (error) {
+            newErrors[fieldPath] = error;
+          }
+          
+          if (field.fields) {
+            validateFields(field.fields, fieldPath);
+          }
         }
       });
     };
@@ -185,9 +205,10 @@ export default function FormRenderer({
 
     const updateValue = (newValue: any) => {
       if (prefix) {
+        const currentGroup = formData[prefix] || {};
         updateFormData({
           [prefix]: {
-            ...formData[prefix],
+            ...currentGroup,
             [field.name]: newValue
           }
         });
@@ -206,7 +227,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-orange-500 cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
                 </Tooltip>
               )}
             </Label>
@@ -231,7 +252,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-orange-500 cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
                 </Tooltip>
               )}
             </Label>
@@ -267,7 +288,7 @@ export default function FormRenderer({
               </Label>
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-orange-500 cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
                 </Tooltip>
               )}
             </div>
@@ -285,7 +306,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-orange-500 cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
                 </Tooltip>
               )}
             </Label>
@@ -324,7 +345,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-orange-500 cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
                 </Tooltip>
               )}
             </Label>
@@ -338,7 +359,7 @@ export default function FormRenderer({
                   onClick={() => updateValue(option.value)}
                   className={`flex-1 ${
                     value === option.value
-                      ? 'bg-green-500 text-white shadow-sm hover:bg-green-600'
+                      ? 'bg-[#9db309] text-white shadow-sm hover:bg-[#8ca208]'
                       : 'hover:bg-background/50'
                   }`}
                 >
@@ -360,7 +381,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-orange-500 cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
                 </Tooltip>
               )}
             </Label>
@@ -408,7 +429,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-orange-500 cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
                 </Tooltip>
               )}
             </Label>
@@ -576,20 +597,51 @@ export default function FormRenderer({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 relative">
+    <form onSubmit={handleSubmit} className="w-full space-y-8 relative">
+      {/* Loading Modal */}
+      {loading && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className="relative z-10 w-full max-w-md rounded-xl shadow-2xl border-2 bg-white border-blue-300 shadow-blue-100 animate-in fade-in-0 zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 rounded-t-xl bg-blue-50 border-b border-blue-200">
+              <div className="flex items-center space-x-3">
+                <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                <span className="text-base font-semibold">Processing...</span>
+              </div>
+            </div>
+            <div className="px-6 py-4">
+              <div className="text-sm font-medium text-blue-800">
+                Cluster creation is in progress...
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Modal */}
       {modal.type && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="absolute inset-0 bg-black/40" />
-          <div className={`relative z-10 w-[90%] max-w-md rounded-lg shadow-lg border ${
-            modal.type === 'success' ? 'bg-background border-green-200' : modal.type === 'error' ? 'bg-background border-destructive' : 'bg-background border-yellow-200'
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div className={`relative z-10 w-full max-w-md rounded-xl shadow-2xl border-2 animate-in fade-in-0 zoom-in-95 duration-200 ${
+            modal.type === 'success' 
+              ? 'bg-white border-green-300 shadow-green-100' 
+              : modal.type === 'error' 
+              ? 'bg-white border-red-300 shadow-red-100' 
+              : 'bg-white border-yellow-300 shadow-yellow-100'
           }`}>
-            <div className="flex items-center justify-between px-4 py-3 border-b">
-              <div className="flex items-center space-x-2">
-                {modal.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-600" />}
-                {modal.type === 'error' && <AlertTriangle className="w-5 h-5 text-destructive" />}
-                {modal.type === 'info' && <Info className="w-5 h-5 text-yellow-600" />}
-                <span className="text-sm font-medium">
-                  {modal.type === 'success' ? 'Success' : modal.type === 'error' ? 'Error' : 'Validation'}
+            <div className={`flex items-center justify-between px-6 py-4 rounded-t-xl ${
+              modal.type === 'success' 
+                ? 'bg-green-50 border-b border-green-200' 
+                : modal.type === 'error' 
+                ? 'bg-red-50 border-b border-red-200' 
+                : 'bg-yellow-50 border-b border-yellow-200'
+            }`}>
+              <div className="flex items-center space-x-3">
+                {modal.type === 'success' && <CheckCircle2 className="w-6 h-6 text-green-600" />}
+                {modal.type === 'error' && <AlertTriangle className="w-6 h-6 text-red-600" />}
+                {modal.type === 'info' && <Info className="w-6 h-6 text-yellow-600" />}
+                <span className="text-base font-semibold">
+                  {modal.type === 'success' ? 'Success!' : modal.type === 'error' ? 'Error!' : 'Validation'}
                 </span>
               </div>
               {(modal.type === 'info' || modal.type === 'error') && (
@@ -598,14 +650,23 @@ export default function FormRenderer({
                   variant="ghost" 
                   size="icon" 
                   onClick={() => setModal({ type: null, messages: [] })}
+                  className="hover:bg-white/50"
                 >
                   <X className="w-4 h-4" />
                 </Button>
               )}
             </div>
-            <div className="px-4 py-3 space-y-2">
+            <div className="px-6 py-4 space-y-2">
               {modal.messages.map((m, i) => (
-                <div key={i} className={`text-sm ${modal.type === 'success' ? 'text-green-700' : modal.type === 'error' ? 'text-destructive' : 'text-yellow-700'}`}>{m}</div>
+                <div key={i} className={`text-sm font-medium ${
+                  modal.type === 'success' 
+                    ? 'text-green-800' 
+                    : modal.type === 'error' 
+                    ? 'text-red-800' 
+                    : 'text-yellow-800'
+                }`}>
+                  {m}
+                </div>
               ))}
             </div>
           </div>
@@ -625,7 +686,7 @@ export default function FormRenderer({
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={loading} className="flex items-center space-x-2">
+        <Button type="submit" disabled={loading} className="flex items-center space-x-2 bg-[#9db309] hover:bg-[#8ca208] text-white">
           {loading && <Loader2 className="w-4 h-4 animate-spin" />}
           <span>{submitButtonText}</span>
         </Button>
