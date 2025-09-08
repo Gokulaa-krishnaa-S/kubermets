@@ -104,7 +104,6 @@ export default function Overview() {
   const navigate = useNavigate();
   const { onDomainSelect }: any = useOutletContext();
   const { instances }: any = useCluster();
-
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -119,16 +118,20 @@ export default function Overview() {
     };
 
     // Initial load
-    loadData();
+    if (instances?.length) {
+      loadData();
+    }
 
     // Set up interval to fetch data every 30 seconds
     const interval = setInterval(() => {
-      loadData();
+      if (instances?.length) {
+        loadData();
+      }
     }, 10000);
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
-  }, []);
+  }, [instances]);
 
   const fetchDashboardSummary = async () => {
     try {
