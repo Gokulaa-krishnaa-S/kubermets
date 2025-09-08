@@ -29,7 +29,7 @@ class ClusterMetrics(Base):
     __tablename__ = "cluster_metrics"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=True)
+    user_id = Column(String, nullable=True)
     cluster_id = Column(Integer, nullable=True)
     # Cluster identification
     cluster_name = Column(String(100), nullable=False)
@@ -118,9 +118,11 @@ class NodeMetrics(Base):
     __tablename__ = "node_metrics"
 
     id = Column(Integer, primary_key=True)
-    cluster_relation_id = Column(Integer, ForeignKey("cluster_metrics.id"), nullable=False)
+    cluster_relation_id = Column(
+        Integer, ForeignKey("cluster_metrics.id"), nullable=False
+    )
     cluster_id = Column(Integer, nullable=True)
-    user_id = Column(Integer, nullable=False)
+    user_id = Column(String, nullable=False)
     # Node identification
     node_name = Column(String(255), nullable=False)
     namespace = Column(String(255), nullable=True)
@@ -222,14 +224,14 @@ class PodMetrics(Base):
 
     id = Column(Integer, primary_key=True)
     node_id = Column(Integer, ForeignKey("node_metrics.id"), nullable=True)
-    user_id = Column(Integer, nullable=True)
+    user_id = Column(String, nullable=True)
     cluster_id = Column(Integer, nullable=True)
     # Identification
     key = Column(String(255), nullable=False)
-    namespace = Column(String(100), nullable=True)  
-    name = Column(String(100), nullable=True)  
-    deployment_name = Column(String(100), nullable=True)  
-    node_name = Column(String(100), nullable=True)  
+    namespace = Column(String(100), nullable=True)
+    name = Column(String(100), nullable=True)
+    deployment_name = Column(String(100), nullable=True)
+    node_name = Column(String(100), nullable=True)
     timestamp = Column(DateTime, nullable=False)
     # Time window
     start_time = Column(DateTime, nullable=False)
