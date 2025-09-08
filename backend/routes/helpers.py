@@ -1,7 +1,5 @@
 from flask import Blueprint, jsonify, request
 from models.model import NodeMetrics, db_manager,PodMetrics
-from sqlalchemy import func
-from datetime import datetime, timedelta
 
 helper_bp = Blueprint("helper", __name__, url_prefix="/v1")
 
