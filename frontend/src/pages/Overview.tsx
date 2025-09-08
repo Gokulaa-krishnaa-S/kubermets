@@ -55,7 +55,8 @@ const OVERVIEW_METRIC_TOOLTIPS = {
 
   // Cluster details
   clusterName: "Display name and configuration name of the cluster",
-  clusterStatus: "Current operational status of the cluster: Running (active) or Stopped (inactive)",
+  clusterStatus:
+    "Current operational status of the cluster: Running (active) or Stopped (inactive)",
   clusterCost:
     "Total cost incurred by this cluster during the selected time period",
   clusterEfficiency:
@@ -124,21 +125,21 @@ export default function Overview() {
   // Handle scrolling to cluster details when hash is present
   useEffect(() => {
     const handleHashScroll = () => {
-      if (window.location.hash === '#cluster-details') {
+      if (window.location.hash === "#cluster-details") {
         // Refresh cluster data when coming from cluster creation
         loadClusterTableData();
-        
+
         setTimeout(() => {
-          const element = document.getElementById('cluster-details');
+          const element = document.getElementById("cluster-details");
           if (element) {
-            element.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'start' 
+            element.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
             });
             // Add a subtle highlight effect
-            element.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.3)';
+            element.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.3)";
             setTimeout(() => {
-              element.style.boxShadow = '';
+              element.style.boxShadow = "";
             }, 2000);
           }
         }, 1000); // Wait for data to load
@@ -149,10 +150,10 @@ export default function Overview() {
     handleHashScroll();
 
     // Listen for hash changes
-    window.addEventListener('hashchange', handleHashScroll);
-    
+    window.addEventListener("hashchange", handleHashScroll);
+
     return () => {
-      window.removeEventListener('hashchange', handleHashScroll);
+      window.removeEventListener("hashchange", handleHashScroll);
     };
   }, []); // Only run once on mount
 
@@ -168,7 +169,6 @@ export default function Overview() {
         setLoading(false);
       }
     };
-
 
     // Initial load
     loadData();
@@ -203,7 +203,7 @@ export default function Overview() {
 
   const fetchClusterTableData = async () => {
     try {
-      const res = await ClusterService.getClusterDetails({}); // Use getClusterDetails for cluster table
+      const res = await ClusterService.getClusterList({}); // Use getClusterDetails for cluster table
       console.log(res, "--- getClusterDetails response ---");
 
       // Support multiple response shapes
@@ -246,40 +246,45 @@ export default function Overview() {
 
         // Extract cluster name directly from the API item's config
         let clusterName = name; // fallback to name
-        
+
         if (item?.config) {
           try {
-            const config = typeof item.config === 'string' ? JSON.parse(item.config) : item.config;
+            const config =
+              typeof item.config === "string"
+                ? JSON.parse(item.config)
+                : item.config;
             console.log(`Processing cluster ${itemId}:`, {
               config: config,
               originalName: name,
-              itemData: item
+              itemData: item,
             });
-            
+
             // Check if this is an imported cluster
             const isImported = config?.isImported === 1;
-            
+
             if (isImported) {
               // For imported clusters, config structure might be different
-              clusterName = config?.cluster?.clusterName || 
-                           config?.clusterName || 
-                           config?.cluster_name || 
-                           config?.name || 
-                           config?.displayName ||
-                           name || 
-                           `Cluster ${itemId}`;
+              clusterName =
+                config?.cluster?.clusterName ||
+                config?.clusterName ||
+                config?.cluster_name ||
+                config?.name ||
+                config?.displayName ||
+                name ||
+                `Cluster ${itemId}`;
             } else {
               // For non-imported clusters, use standard structure
-              clusterName = config?.clusterName || 
-                           config?.cluster_name || 
-                           config?.name ||
-                           name || 
-                           `Cluster ${itemId}`;
+              clusterName =
+                config?.clusterName ||
+                config?.cluster_name ||
+                config?.name ||
+                name ||
+                `Cluster ${itemId}`;
             }
-            
+
             console.log(`Extracted cluster name for ${itemId}:`, clusterName);
           } catch (error) {
-            console.warn('Error parsing config for cluster:', itemId, error);
+            console.warn("Error parsing config for cluster:", itemId, error);
             clusterName = name || `Cluster ${itemId}`;
           }
         } else {
@@ -322,12 +327,12 @@ export default function Overview() {
 
   if (loading) {
     return (
-        <ResponsiveLoader
-          title="Overview"
-          subtitle={`Loading Kubernetes metrics across ${
-            aggregated?.clusterCount || 0
-          } clusters...`}
-        />
+      <ResponsiveLoader
+        title="Overview"
+        subtitle={`Loading Kubernetes metrics across ${
+          aggregated?.clusterCount || 0
+        } clusters...`}
+      />
     );
   }
 
@@ -815,16 +820,22 @@ export default function Overview() {
                       >
                         <td className="p-4">{index + 1}</td>
                         <td className="p-4 font-medium">
-                          {cluster?.clusterName || cluster?.name || `Cluster ${cluster?.id}`}
-                          {cluster?.name && cluster?.clusterName && cluster?.clusterName !== cluster?.name}
+                          {cluster?.clusterName ||
+                            cluster?.name ||
+                            `Cluster ${cluster?.id}`}
+                          {cluster?.name &&
+                            cluster?.clusterName &&
+                            cluster?.clusterName !== cluster?.name}
                         </td>
                         <td className="p-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            cluster?.status === 1 
-                              ? 'bg-green-100 text-green-700' 
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {cluster?.status === 1 ? 'Running' : 'Stopped'}
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              cluster?.status === 1
+                                ? "bg-green-100 text-green-700"
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {cluster?.status === 1 ? "Running" : "Stopped"}
                           </span>
                         </td>
                         <td className="p-4">

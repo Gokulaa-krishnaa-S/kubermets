@@ -163,16 +163,38 @@ class ClusterService {
     }
   }
 
-  async getClusterDetails(queryParams: QueryParams): Promise<any> {
+  async getClusterList(queryParams: QueryParams): Promise<any> {
     try {
       const apiBaseUrl = import.meta.env.VITE_BACKEND_API_BASE_URL; // pulled from env
-      const response: AxiosResponse = await axios.get(`${apiBaseUrl}/clusters`, {
-        params: queryParams,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-  
+      const response: AxiosResponse = await axios.get(
+        `${apiBaseUrl}/clusters`,
+        {
+          params: queryParams,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching cluster details:", error);
+      throw error;
+    }
+  }
+  async getClusterDetails(queryParams: QueryParams): Promise<any> {
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL; // pulled from env
+      const response: AxiosResponse = await axios.get(
+        `${apiBaseUrl}/clusters`,
+        {
+          params: queryParams,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
       return response.data;
     } catch (error) {
       console.error("Error fetching cluster details:", error);
