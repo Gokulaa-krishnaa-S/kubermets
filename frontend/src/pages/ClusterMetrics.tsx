@@ -314,7 +314,7 @@ export default function ClusterMetrics() {
           {
             title: "Total Cost",
             value: `$${totalCost.toFixed(2)}`,
-            subtitle: "CPU + Memory + Storage",
+            subtitle: "Cost",
             icon: <DollarSign className="w-4 h-4" />,
             status: "info",
             tooltip: METRIC_TOOLTIPS.totalCost,
