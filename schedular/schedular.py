@@ -51,11 +51,11 @@ LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 MAX_BACKFILL_WINDOWS = int(os.getenv("MAX_BACKFILL_WINDOWS", "7"))
 MIN_SCHEDULE_INTERVAL_MIN = int(os.getenv("MIN_SCHEDULE_INTERVAL_MIN", "30"))
 CLUSTER_ID = int(os.getenv("CLUSTER_ID", "1"))
-CLUSTER_NAME = os.getenv("CLUSTER_NAME", "cluster_one")
-USER_ID = os.getenv("USER_ID", "1")
-USERNAME = os.getenv("USERNAME", "admin")
-PASSWORD = os.getenv("PASSWORD", "Admin@12#$")
-KUBECOST_API_URL = os.getenv("KUBECOST_API_URL", "")
+CLUSTER_NAME = (os.getenv("CLUSTER_NAME", "cluster_one"))
+USER_ID = (os.getenv("USER_ID", "1"))
+USERNAME = (os.getenv("USERNAME", "admin"))
+PASSWORD = (os.getenv("PASSWORD", "Admin@12#$"))                  
+KUBECOST_API_URL = (os.getenv("KUBECOST_API_URL", ""))                  
 
 
 # -------------------- Logging --------------------
@@ -120,7 +120,6 @@ def fetch_multi_aggregation_data(
     except Exception as e:
         log.error("Multi-aggregation fetch failed: %s", e)
         return {}
-
 
 def build_mapping_tables(
     multi_agg_data: Dict,
@@ -514,7 +513,6 @@ def fetch_kubecost_window(
             timeout=REQUEST_TIMEOUT_SEC,
             verify=False,
         )
-        print("Final request URL:", r.url)
         r.raise_for_status()
         cluster_data = r.json()
 
@@ -582,6 +580,7 @@ def send_snapshots_to_backend(
         kubecost_data, user_id, cluster_id, node_mapping, pod_mapping
     )
 
+
     # Add window metadata to payload
     formatted_payload["window_metadata"] = {
         "start_time": window_start.isoformat(),
@@ -602,7 +601,7 @@ def send_snapshots_to_backend(
         len(node_mapping) if node_mapping else 0,
         len(pod_mapping) if pod_mapping else 0,
     )
-    # log.info(formatted_payload, len(str(formatted_payload)))
+
     try:
         r = requests.post(url, json=formatted_payload, timeout=REQUEST_TIMEOUT_SEC)
         r.raise_for_status()
@@ -650,7 +649,7 @@ def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime) 
                     start_time.isoformat(),
                     end_time.isoformat(),
                 )
-                return True
+                return True  
 
             send_snapshots_to_backend(
                 user_id,
