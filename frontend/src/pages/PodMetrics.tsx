@@ -499,7 +499,7 @@ const KubecostDashboard = () => {
     const diffMs = endDate.getTime() - startDate.getTime();
     return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
   }
-
+ 
   // Enhanced useEffect with connection status handling
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
