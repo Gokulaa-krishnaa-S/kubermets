@@ -253,10 +253,21 @@ const KubecostDashboard = () => {
         return "365d";
       default:
         if (range.includes(":")) {
-          const [start, end] = range.split(":");
-          const diffInMs = new Date(end).getTime() - new Date(start).getTime();
-          const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
-          return `${diffInDays}d`;
+          function getDaysFromCustomRange(r: string): number | null {
+            if (!r.includes(":")) return null;
+            const [start, end] = r.split(":");
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
+            const diffMs = endDate.getTime() - startDate.getTime();
+            return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+          }
+          const days = getDaysFromCustomRange(range);
+          if (days && days > 0) {
+            return `${days}d`;
+          } else {
+            return "1d";
+          }
         }
         return "1d";
     }

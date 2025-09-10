@@ -369,8 +369,7 @@ export default function ClusterMetrics() {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying cluster data... (${
-                retryAttempts + 1
+              `Connection failed, retrying cluster data... (${retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -436,7 +435,7 @@ export default function ClusterMetrics() {
             name,
             used: parseFloat(
               (cluster as ClusterAllocation).cpuCoreUsageAverage?.toFixed(2) ||
-                "0"
+              "0"
             ),
             requested: parseFloat(
               (cluster as ClusterAllocation).cpuCoreRequestAverage?.toFixed(
@@ -492,8 +491,7 @@ export default function ClusterMetrics() {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying chart data... (${
-                retryAttempts + 1
+              `Connection failed, retrying chart data... (${retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -572,14 +570,39 @@ export default function ClusterMetrics() {
     refreshAllData(false);
   };
 
+  function getDaysFromCustomRange(range: string): number | null {
+    if (!range.includes(":")) return null;
+    const [start, end] = range.split(":");
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
+
+    // Calculate difference in milliseconds and convert to days (inclusive)
+    const diffMs = endDate.getTime() - startDate.getTime();
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+  }
+
   // Handle time range changes - immediately fetch data with new time range
   const handleTimeRangeChange = useCallback(
     (range: string) => {
-      console.log("Time range changed to:", range);
-      setTimeRange(range);
-      setSearchParams({ window: range });
-      // Immediately fetch data with the new time range
-      fetchAllData(range, cluster_id, false);
+      // If custom range, convert to days count
+      if (range.includes(":")) {
+        const days = getDaysFromCustomRange(range);
+        if (days && days > 0) {
+          const daysStr = `${days}d`;
+          setTimeRange(daysStr);
+          setSearchParams({ window: daysStr });
+          fetchAllData(daysStr, cluster_id, false);
+        } else {
+          // fallback: do not update if invalid
+          console.warn("Invalid custom range, not updating time range.");
+        }
+      } else {
+        setTimeRange(range);
+        setSearchParams({ window: range });
+        fetchAllData(range, cluster_id, false);
+      }
     },
     [cluster_id, fetchAllData, setSearchParams]
   );
@@ -1438,11 +1461,10 @@ export default function ClusterMetrics() {
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
-                              className={`h-2 rounded-full transition-all duration-500 ${
-                                item.name === "Idle Resources"
+                              className={`h-2 rounded-full transition-all duration-500 ${item.name === "Idle Resources"
                                   ? "bg-gray-400"
                                   : "bg-gradient-to-r from-blue-500 to-blue-600"
-                              }`}
+                                }`}
                               style={{ width: `${item.percentage}%` }}
                             ></div>
                           </div>

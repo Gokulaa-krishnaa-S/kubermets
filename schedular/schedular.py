@@ -210,61 +210,29 @@ def get_latest_timestamp(cluster_id: int) -> Optional[datetime]:
         return None
 
 
-# def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
-#     """
-#     Get all missing time windows that need to be backfilled.
-#     Returns a list of (start_time, end_time) tuples.
-#     """
-#     windows = []
-#     latest_timestamp = get_latest_timestamp(cluster_id)
-#     now = helper.round_down_time(
-#         datetime.now(timezone.utc), timedelta(hours=COLLECTION_WINDOW_HOURS)
-#     )
-
-#     if latest_timestamp is None:
-#         # First run - collect up to MAX_BACKFILL_WINDOWS windows (default = 7)
-#         end_time = now
-#         for i in range(MAX_BACKFILL_WINDOWS, 0, -1):
-#             start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
-#             windows.append((start_time, end_time))
-#             end_time = start_time
-
-#         return list(reversed(windows))
-
-#     # Normal case - catch up from latest_timestamp to now
-#     # Ensure latest_timestamp is timezone-aware
-#     if latest_timestamp.tzinfo is None:
-#         latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
-
-#     current_start = latest_timestamp
-#     while current_start < now:
-#         current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
-#         if current_end > now:
-#             break
-#         windows.append((current_start, current_end))
-#         current_start = current_end
-#     return windows
-
-
 def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     """
     Get all missing time windows that need to be backfilled.
-    Returns a list of (start_time, end_time) tuples, always ending at 'now'.
+    Returns a list of (start_time, end_time) tuples.
     """
     windows = []
     latest_timestamp = get_latest_timestamp(cluster_id)
-    now = datetime.now(timezone.utc)  # ✅ exact current time
-    print("nooo timestamps here")
+    now = helper.round_down_time(
+        datetime.now(timezone.utc), timedelta(hours=COLLECTION_WINDOW_HOURS)
+    )
+
     if latest_timestamp is None:
-        # First run - build windows backwards but ensure last one ends at "now"
-        start_time = now
-        for _ in range(MAX_BACKFILL_WINDOWS):
-            end_time = start_time + timedelta(hours=COLLECTION_WINDOW_HOURS)
+        # First run - collect up to MAX_BACKFILL_WINDOWS windows (default = 7)
+        end_time = now
+        for i in range(MAX_BACKFILL_WINDOWS, 0, -1):
+            start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
             windows.append((start_time, end_time))
-            start_time = end_time
-        return windows
-    print(":timestamp exitssssssssssssssssssssssss")
+            end_time = start_time
+
+        return list(reversed(windows))
+
     # Normal case - catch up from latest_timestamp to now
+    # Ensure latest_timestamp is timezone-aware
     if latest_timestamp.tzinfo is None:
         latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
 
@@ -272,12 +240,44 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     while current_start < now:
         current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
         if current_end > now:
-            windows.append((current_start, now))  # ✅ end at now
             break
         windows.append((current_start, current_end))
         current_start = current_end
-    print(windows, "[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]")
     return windows
+
+
+# def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
+#     """
+#     Get all missing time windows that need to be backfilled.
+#     Returns a list of (start_time, end_time) tuples, always ending at 'now'.
+#     """
+#     windows = []
+#     latest_timestamp = get_latest_timestamp(cluster_id)
+#     now = datetime.now(timezone.utc)  # ✅ exact current time
+#     print("nooo timestamps here")
+#     if latest_timestamp is None:
+#         # First run - build windows backwards but ensure last one ends at "now"
+#         start_time = now
+#         for _ in range(MAX_BACKFILL_WINDOWS):
+#             end_time = start_time + timedelta(hours=COLLECTION_WINDOW_HOURS)
+#             windows.append((start_time, end_time))
+#             start_time = end_time
+#         return windows
+#     print(":timestamp exitssssssssssssssssssssssss")
+#     # Normal case - catch up from latest_timestamp to now
+#     if latest_timestamp.tzinfo is None:
+#         latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
+
+#     current_start = latest_timestamp
+#     while current_start < now:
+#         current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
+#         if current_end > now:
+#             windows.append((current_start, now))  # ✅ end at now
+#             break
+#         windows.append((current_start, current_end))
+#         current_start = current_end
+#     print(windows, "[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]")
+#     return windows
 
 
 def calculate_next_run_time(cluster_id: int) -> Optional[datetime]:
