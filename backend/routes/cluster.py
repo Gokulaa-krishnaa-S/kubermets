@@ -307,8 +307,12 @@ def get_latest_timestamp_route():
         print(latest_record, "--------")
         if not latest_record:
             return (
-                jsonify({"message": f"No records found for cluster_id={cluster_id}"}),
-                404,
+                jsonify({
+                    "latest_timestamp": None,
+                    "window_duration": None,
+                    "message": f"No records yet for cluster_id={cluster_id}"
+                }),
+                200,
             )
 
         return (
