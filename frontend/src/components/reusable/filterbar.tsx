@@ -1,17 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-/**
- * Calculates the number of days between two dates in "YYYY-MM-DD:YYYY-MM-DD" format.
- * Returns null if the format is invalid.
- */
-function getDaysFromCustomRange(range: string): number | null {
-  if (!range.includes(":")) return null;
-  const [start, end] = range.split(":");
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
-  const diffMs = endDate.getTime() - startDate.getTime();
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-}
 import {
   Filter,
   RefreshCw,
@@ -313,10 +300,7 @@ export const Days: React.FC<DaysProps> = ({
       return date.toISOString().split("T")[0];
     };
     const customRange = `${formatDate(startDate)}:${formatDate(endDate)}`;
-    const days = getDaysFromCustomRange(customRange);
-    if (days && days > 0) {
-      onTimeRangeChange(customRange);
-    }
+    onTimeRangeChange(customRange);
     setShowCustomCalendar(false);
     setIsDropdownOpen(false);
   };
@@ -554,10 +538,6 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const navigate = useNavigate();
   const { selectedInstance }: any = useCluster();
 
-  // Only allow API hit if custom range is valid and days > 0
-  const isCustomRange = selectedTimeRange.includes(":");
-  const customRangeDays = isCustomRange ? getDaysFromCustomRange(selectedTimeRange) : null;
-
   return (
     <div
       className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 ${className}`}
@@ -678,12 +658,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                // Only hit API if custom range is valid and days > 0, or if not a custom range
-                if (!isCustomRange || (customRangeDays && customRangeDays > 0)) {
-                  onRefresh(true);
-                }
-              }}
+              onClick={() => onRefresh(true)}
               disabled={isRefreshing}
               className="flex items-center gap-2 text-xs sm:text-sm"
             >

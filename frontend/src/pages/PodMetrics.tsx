@@ -165,9 +165,24 @@ const KubecostDashboard = () => {
   const [sortField, setSortField] = useState("totalCost");
   const [sortDirection, setSortDirection] = useState("desc");
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedTimeRange, setSelectedTimeRange] = useState(() => {
+  const [selectedTimeRange, setSelectedTimeRangeRaw] = useState(() => {
     return searchParams.get("window") || "24h";
   });
+
+  // Wrapper to handle custom range conversion
+  const setSelectedTimeRange = (range: string) => {
+    if (range.includes(":")) {
+      const days = getDaysFromCustomRange(range);
+      if (days && days > 0) {
+        setSelectedTimeRangeRaw(`${days}d`);
+      } else {
+        // fallback: do not update if invalid
+        console.warn("Invalid custom range, not updating time range.");
+      }
+    } else {
+      setSelectedTimeRangeRaw(range);
+    }
+  };
 
   // Advanced Filter States
   const [filters, setFilters] = useState({
@@ -253,21 +268,10 @@ const KubecostDashboard = () => {
         return "365d";
       default:
         if (range.includes(":")) {
-          function getDaysFromCustomRange(r: string): number | null {
-            if (!r.includes(":")) return null;
-            const [start, end] = r.split(":");
-            const startDate = new Date(start);
-            const endDate = new Date(end);
-            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
-            const diffMs = endDate.getTime() - startDate.getTime();
-            return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-          }
-          const days = getDaysFromCustomRange(range);
-          if (days && days > 0) {
-            return `${days}d`;
-          } else {
-            return "1d";
-          }
+          const [start, end] = range.split(":");
+          const diffInMs = new Date(end).getTime() - new Date(start).getTime();
+          const diffInDays = Math.ceil(diffInMs / (1000 * 60 * 60 * 24));
+          return `${diffInDays}d`;
         }
         return "1d";
     }
@@ -483,6 +487,19 @@ const KubecostDashboard = () => {
     }
   };
 
+    function getDaysFromCustomRange(range: string): number | null {
+    if (!range.includes(":")) return null;
+    const [start, end] = range.split(":");
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
+
+    // Calculate difference in milliseconds and convert to days (inclusive)
+    const diffMs = endDate.getTime() - startDate.getTime();
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+  }
+
   // Enhanced useEffect with connection status handling
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
@@ -493,7 +510,7 @@ const KubecostDashboard = () => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set("window", rangeFromUrl);
     setSearchParams(newParams);
-    console.log(cluster_id, user_id);
+
     if (cluster_id && user_id) {
       fetchData();
     }
