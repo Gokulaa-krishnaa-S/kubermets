@@ -160,7 +160,7 @@ const KubecostDashboard = () => {
   let cluster_id = selectedInstance?.id;
   let user_id = selectedInstance?.user_id;
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sortField, setSortField] = useState("totalCost");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -308,7 +308,6 @@ const KubecostDashboard = () => {
         if (!isRetry) {
           setIsRefreshing(showToast);
           // setIsLoadingData(true);
-          if (!showToast) setLoading(true);
           setError(null);
         }
 
@@ -420,7 +419,6 @@ const KubecostDashboard = () => {
           setData({ sets: [{ allocations: {} }] });
         }
       } finally {
-        setLoading(false);
         setIsLoadingData(false);
         setIsInitialLoading(false);
         setIsRefreshing(false);
@@ -485,6 +483,10 @@ const KubecostDashboard = () => {
 
     if (cluster_id && user_id) {
       fetchData();
+    }
+    else {
+      setIsLoadingData(false);
+      setIsInitialLoading(false);
     }
   }, [cluster_id, user_id]);
 

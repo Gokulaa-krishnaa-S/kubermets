@@ -344,7 +344,7 @@ class ClusterService {
    */
   async getInstanceList() {
     try {
-      const response: AxiosResponse = await this.api.get("/getClusterNames");
+      const response: AxiosResponse = await this.api.post("/getClusterNames", {user_id:"9ba3431f-7185-4bb5-85e2-869b20c15bb1"});
       return response.data;
     } catch (error) {
       console.error("Error fetching instance list:", error);

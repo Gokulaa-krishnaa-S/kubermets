@@ -24,8 +24,12 @@ import logging
 import base64
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any, Tuple
+# from pydantic import BaseModel
 
 import requests
+# import uvicorn
+# from fastapi import FastAPI, HTTPException, BackgroundTasks
+# from fastapi.responses import JSONResponse
 
 requests.packages.urllib3.disable_warnings()
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -55,7 +59,9 @@ CLUSTER_NAME = (os.getenv("CLUSTER_NAME", "cluster_one"))
 USER_ID = (os.getenv("USER_ID", "1"))
 USERNAME = (os.getenv("USERNAME", "admin"))
 PASSWORD = (os.getenv("PASSWORD", "Admin@12#$"))                  
-KUBECOST_API_URL = (os.getenv("KUBECOST_API_URL", ""))                  
+KUBECOST_API_URL = (os.getenv("KUBECOST_API_URL", "")) 
+# API_PORT = int(os.getenv("API_PORT", "8080"))
+# API_HOST = os.getenv("API_HOST", "0.0.0.0")                 
 
 
 # -------------------- Logging --------------------
@@ -65,6 +71,34 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 log = logging.getLogger("kubecost-scheduler")
+
+
+# # -------------------- FastAPI Models --------------------
+# class TriggerRequest(BaseModel):
+#     cluster_id: Optional[int] = None
+
+# class TriggerResponse(BaseModel):
+#     status: str
+#     message: str
+#     clusters: List[Dict]
+
+# class HealthResponse(BaseModel):
+#     status: str
+#     service: str
+#     timestamp: str
+
+# class ClusterStatus(BaseModel):
+#     cluster_id: int
+#     cluster_name: str
+#     status: str
+#     error: Optional[str] = None
+
+# # -------------------- FastAPI App --------------------
+# app = FastAPI(
+#     title="Kubecost Scheduler API",
+#     description="API to trigger Kubecost data collection manually",
+#     version="1.0.0"
+# )
 
 
 def fetch_multi_aggregation_data(
@@ -245,38 +279,7 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     return windows
 
 
-# def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
-#     """
-#     Get all missing time windows that need to be backfilled.
-#     Returns a list of (start_time, end_time) tuples, always ending at 'now'.
-#     """
-#     windows = []
-#     latest_timestamp = get_latest_timestamp(cluster_id)
-#     now = datetime.now(timezone.utc)  # ✅ exact current time
-#     print("nooo timestamps here")
-#     if latest_timestamp is None:
-#         # First run - build windows backwards but ensure last one ends at "now"
-#         start_time = now
-#         for _ in range(MAX_BACKFILL_WINDOWS):
-#             end_time = start_time + timedelta(hours=COLLECTION_WINDOW_HOURS)
-#             windows.append((start_time, end_time))
-#             start_time = end_time
-#         return windows
-#     print(":timestamp exitssssssssssssssssssssssss")
-#     # Normal case - catch up from latest_timestamp to now
-#     if latest_timestamp.tzinfo is None:
-#         latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
 
-#     current_start = latest_timestamp
-#     while current_start < now:
-#         current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
-#         if current_end > now:
-#             windows.append((current_start, now))  # ✅ end at now
-#             break
-#         windows.append((current_start, current_end))
-#         current_start = current_end
-#     print(windows, "[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]")
-#     return windows
 
 
 def calculate_next_run_time(cluster_id: int) -> Optional[datetime]:
@@ -896,3 +899,220 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#     # -------------------- FastAPI Endpoints --------------------
+
+# @app.get("/health", response_model=HealthResponse)
+# async def health_check():
+#     """Health check endpoint"""
+#     return HealthResponse(
+#         status="healthy",
+#         service="kubecost-scheduler-api",
+#         timestamp=datetime.now(timezone.utc).isoformat()
+#     )
+
+# @app.post("/api/trigger-collection", response_model=TriggerResponse)
+# async def trigger_collection(request: TriggerRequest, background_tasks: BackgroundTasks):
+#     """
+#     Trigger collect_cluster_data function for specified cluster(s)
+    
+#     - cluster_id: Optional cluster ID. If not provided, runs for all clusters
+#     """
+#     try:
+#         # Get cluster configurations
+#         clusters = get_active_clusters()
+#         if not clusters:
+#             raise HTTPException(
+#                 status_code=404, 
+#                 detail="No active clusters found"
+#             )
+        
+#         # Filter by cluster_id if provided
+#         if request.cluster_id:
+#             clusters = [c for c in clusters if c['cluster_id'] == request.cluster_id]
+#             if not clusters:
+#                 raise HTTPException(
+#                     status_code=404,
+#                     detail=f"Cluster ID {request.cluster_id} not found"
+#                 )
+        
+#         # Add collection task to background
+#         background_tasks.add_task(run_collection_task, clusters)
+        
+#         return TriggerResponse(
+#             status="success",
+#             message="Collection triggered successfully",
+#             clusters=[
+#                 {
+#                     "cluster_id": c['cluster_id'],
+#                     "cluster_name": c.get('cluster_name', f"id-{c['cluster_id']}")
+#                 } for c in clusters
+#             ]
+#         )
+        
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         log.error(f"API trigger failed: {e}")
+#         raise HTTPException(
+#             status_code=500,
+#             detail=f"Failed to trigger collection: {str(e)}"
+#         )
+
+# @app.get("/api/clusters")
+# async def get_clusters():
+#     """Get list of active clusters"""
+#     try:
+#         clusters = get_active_clusters()
+#         return {
+#             "status": "success",
+#             "clusters": [
+#                 {
+#                     "cluster_id": c['cluster_id'],
+#                     "cluster_name": c.get('cluster_name', f"id-{c['cluster_id']}"),
+#                     "kubecost_api_url": c.get('kubecost_api_url', '')
+#                 } for c in clusters
+#             ]
+#         }
+#     except Exception as e:
+#         log.error(f"Failed to get clusters: {e}")
+#         raise HTTPException(
+#             status_code=500,
+#             detail=f"Failed to get clusters: {str(e)}"
+#         )
+
+# # -------------------- Background Tasks --------------------
+
+# async def run_collection_task(clusters: List[Dict]):
+#     """
+#     Background task to run collection for specified clusters
+#     """
+#     results = []
+    
+#     for cluster_cfg in clusters:
+#         try:
+#             cluster_name = cluster_cfg.get('cluster_name', f"id-{cluster_cfg['cluster_id']}")
+#             log.info(f"API triggered collection for cluster: {cluster_name}")
+            
+#             # Run the collection function in a thread to avoid blocking
+#             def run_collection():
+#                 collect_cluster_data(cluster_cfg)
+            
+#             # Run in thread pool to avoid blocking the async event loop
+#             loop = asyncio.get_event_loop()
+#             await loop.run_in_executor(None, run_collection)
+            
+#             log.info(f"API collection completed for cluster: {cluster_name}")
+#             results.append({
+#                 "cluster_id": cluster_cfg['cluster_id'],
+#                 "cluster_name": cluster_name,
+#                 "status": "success"
+#             })
+            
+#         except Exception as e:
+#             log.error(f"API collection failed for cluster {cluster_cfg['cluster_id']}: {e}")
+#             results.append({
+#                 "cluster_id": cluster_cfg['cluster_id'],
+#                 "cluster_name": cluster_cfg.get('cluster_name', f"id-{cluster_cfg['cluster_id']}"),
+#                 "status": "error",
+#                 "error": str(e)
+#             })
+    
+#     log.info(f"Background collection task completed. Results: {results}")
+#     return results
+
+
+# # -------------------- Server Management --------------------
+
+# class UvicornServer:
+#     """Manage Uvicorn server in a separate thread"""
+#     def __init__(self, config: uvicorn.Config):
+#         self.server = uvicorn.Server(config)
+#         self.config = config
+
+#     def run_in_thread(self):
+#         """Run server in background thread"""
+#         self.server.run()
+
+#     def start(self):
+#         """Start server in background thread"""
+#         self.thread = threading.Thread(target=self.run_in_thread, daemon=True)
+#         self.thread.start()
+#         log.info(f"FastAPI server started on {self.config.host}:{self.config.port}")
+
+#     def stop(self):
+#         """Stop the server"""
+#         if hasattr(self, 'server'):
+#             self.server.should_exit = True
+
+
+# # -------------------- Main --------------------
+# def main():
+#     jobstores = {"default": MemoryJobStore()}
+#     executors = {"default": ThreadPoolExecutor(max_workers=10)}
+#     job_defaults = {"coalesce": True, "max_instances": 1}
+#     scheduler = BackgroundScheduler(
+#         jobstores=jobstores, executors=executors, job_defaults=job_defaults
+#     )
+#     scheduler.start()
+
+
+ # start the FastAPI server in a separate thread
+
+#     # Start FastAPI server
+#     config = uvicorn.Config(
+#         app,
+#         host=API_HOST,
+#         port=API_PORT,
+#         log_level="info",
+#         access_log=False
+#     )
+#     server = UvicornServer(config)
+#     server.start()
+
+
+#     FastAPI Ends
+
+#     # graceful shutdown
+#     def shutdown(signum, frame):
+#         log.info("Shutting down scheduler and API server (signal=%s)...", signum)
+#         server.stop()
+#         scheduler.shutdown(wait=True)
+#         sys.exit(0)
+
+#     signal.signal(signal.SIGINT, shutdown)
+#     signal.signal(signal.SIGTERM, shutdown)
+
+#     # initial bootstrapping
+#     initial_collect_all(scheduler)
+
+#     log.info(
+#         "Enhanced scheduler with API started | Backend=%s window=%d hours max_backfill=%d min_interval=%d min | API=%s:%d",
+#         BACKEND_API_URL,
+#         COLLECTION_WINDOW_HOURS,
+#         MAX_BACKFILL_WINDOWS,
+#         MIN_SCHEDULE_INTERVAL_MIN,
+#         API_HOST,
+#         API_PORT,
+#     )
+
+#     # keep main thread alive
+#     try:
+#         while True:
+#             time.sleep(1)
+#     except KeyboardInterrupt:
+#         shutdown("KeyboardInterrupt", None)
+
+
+# if __name__ == "__main__":
+#     main()
+
+
+
+
+
+
+
+
+
+    

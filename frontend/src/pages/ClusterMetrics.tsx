@@ -629,7 +629,7 @@ export default function ClusterMetrics() {
     try {
       const apiBaseUrl =
         import.meta.env.VITE_API_BASE_URL || "http://172.16.10.4:5007/v1";
-      const response = await fetch(`${apiBaseUrl}/saveNewCluster`, {
+      const response = await fetch(`${apiBaseUrl}saveNewCluster`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

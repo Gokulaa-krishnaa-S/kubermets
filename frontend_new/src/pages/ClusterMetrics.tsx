@@ -369,8 +369,7 @@ export default function ClusterMetrics() {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying cluster data... (${
-                retryAttempts + 1
+              `Connection failed, retrying cluster data... (${retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -436,7 +435,7 @@ export default function ClusterMetrics() {
             name,
             used: parseFloat(
               (cluster as ClusterAllocation).cpuCoreUsageAverage?.toFixed(2) ||
-                "0"
+              "0"
             ),
             requested: parseFloat(
               (cluster as ClusterAllocation).cpuCoreRequestAverage?.toFixed(
@@ -492,8 +491,7 @@ export default function ClusterMetrics() {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying chart data... (${
-                retryAttempts + 1
+              `Connection failed, retrying chart data... (${retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -885,6 +883,14 @@ export default function ClusterMetrics() {
       if (effectiveClusterId) {
         fetchAllData(rangeFromUrl, effectiveClusterId);
       }
+      else {
+        setIsLoadingData(false);
+        setIsInitialLoading(false);
+
+      }
+      // setIsLoadingData(false);
+      // setIsInitialLoading(false);
+
     }
   }, []); // Initial load only
 
@@ -1438,11 +1444,10 @@ export default function ClusterMetrics() {
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
-                              className={`h-2 rounded-full transition-all duration-500 ${
-                                item.name === "Idle Resources"
-                                  ? "bg-gray-400"
-                                  : "bg-gradient-to-r from-blue-500 to-blue-600"
-                              }`}
+                              className={`h-2 rounded-full transition-all duration-500 ${item.name === "Idle Resources"
+                                ? "bg-gray-400"
+                                : "bg-gradient-to-r from-blue-500 to-blue-600"
+                                }`}
                               style={{ width: `${item.percentage}%` }}
                             ></div>
                           </div>

@@ -448,8 +448,7 @@ const NodeMetricsDashboard = () => {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying... (${
-                retryAttempts + 1
+              `Connection failed, retrying... (${retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -623,6 +622,11 @@ const NodeMetricsDashboard = () => {
     if (cluster_id) {
       refreshAllData(false);
     }
+    else {
+      setLoading(false);
+      setIsLoadingData(false);
+      setIsInitialLoading(false);
+    }
   }, [cluster_id]);
 
   const handleTimeRangeChange = (range) => {
@@ -765,9 +769,8 @@ const NodeMetricsDashboard = () => {
 
     return (
       <Card
-        className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${
-          statusColors[status] || statusColors.info
-        } ${serverStatus === "down" ? "opacity-75" : ""}`}
+        className={`transition-all duration-200 hover:shadow-md hover:scale-[1.02] ${statusColors[status] || statusColors.info
+          } ${serverStatus === "down" ? "opacity-75" : ""}`}
       >
         <CardContent className="p-4 sm:p-6">
           <div className="flex items-center justify-between mb-3">
@@ -834,8 +837,8 @@ const NodeMetricsDashboard = () => {
       status === "healthy"
         ? "hsl(var(--chart-storage))"
         : status === "warning"
-        ? "hsl(var(--warning))"
-        : "hsl(var(--chart-cpu))",
+          ? "hsl(var(--warning))"
+          : "hsl(var(--chart-cpu))",
   }));
 
   // Pagination logic
@@ -934,13 +937,12 @@ const NodeMetricsDashboard = () => {
                   typeof page === "number" && handlePageChange(page)
                 }
                 disabled={page === "..."}
-                className={`px-3 py-1 text-sm border rounded transition-colors ${
-                  page === currentPage
+                className={`px-3 py-1 text-sm border rounded transition-colors ${page === currentPage
                     ? "bg-primary text-primary-foreground border-primary"
                     : page === "..."
-                    ? "border-transparent cursor-default"
-                    : "border-border bg-background text-foreground hover:bg-muted"
-                }`}
+                      ? "border-transparent cursor-default"
+                      : "border-border bg-background text-foreground hover:bg-muted"
+                  }`}
               >
                 {page}
               </button>
@@ -1079,8 +1081,8 @@ const NodeMetricsDashboard = () => {
                     {filteredNodeData.length === 0
                       ? "No nodes found"
                       : filteredNodeData.length === 1
-                      ? "1 node found"
-                      : `${filteredNodeData.length} nodes found`}
+                        ? "1 node found"
+                        : `${filteredNodeData.length} nodes found`}
                     {(searchTerm ||
                       Object.values(filters).some((f) => f.length > 0)) &&
                       " with current filters"}
@@ -1110,18 +1112,18 @@ const NodeMetricsDashboard = () => {
 
                 {(searchTerm ||
                   Object.values(filters).some((f) => f.length > 0)) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSearchTerm("");
-                      setFilters({ pod: [], deployment: [], namespace: [] });
-                    }}
-                    className="text-blue-600 hover:text-blue-700"
-                  >
-                    Clear all
-                  </Button>
-                )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSearchTerm("");
+                        setFilters({ pod: [], deployment: [], namespace: [] });
+                      }}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      Clear all
+                    </Button>
+                  )}
               </div>
             </div>
           )}
@@ -1156,11 +1158,10 @@ const NodeMetricsDashboard = () => {
           <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.totalNodeCost}>
             <MetricCard
               title="Total Cost"
-              value={`${
-                filteredNodeData
+              value={`${filteredNodeData
                   .reduce((sum, node) => sum + parseFloat(node.totalCost), 0)
                   .toFixed(2) || "0.00"
-              }`}
+                }`}
               subtitle={`Last ${timeRange}`}
               icon={
                 <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
@@ -1173,24 +1174,23 @@ const NodeMetricsDashboard = () => {
           <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgCpuUsage}>
             <MetricCard
               title="Avg CPU Usage"
-              value={`${
-                filteredNodeData.length > 0
+              value={`${filteredNodeData.length > 0
                   ? (
-                      filteredNodeData.reduce(
-                        (sum, node) => sum + parseFloat(node.cpuUsage),
-                        0
-                      ) / filteredNodeData.length
-                    ).toFixed(1)
+                    filteredNodeData.reduce(
+                      (sum, node) => sum + parseFloat(node.cpuUsage),
+                      0
+                    ) / filteredNodeData.length
+                  ).toFixed(1)
                   : "0.0"
-              }%`}
+                }%`}
               subtitle="Across filtered nodes"
               icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />}
               status={
                 filteredNodeData.length > 0 &&
-                filteredNodeData.reduce(
-                  (sum, node) => sum + parseFloat(node.cpuUsage),
-                  0
-                ) /
+                  filteredNodeData.reduce(
+                    (sum, node) => sum + parseFloat(node.cpuUsage),
+                    0
+                  ) /
                   filteredNodeData.length >
                   thresholds.cpuUsageWarning
                   ? "warning"
@@ -1203,24 +1203,23 @@ const NodeMetricsDashboard = () => {
           <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgEfficiency}>
             <MetricCard
               title="Avg Efficiency"
-              value={`${
-                filteredNodeData.length > 0
+              value={`${filteredNodeData.length > 0
                   ? (
-                      filteredNodeData.reduce(
-                        (sum, node) => sum + parseFloat(node.efficiency),
-                        0
-                      ) / filteredNodeData.length
-                    ).toFixed(1)
+                    filteredNodeData.reduce(
+                      (sum, node) => sum + parseFloat(node.efficiency),
+                      0
+                    ) / filteredNodeData.length
+                  ).toFixed(1)
                   : "0.0"
-              }%`}
+                }%`}
               subtitle="Resource utilization"
               icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
               status={
                 filteredNodeData.length > 0 &&
-                filteredNodeData.reduce(
-                  (sum, node) => sum + parseFloat(node.efficiency),
-                  0
-                ) /
+                  filteredNodeData.reduce(
+                    (sum, node) => sum + parseFloat(node.efficiency),
+                    0
+                  ) /
                   filteredNodeData.length <
                   thresholds.efficiencyWarning
                   ? "warning"
@@ -1466,9 +1465,8 @@ const NodeMetricsDashboard = () => {
           <CardContent className="pt-0">
             <div className="hidden lg:block overflow-x-auto">
               <table
-                className={`w-full ${
-                  serverStatus === "down" ? "opacity-75" : ""
-                }`}
+                className={`w-full ${serverStatus === "down" ? "opacity-75" : ""
+                  }`}
               >
                 <thead>
                   <tr
