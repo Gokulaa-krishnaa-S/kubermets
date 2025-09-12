@@ -1,0 +1,101 @@
+// GCP Regions (for dropdown)
+export const gcpRegions = [
+  { value: "africa-south1", label: "Africa South 1" },
+  { value: "asia-east1", label: "Asia East 1" },
+  { value: "asia-east2", label: "Asia East 2" },
+  { value: "asia-northeast1", label: "Asia Northeast 1" },
+  { value: "asia-northeast2", label: "Asia Northeast 2" },
+  { value: "asia-northeast3", label: "Asia Northeast 3" },
+  { value: "asia-south1", label: "Asia South 1" },
+  { value: "asia-south2", label: "Asia South 2" },
+  { value: "asia-southeast1", label: "Asia Southeast 1" },
+  { value: "asia-southeast2", label: "Asia Southeast 2" },
+  { value: "australia-southeast1", label: "Australia Southeast 1" },
+  { value: "australia-southeast2", label: "Australia Southeast 2" },
+  { value: "europe-central2", label: "Europe Central 2" },
+  { value: "europe-north1", label: "Europe North 1" },
+  { value: "europe-north2", label: "Europe North 2" },
+  { value: "europe-southwest1", label: "Europe Southwest 1" },
+  { value: "europe-west1", label: "Europe West 1" },
+  { value: "europe-west2", label: "Europe West 2" },
+  { value: "europe-west3", label: "Europe West 3" },
+  { value: "europe-west4", label: "Europe West 4" },
+  { value: "europe-west6", label: "Europe West 6" },
+  { value: "europe-west8", label: "Europe West 8" },
+  { value: "europe-west9", label: "Europe West 9" },
+  { value: "europe-west10", label: "Europe West 10" },
+  { value: "europe-west12", label: "Europe West 12" },
+  { value: "me-central1", label: "Middle East Central 1" },
+  { value: "me-central2", label: "Middle East Central 2" },
+  { value: "me-west1", label: "Middle East West 1" },
+  { value: "northamerica-northeast1", label: "North America Northeast 1" },
+  { value: "northamerica-northeast2", label: "North America Northeast 2" },
+  { value: "northamerica-south1", label: "North America South 1" },
+  { value: "southamerica-east1", label: "South America East 1" },
+  { value: "southamerica-west1", label: "South America West 1" },
+  { value: "us-central1", label: "US Central 1" },
+  { value: "us-east1", label: "US East 1" },
+  { value: "us-east4", label: "US East 4" },
+  { value: "us-east5", label: "US East 5" },
+  { value: "us-south1", label: "US South 1" },
+  { value: "us-west1", label: "US West 1" },
+  { value: "us-west2", label: "US West 2" },
+  { value: "us-west3", label: "US West 3" },
+  { value: "us-west4", label: "US West 4" }
+];
+
+// GCP Zones by region
+export const gcpZonesByRegion: Record<string, string[]> = {
+  "africa-south1": ["africa-south1-a", "africa-south1-b", "africa-south1-c"],
+  "asia-east1": ["asia-east1-a", "asia-east1-b", "asia-east1-c"],
+  "asia-east2": ["asia-east2-a", "asia-east2-b", "asia-east2-c"],
+  "asia-northeast1": ["asia-northeast1-a", "asia-northeast1-b", "asia-northeast1-c"],
+  "asia-northeast2": ["asia-northeast2-a", "asia-northeast2-b", "asia-northeast2-c"],
+  "asia-northeast3": ["asia-northeast3-a", "asia-northeast3-b", "asia-northeast3-c"],
+  "asia-south1": ["asia-south1-a", "asia-south1-b", "asia-south1-c"],
+  "asia-south2": ["asia-south2-a", "asia-south2-b", "asia-south2-c"],
+  "asia-southeast1": ["asia-southeast1-a", "asia-southeast1-b", "asia-southeast1-c"],
+  "asia-southeast2": ["asia-southeast2-a", "asia-southeast2-b", "asia-southeast2-c"],
+  "australia-southeast1": ["australia-southeast1-a", "australia-southeast1-b", "australia-southeast1-c"],
+  "australia-southeast2": ["australia-southeast2-a", "australia-southeast2-b", "australia-southeast2-c"],
+  "europe-central2": ["europe-central2-a", "europe-central2-b", "europe-central2-c"],
+  "europe-north1": ["europe-north1-a", "europe-north1-b", "europe-north1-c"],
+  "europe-north2": ["europe-north2-a", "europe-north2-b", "europe-north2-c"],
+  "europe-southwest1": ["europe-southwest1-a", "europe-southwest1-b", "europe-southwest1-c"],
+  "europe-west1": ["europe-west1-b", "europe-west1-c", "europe-west1-d"],
+  "europe-west2": ["europe-west2-a", "europe-west2-b", "europe-west2-c"],
+  "europe-west3": ["europe-west3-a", "europe-west3-b", "europe-west3-c"],
+  "europe-west4": ["europe-west4-a", "europe-west4-b", "europe-west4-c"],
+  "europe-west6": ["europe-west6-a", "europe-west6-b", "europe-west6-c"],
+  "europe-west8": ["europe-west8-a", "europe-west8-b", "europe-west8-c"],
+  "europe-west9": ["europe-west9-a", "europe-west9-b", "europe-west9-c"],
+  "europe-west10": ["europe-west10-a", "europe-west10-b", "europe-west10-c"],
+  "europe-west12": ["europe-west12-a", "europe-west12-b", "europe-west12-c"],
+  "me-central1": ["me-central1-a", "me-central1-b", "me-central1-c"],
+  "me-central2": ["me-central2-a", "me-central2-b", "me-central2-c"],
+  "me-west1": ["me-west1-a", "me-west1-b", "me-west1-c"],
+  "northamerica-northeast1": ["northamerica-northeast1-a", "northamerica-northeast1-b", "northamerica-northeast1-c"],
+  "northamerica-northeast2": ["northamerica-northeast2-a", "northamerica-northeast2-b", "northamerica-northeast2-c"],
+  "northamerica-south1": ["northamerica-south1-a", "northamerica-south1-b", "northamerica-south1-c"],
+  "southamerica-east1": ["southamerica-east1-a", "southamerica-east1-b", "southamerica-east1-c"],
+  "southamerica-west1": ["southamerica-west1-a", "southamerica-west1-b", "southamerica-west1-c"],
+  "us-central1": ["us-central1-a", "us-central1-b", "us-central1-c", "us-central1-f"],
+  "us-east1": ["us-east1-b", "us-east1-c", "us-east1-d"],
+  "us-east4": ["us-east4-a", "us-east4-b", "us-east4-c"],
+  "us-east5": ["us-east5-a", "us-east5-b", "us-east5-c"],
+  "us-south1": ["us-south1-a", "us-south1-b", "us-south1-c"],
+  "us-west1": ["us-west1-a", "us-west1-b", "us-west1-c"],
+  "us-west2": ["us-west2-a", "us-west2-b", "us-west2-c"],
+  "us-west3": ["us-west3-a", "us-west3-b", "us-west3-c"],
+  "us-west4": ["us-west4-a", "us-west4-b", "us-west4-c"]
+};
+
+// Other providers (reuse for future)
+export const awsRegions = [...gcpRegions];
+export const awsZonesByRegion = { ...gcpZonesByRegion };
+export const azureRegions = [...gcpRegions];
+export const azureZonesByRegion = { ...gcpZonesByRegion };
+export const sifyRegions = [...gcpRegions];
+export const sifyZonesByRegion = { ...gcpZonesByRegion };
+
+
