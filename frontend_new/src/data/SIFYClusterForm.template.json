@@ -1,0 +1,47 @@
+{
+  "title": "SIFY Cluster Form",
+  "fields": [
+    { "name": "SIFYRegion", "type": "select", "label": "SIFY Region", "required": true, "options": [
+      { "value": "us-central1", "label": "US Central (Iowa)" },
+      { "value": "us-east1", "label": "US East (South Carolina)" },
+      { "value": "europe-west1", "label": "Europe West (Belgium)" },
+      { "value": "asia-east1", "label": "Asia East (Taiwan)" }
+    ]},
+    { "name": "sifyProjectId", "type": "text", "label": "SIFY Project ID", "required": true },
+    { "name": "clusterName", "type": "text", "label": "Cluster Name", "required": true },
+    { "name": "kubernetesVersion", "type": "select", "label": "Kubernetes Version", "required": true, "options": [
+      { "value": "1.31", "label": "1.31" },
+      { "value": "1.30", "label": "1.30" },
+      { "value": "1.29", "label": "1.29" }
+    ]},
+    { "name": "ipv4CidrBlock", "type": "text", "label": "IPv4 CIDR block for GKE master nodes", "required": true },
+    { "name": "availabilityZones", "type": "checkbox-group", "label": "Availability Zones in the selected region", "options": [
+      { "value": "us-central1-c", "label": "us-central1-c" },
+      { "value": "us-central1-a", "label": "us-central1-a" },
+      { "value": "us-central1-f", "label": "us-central1-f" },
+      { "value": "us-central1-b", "label": "us-central1-b" }
+    ]},
+    { "name": "networkConfig", "type": "radio-group", "label": "Network Configuration", "required": true, "options": [
+      { "value": "create-new", "label": "Create New Network" },
+      { "value": "use-existing", "label": "Use Existing Network" }
+    ]},
+    { "name": "ipv4CidrPrivateSubnet", "type": "text", "label": "IPv4 CIDR block for private subnet", "required": true },
+    { "name": "ipv4CidrPods", "type": "text", "label": "IPv4 CIDR block for Pods", "required": true },
+    { "name": "ipv4CidrServices", "type": "text", "label": "IPv4 CIDR block for services", "required": true },
+    { "name": "podRangeName", "type": "text", "label": "Pod Range Name", "required": true },
+    { "name": "serviceRangeName", "type": "text", "label": "Service Range Name", "required": true },
+    { "name": "networkTags", "type": "array", "label": "Network Tags", "itemType": "text" },
+    { "name": "bucketConfig", "type": "group", "label": "Bucket configuration for Terraform state", "fields": [
+      { "name": "gcsBucketName", "type": "text", "label": "GCS Bucket Name for Terraform state", "required": true },
+      { "name": "prefixPath", "type": "text", "label": "Prefix (path) where Terraform state will be stored in the bucket", "required": true }
+    ]},
+    { "name": "platformFeatures", "type": "checkbox-group", "label": "Platform Features", "options": [
+      { "value": "blobStorage", "label": "Blob Storage" },
+      { "value": "clusterIntegration", "label": "Cluster Integration" },
+      { "value": "registry", "label": "Registry" },
+      { "value": "secrets", "label": "Secrets" }
+    ]}
+  ]
+}
+
+
