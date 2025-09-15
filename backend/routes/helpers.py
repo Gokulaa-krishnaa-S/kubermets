@@ -36,9 +36,36 @@ def get_filter_params():
         session.close()
 
 
-@helper_bp.route("/getClusterNames", methods=["GET"])
+# @helper_bp.route("/getClusterNames", methods=["GET"])
+# def getclusternames():
+#     session = db_manager.get_session()
+
+#     existing_clusters = (
+#         session.query(
+#             ClusterMetrics.cluster_id,
+#             ClusterMetrics.cluster_name,
+#             ClusterMetrics.user_id,
+#         )
+#         .filter(ClusterMetrics.cluster_name != "__idle__")
+#         .distinct()
+#         .all()
+#     )
+
+#     # Format as list of dicts
+#     cluster_list = [
+#         {"id": row.cluster_id, "clusterName": row.cluster_name, "user_id": row.user_id}
+#         for row in existing_clusters
+#     ]
+
+#     return jsonify(cluster_list), 200
+
+
+@helper_bp.route("/getClusterNames", methods=["POST"])
 def getclusternames():
     session = db_manager.get_session()
+    user_id = request.json.get("user_id")
+    if not user_id:
+        return jsonify({"error": "user_id is required"}), 400   
 
     existing_clusters = (
         session.query(
@@ -47,6 +74,7 @@ def getclusternames():
             ClusterMetrics.user_id,
         )
         .filter(ClusterMetrics.cluster_name != "__idle__")
+        .filter(ClusterMetrics.user_id == user_id)   # ✅ filter by user_id
         .distinct()
         .all()
     )

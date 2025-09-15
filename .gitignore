@@ -45,6 +45,8 @@ backend/venv/
 schedular/schedularvenv/
 backend_inProgress/venv/
 
+
+schedular/fastapi.py
 .ven
 *.zip
 
