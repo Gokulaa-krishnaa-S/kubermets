@@ -43,6 +43,7 @@ backend_inProgress/migrations
 #python venv
 backend/venv/
 schedular/schedularvenv/
+schedular/venv/
 backend_inProgress/venv/
 
 

@@ -7,47 +7,16 @@ helper = HelperClass()
 
 
 class dataFormatter:
-    # def format_kubecost_window(self, start_time: datetime, end_time: datetime) -> str:
-    #     """
-    #     Convert datetime objects to Kubecost absolute window format:
-    #     <start_iso>Z,<end_iso>Z
-    #     """
-    #     # Ensure both times are timezone-aware
-    #     if start_time.tzinfo is None:
-    #         start_time = start_time.replace(tzinfo=timezone.utc)
-    #     if end_time.tzinfo is None:
-    #         end_time = end_time.replace(tzinfo=timezone.utc)
-    #     print(
-    #         start_time,
-    #         end_time,
-    #         "-----------------",
-    #         f"{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')},{end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}",
-    #     )
-    #     return f"{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')},{end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}"
-
-    from datetime import datetime, timezone, timedelta
-
     def format_kubecost_window(self, start_time: datetime, end_time: datetime) -> str:
         """
         Convert datetime objects to Kubecost absolute window format:
         <start_iso>Z,<end_iso>Z
-        Shift start_time back by 2 days.
         """
         # Ensure both times are timezone-aware
         if start_time.tzinfo is None:
             start_time = start_time.replace(tzinfo=timezone.utc)
         if end_time.tzinfo is None:
             end_time = end_time.replace(tzinfo=timezone.utc)
-
-        # Shift start_time back 2 days
-        start_time = start_time - timedelta(days=2)
-
-        print(
-            start_time,
-            end_time,
-            "-----------------",
-            f"{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')},{end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}",
-        )
 
         return f"{start_time.strftime('%Y-%m-%dT%H:%M:%SZ')},{end_time.strftime('%Y-%m-%dT%H:%M:%SZ')}"
 
@@ -131,7 +100,7 @@ class dataFormatter:
             "query_params": None,  # Could store query params used
             "fetch_timestamp": datetime.now(timezone.utc).isoformat(),
         }
-
+        
         return formatted_data
 
     def format_node_metrics(
@@ -155,7 +124,7 @@ class dataFormatter:
         formatted_data = {
             # Node identification
             "node_name": node_name,
-            "cluster_name": (os.getenv("CLUSTER_NAME", "cluster_one")),
+            "cluster_name":  (os.getenv("CLUSTER_NAME", "cluster_one")),
             # Enhanced with namespace and deployment info
             "namespace": namespace,
             "deployment_name": deployment,
@@ -362,7 +331,7 @@ class dataFormatter:
                 if allocation_name != "__idle__":
                     formatted_allocations[allocation_name] = {
                         **dataFormatter.format_cluster_metrics(
-                            self, allocation_data, allocation_name
+                            self,allocation_data, allocation_name
                         ),
                         "node_data": None,
                     }
@@ -454,7 +423,7 @@ class dataFormatter:
                     # Handle idle allocations
                     formatted_allocations[allocation_name] = (
                         dataFormatter.format_cluster_metrics(
-                            self, allocation_data, allocation_name
+                           self, allocation_data, allocation_name
                         )
                     )
 
