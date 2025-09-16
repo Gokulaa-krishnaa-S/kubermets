@@ -7,7 +7,7 @@ export default function GCPClusterPage() {
 
   const handleSubmit = (data: any, isUpdate: boolean) => {
     toast.success(
-      isUpdate ? 'GCP cluster updated successfully!' : 'GCP cluster created successfully!'
+      isUpdate ? 'GCP cluster updated successfully!' : 'GCP cluster creation is in progress!'
     );
     // Optionally navigate to cluster list or overview
     // navigate('/overview');
@@ -28,8 +28,8 @@ export default function GCPClusterPage() {
               <span className="text-foreground">GCP GKE</span>
             </nav>
           </div>
-          
-          <GCPClusterForm 
+
+          <GCPClusterForm
             onSubmit={handleSubmit}
             onCancel={handleCancel}
           />

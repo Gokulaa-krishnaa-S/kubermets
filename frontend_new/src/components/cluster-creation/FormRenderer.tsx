@@ -27,7 +27,7 @@ interface FormField {
   required?: boolean;
   helpText?: string;
   placeholder?: string;
-  options?: Array<{ value: string; label: string }>;
+  options?: Array<{ value: string; label: string; when?: string; options?: Array<{ value: string; label: string }> }>;
   fields?: FormField[];
   showIf?: Record<string, any>;
   validation?: { type: string };
@@ -35,6 +35,7 @@ interface FormField {
   poolType?: string;
   description?: string;
   optional?: boolean;
+  dependsOn?: string; // Field that this field depends on
 }
 
 interface FormTemplate {
@@ -84,10 +85,10 @@ export default function FormRenderer({
   useEffect(() => {
     if (!status || !status.type) return;
     const msgs = status.messages && status.messages.length > 0 ? status.messages : [
-      status.type === 'success' ? 'Cluster created successfully!' : 'Cluster creation failed'
+      status.type === 'success' ? 'Cluster creation is in progress!' : 'Cluster creation failed'
     ];
     setModal({ type: status.type, messages: msgs });
-    
+
     // Auto-close modal after 2 seconds for both success and error
     if (status.type === 'success' || status.type === 'error') {
       const t = setTimeout(() => setModal({ type: null, messages: [] }), 2000);
@@ -107,7 +108,7 @@ export default function FormRenderer({
 
   const shouldShowField = (field: FormField): boolean => {
     if (!field.showIf) return true;
-    
+
     return Object.entries(field.showIf).every(([key, value]) => {
       return formData[key] === value;
     });
@@ -117,49 +118,49 @@ export default function FormRenderer({
     if (field.required && (!value || (Array.isArray(value) && value.length === 0))) {
       return `${field.label} is required`;
     }
-    
+
     // Handle file field validation with new structure
     if (field.type === 'file' && field.required && (!value || !value.content)) {
       return `${field.label} is required`;
     }
-    
+
     if (field.validation?.type === 'cidrBlock' && value) {
       const cidrRegex = /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/;
       if (!cidrRegex.test(value)) {
         return 'Please enter a valid CIDR block (e.g., 10.0.0.0/16)';
       }
     }
-    
+
     if (field.validation?.type === 'gcpProjectId' && value) {
       const projectIdRegex = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
       if (!projectIdRegex.test(value)) {
         return 'Project ID must be 6-30 characters, start with lowercase letter, and contain only lowercase letters, numbers, and hyphens';
       }
     }
-    
+
     if (field.validation?.type === 'clusterName' && value) {
       const clusterNameRegex = /^[a-z][a-z0-9-]{0,39}$/;
       if (!clusterNameRegex.test(value)) {
         return 'Cluster name must start with lowercase letter and contain only lowercase letters, numbers, and hyphens (max 40 chars)';
       }
     }
-    
+
     return '';
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate all visible required fields
     const newErrors: Record<string, string> = {};
-    
+
     const validateFields = (fields: FormField[], prefix = '') => {
       fields.forEach(field => {
         if (!shouldShowField(field)) return;
-        
+
         const fieldPath = prefix ? `${prefix}.${field.name}` : field.name;
         const value = prefix ? formData[prefix]?.[field.name] : formData[field.name];
-        
+
         // Handle dynamic-pool-group validation
         if (field.type === 'dynamic-pool-group') {
           const pools = formData[field.name] || [];
@@ -167,7 +168,7 @@ export default function FormRenderer({
             field.fields?.forEach(poolField => {
               const poolFieldPath = `${field.name}[${poolIndex}].${poolField.name}`;
               const poolFieldValue = pool[poolField.name];
-              
+
               const poolError = validateField(poolField, poolFieldValue);
               if (poolError) {
                 newErrors[poolFieldPath] = poolError;
@@ -179,16 +180,16 @@ export default function FormRenderer({
           if (error) {
             newErrors[fieldPath] = error;
           }
-          
+
           if (field.fields) {
             validateFields(field.fields, fieldPath);
           }
         }
       });
     };
-    
+
     validateFields(template.fields);
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       // Show only the first error in field order (FIFO)
@@ -196,14 +197,14 @@ export default function FormRenderer({
       setModal({ type: 'info', messages: [firstError] });
       return;
     }
-    
+
     setErrors({});
     onSubmit(formData);
   };
 
   const renderField = (field: FormField, prefix = ''): React.ReactNode => {
     if (!shouldShowField(field)) return null;
-    
+
     const fieldPath = prefix ? `${prefix}.${field.name}` : field.name;
     const value = prefix ? formData[prefix]?.[field.name] : formData[field.name];
     const error = errors[fieldPath];
@@ -362,11 +363,10 @@ export default function FormRenderer({
                   variant={value === option.value ? "default" : "ghost"}
                   size="sm"
                   onClick={() => updateValue(option.value)}
-                  className={`flex-1 ${
-                    value === option.value
-                      ? 'bg-[#9db309] text-white shadow-sm hover:bg-[#8ca208]'
-                      : 'hover:bg-background/50'
-                  }`}
+                  className={`flex-1 ${value === option.value
+                    ? 'bg-[#9db309] text-white shadow-sm hover:bg-[#8ca208]'
+                    : 'hover:bg-background/50'
+                    }`}
                 >
                   {option.label}
                 </Button>
@@ -379,6 +379,8 @@ export default function FormRenderer({
         );
 
       case 'file':
+        // Collapsible permissions info
+        const [showPerms, setShowPerms] = React.useState(false);
         return (
           <div key={fieldPath} className="space-y-2">
             <Label className="flex items-center text-sm font-medium">
@@ -402,11 +404,13 @@ export default function FormRenderer({
                       try {
                         const json = JSON.parse(event.target?.result as string);
                         // Store both the JSON content and file name
+                        console.log('Parsed JSON:', json);
                         updateValue({
                           content: json,
                           fileName: file.name,
                           fileSize: file.size
                         });
+                        // updateValue(json);
                       } catch (error) {
                         console.error('Error parsing JSON file:', error);
                       }
@@ -418,7 +422,7 @@ export default function FormRenderer({
                 id={fieldPath}
                 key={value ? 'file-input-with-value' : 'file-input-empty'}
               />
-              
+
               {value && value.fileName ? (
                 <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center space-x-3">
@@ -459,6 +463,32 @@ export default function FormRenderer({
             {field.helpText && (
               <p className="text-xs text-muted-foreground">{field.helpText}</p>
             )}
+            {/* Collapsible permissions info */}
+            <div className="mt-2 text-xs">
+              <button
+                type="button"
+                className="text-blue-700 underline hover:text-blue-900 focus:outline-none"
+                onClick={() => setShowPerms((v) => !v)}
+                tabIndex={0}
+              >
+                {showPerms ? 'Hide required service account permissions' : 'Click to view required service account permissions'}
+              </button>
+              {showPerms && (
+                <div className="mt-2 text-blue-800 bg-blue-50 border border-blue-200 rounded p-3">
+                  <span className="font-semibold">The following permissions should be enabled for your service account:</span>
+                  <ul className="list-disc ml-5 mt-1">
+                    <li>roles/compute.networkAdmin</li>
+                    <li>roles/compute.securityAdmin</li>
+                    <li>roles/container.admin</li>
+                    <li>roles/iam.serviceAccountAdmin</li>
+                    <li>roles/iam.serviceAccountUser</li>
+                    <li>roles/storage.objectAdmin</li>
+                    <li>roles/compute.viewer</li>
+                    <li>roles/resourcemanager.projectIamAdmin</li>
+                  </ul>
+                </div>
+              )}
+            </div>
           </div>
         );
 
@@ -544,7 +574,7 @@ export default function FormRenderer({
                 <span>Add {field.poolType?.toUpperCase()} Pool</span>
               </Button>
             </div>
-            
+
             <div className="space-y-4">
               {pools.map((pool: any, poolIndex: number) => (
                 <Card key={poolIndex}>
@@ -567,45 +597,87 @@ export default function FormRenderer({
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {field.fields?.map((poolField) => (
-                        <div key={poolField.name} className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            {poolField.label}
-                            {poolField.required && <span className="text-destructive ml-1">*</span>}
-                          </Label>
-                          {poolField.type === 'select' ? (
-                            <Select
-                              value={pool[poolField.name] || ''}
-                              onValueChange={(value) => {
-                                const newPools = [...pools];
-                                newPools[poolIndex] = { ...pool, [poolField.name]: value };
-                                updateFormData({ [field.name]: newPools });
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder={`Select ${poolField.label}`} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {poolField.options?.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <Input
-                              value={pool[poolField.name] || ''}
-                              onChange={(e) => {
-                                const newPools = [...pools];
-                                newPools[poolIndex] = { ...pool, [poolField.name]: e.target.value };
-                                updateFormData({ [field.name]: newPools });
-                              }}
-                              placeholder={poolField.placeholder}
-                            />
-                          )}
-                        </div>
-                      ))}
+                      {field.fields?.map((poolField) => {
+                        // Handle conditional options based on dependsOn
+                        let fieldOptions = poolField.options;
+
+                        if (poolField.dependsOn && fieldOptions) {
+                          const dependentValue = pool[poolField.dependsOn] || '';
+
+                          if (Array.isArray(fieldOptions)) {
+                            // Find options for this dependent value
+                            const matchingOption = fieldOptions.find(
+                              (option) => option.when === dependentValue
+                            );
+
+                            // If there's a matching option, use its options
+                            // Otherwise fall back to the empty value options or a safe placeholder
+                            const emptyOption = fieldOptions.find((option) => option.when === "");
+
+                            if (matchingOption) {
+                              fieldOptions = matchingOption.options;
+                            } else if (emptyOption) {
+                              fieldOptions = emptyOption.options;
+                            } else {
+                              fieldOptions = [{ value: "_placeholder_", label: "No options available" }];
+                            }
+                          }
+                        }
+
+                        return (
+                          <div key={poolField.name} className="space-y-2">
+                            <Label className="text-sm font-medium">
+                              {poolField.label}
+                              {poolField.required && <span className="text-destructive ml-1">*</span>}
+                            </Label>
+                            {poolField.type === 'select' ? (
+                              <Select
+                                value={pool[poolField.name] || ''}
+                                onValueChange={(value) => {
+                                  const newPools = [...pools];
+                                  newPools[poolIndex] = { ...pool, [poolField.name]: value };
+
+                                  // If this field has dependent fields, reset them when this field changes
+                                  if (field.fields) {
+                                    const dependentFields = field.fields.filter(
+                                      (f) => f.dependsOn === poolField.name
+                                    );
+
+                                    if (dependentFields.length > 0) {
+                                      dependentFields.forEach(depField => {
+                                        newPools[poolIndex][depField.name] = '';
+                                      });
+                                    }
+                                  }
+
+                                  updateFormData({ [field.name]: newPools });
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder={`Select ${poolField.label}`} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {fieldOptions?.filter(option => option.value !== '').map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input
+                                value={pool[poolField.name] || ''}
+                                onChange={(e) => {
+                                  const newPools = [...pools];
+                                  newPools[poolIndex] = { ...pool, [poolField.name]: e.target.value };
+                                  updateFormData({ [field.name]: newPools });
+                                }}
+                                placeholder={poolField.placeholder}
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>
@@ -664,20 +736,18 @@ export default function FormRenderer({
       {modal.type && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-          <div className={`relative z-10 w-full max-w-md rounded-xl shadow-2xl border-2 animate-in fade-in-0 zoom-in-95 duration-200 ${
-            modal.type === 'success' 
-              ? 'bg-white border-green-300 shadow-green-100' 
-              : modal.type === 'error' 
-              ? 'bg-white border-red-300 shadow-red-100' 
+          <div className={`relative z-10 w-full max-w-md rounded-xl shadow-2xl border-2 animate-in fade-in-0 zoom-in-95 duration-200 ${modal.type === 'success'
+            ? 'bg-white border-green-300 shadow-green-100'
+            : modal.type === 'error'
+              ? 'bg-white border-red-300 shadow-red-100'
               : 'bg-white border-yellow-300 shadow-yellow-100'
-          }`}>
-            <div className={`flex items-center justify-between px-6 py-4 rounded-t-xl ${
-              modal.type === 'success' 
-                ? 'bg-green-50 border-b border-green-200' 
-                : modal.type === 'error' 
-                ? 'bg-red-50 border-b border-red-200' 
-                : 'bg-yellow-50 border-b border-yellow-200'
             }`}>
+            <div className={`flex items-center justify-between px-6 py-4 rounded-t-xl ${modal.type === 'success'
+              ? 'bg-green-50 border-b border-green-200'
+              : modal.type === 'error'
+                ? 'bg-red-50 border-b border-red-200'
+                : 'bg-yellow-50 border-b border-yellow-200'
+              }`}>
               <div className="flex items-center space-x-3">
                 {modal.type === 'success' && <CheckCircle2 className="w-6 h-6 text-green-600" />}
                 {modal.type === 'error' && <AlertTriangle className="w-6 h-6 text-red-600" />}
@@ -687,10 +757,10 @@ export default function FormRenderer({
                 </span>
               </div>
               {(modal.type === 'info' || modal.type === 'error') && (
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setModal({ type: null, messages: [] })}
                   className="hover:bg-white/50"
                 >
@@ -700,13 +770,12 @@ export default function FormRenderer({
             </div>
             <div className="px-6 py-4 space-y-2">
               {modal.messages.map((m, i) => (
-                <div key={i} className={`text-sm font-medium ${
-                  modal.type === 'success' 
-                    ? 'text-green-800' 
-                    : modal.type === 'error' 
-                    ? 'text-red-800' 
+                <div key={i} className={`text-sm font-medium ${modal.type === 'success'
+                  ? 'text-green-800'
+                  : modal.type === 'error'
+                    ? 'text-red-800'
                     : 'text-yellow-800'
-                }`}>
+                  }`}>
                   {m}
                 </div>
               ))}
@@ -714,13 +783,13 @@ export default function FormRenderer({
           </div>
         </div>
       )}
-      
+
       <div className="space-y-8">
         {template.fields.map((field) => renderField(field))}
       </div>
-      
+
       <Separator />
-      
+
       {/* Form Actions */}
       <div className="flex items-center justify-end space-x-4">
         {onCancel && (

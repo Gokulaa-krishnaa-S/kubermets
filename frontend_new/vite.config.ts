@@ -4,7 +4,7 @@ import path from "path";
 
 
 export default defineConfig(({ mode }) => ({
-  base: "/environment",   // 👈 put it here, top-level
+  base: "/environment-ingress",   // 👈 put it here, top-level
   server: {
     host: "::",
     port: 8080,

@@ -85,8 +85,8 @@ function MetricLayout() {
   const { title, subtitle } = getPageInfo();
 
   return (
-    <Layout 
-      title={title} 
+    <Layout
+      title={title}
       subtitle={subtitle}
       onDomainChange={handleDomainSelect}
     >
@@ -105,7 +105,7 @@ const App = () => (
       <Toaster />
       <Sonner />
 
-      <BrowserRouter basename="/environment">
+      <BrowserRouter basename="/environment-ingress">
         <ClusterProvider>
           <Routes>
             {/* Direct routes */}

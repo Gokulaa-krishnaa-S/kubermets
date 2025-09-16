@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { Search, ChevronDown, Pencil } from "lucide-react";
 import { useCluster } from "../context/ClusterContext";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import {
   Cloud,
   CloudCog,
@@ -19,10 +19,25 @@ interface DomainTypeAheadProps {
 }
 
 const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
+  const location = useLocation();
+
   const { instances, loading, selectedInstance, setSelectedInstance }: any =
     useCluster();
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
+  // Close dropdown on outside click
+  React.useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [open]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -106,6 +121,12 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
     instance?.clusterName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+
+  // Hide dropdown on overview and cluster creation pages
+  const hideOnRoutes = ["/overview", "/cluster-creation", "/pages/overview", "/pages/cluster-creation", "/cluster-creation/gcp", "/pages/cluster-creation/gcp"];
+  if (hideOnRoutes.some((route) => location.pathname.startsWith(route))) {
+    return null;
+  }
   if (loading) return <p className="text-gray-500">Loading...</p>;
 
   return (
