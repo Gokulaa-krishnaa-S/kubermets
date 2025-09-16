@@ -285,35 +285,56 @@ def get_missing_hourly_windows(cluster_id: int, after_timestamp: datetime) -> Li
     """
     Get missing hourly windows after a specific timestamp.
     This is used to fill hourly data after the daily windows are complete.
-    Uses COLLECTION_WINDOW_HOURS_FOR_BACKFILL as the interval.
+    Creates precise 1-hour windows from the latest timestamp up to the current hour.
     """
-    # First get the latest hourly timestamp to ensure we don't miss any hours
-    latest_hourly = get_latest_hourly_timestamp(cluster_id)
-    if latest_hourly and latest_hourly > after_timestamp:
-        log.info("Using more recent hourly timestamp: %s instead of %s", 
-                latest_hourly.isoformat(), after_timestamp.isoformat())
-        after_timestamp = latest_hourly
-
+    log.info("\n" + "="*50)
+    log.info("HOURLY WINDOWS CALCULATION STARTED")
+    log.info("="*50)
+    
     windows = []
     
+    # Get current time rounded down to the nearest hour
     now = datetime.now(timezone.utc)
-    current_hour = helper.round_down_time(now, timedelta(hours=1))
-
-    log.info("Checking for hourly windows after: %s", after_timestamp.isoformat())
+    current_hour = now.replace(minute=0, second=0, microsecond=0)
+    log.info("Current hour (UTC): %s", current_hour.isoformat())
+    
+    # Get the most recent hourly timestamp
+    latest_hourly = get_latest_hourly_timestamp(cluster_id)
+    log.info("Latest hourly timestamp: %s", latest_hourly.isoformat() if latest_hourly else "None")
+    
+    start_from = after_timestamp
+    log.info("Starting from timestamp: %s", start_from.isoformat())
+    
+    if latest_hourly:
+        if latest_hourly > after_timestamp:
+            log.info("Using more recent hourly timestamp: %s instead of %s", 
+                    latest_hourly.isoformat(), after_timestamp.isoformat())
+            start_from = latest_hourly
+        
+        # Calculate time difference to current hour
+        time_diff = current_hour - latest_hourly
+        hours_behind = time_diff.total_seconds() / 3600
+        log.info("Hours behind current time: %.2f", hours_behind)
     
     # Ensure timezone-aware comparison
-    if after_timestamp.tzinfo is None:
-        after_timestamp = after_timestamp.replace(tzinfo=timezone.utc)
+    if start_from.tzinfo is None:
+        start_from = start_from.replace(tzinfo=timezone.utc)
     
-    # Start from the next hour after the given timestamp
-    current_start = after_timestamp.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+    # Start from the next hour after the start timestamp
+    current_start = start_from.replace(minute=0, second=0, microsecond=0)
+    # if current_start <= start_from:  # If we're at the start of an hour, move to next hour
+    #     current_start += timedelta(hours=1)
     
+    log.info("Starting hourly window collection from: %s to %s", 
+             current_start.isoformat(), current_hour.isoformat())
+    
+    # Create 1-hour windows up to current_hour
     while current_start < current_hour:
-        current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS_FOR_BACKFILL)
-        if current_end > current_hour:
-            current_end = current_hour
-        windows.append((current_start, current_end))
-        current_start = current_end
+        next_hour = current_start + timedelta(hours=1)
+        if next_hour > current_hour:
+            next_hour = current_hour
+        windows.append((current_start, next_hour))
+        current_start = next_hour
 
     if windows:
         log.info("Found %d hourly windows to collect:", len(windows))
@@ -374,47 +395,66 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
 
 
 
-
 def calculate_next_run_time(cluster_id: int) -> Optional[datetime]:
-    """Calculate when the next collection should run - exactly 1 hour after the latest timestamp in DB."""
-    log.info("=== SCHEDULING FLOW: calculate_next_run_time ===")
-    log.info("Calculating next run time for cluster_id=%d", cluster_id)
+    """Calculate when the next collection should run based on last saved timestamp."""
+    log.info("\n" + "="*70)
+    log.info("CALCULATING NEXT RUN TIME".center(70))
+    log.info("="*70)
     
     latest_timestamp = get_latest_timestamp(cluster_id)
-    log.info("Latest timestamp from DB: %s", latest_timestamp)
-    
     now = datetime.now(timezone.utc)
-    log.info("Current UTC time: %s", now)
+    
+    log.info("\nTIME ANALYSIS:")
+    log.info("-"*50)
+    log.info("Cluster ID: %d", cluster_id)
+    log.info("Current time (UTC): %s", now.isoformat())
+    log.info("Latest timestamp: %s", latest_timestamp.isoformat() if latest_timestamp else "None")
+    log.info("-"*50)
 
     if latest_timestamp is None:
         # First run - schedule immediately
-        next_time = now + timedelta(seconds=30)
-        log.info("No previous timestamp found - scheduling immediate run at: %s", next_time)
-        return next_time
+        return now + timedelta(seconds=30)
 
     # Ensure timezone-aware comparison
     if latest_timestamp.tzinfo is None:
         latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
 
-    # Always schedule exactly 1 hour after the latest timestamp
-    next_expected_window = latest_timestamp + timedelta(hours=1)
-    log.info("Calculated next window (latest + 1 hour): %s", next_expected_window)
+    # Next collection should happen at latest_timestamp + window_hours
+    next_expected_window = latest_timestamp + timedelta(hours=COLLECTION_WINDOW_HOURS_FOR_BACKFILL)
+    log.info("\nSchedule Calculation:")
+    log.info("-"*50)
+    log.info("Next expected window: %s", next_expected_window.isoformat())
+    log.info("Window hours: %d", COLLECTION_WINDOW_HOURS_FOR_BACKFILL)
 
-    # If that time has already passed, schedule immediately (with a small delay)
+    # If that time has already passed, schedule immediately to catch up
     if next_expected_window <= now:
-        next_time = now + timedelta(seconds=30)
-        log.info("Next expected window already passed!")
-        log.info("Scheduling immediate run in 30 seconds at: %s", next_time)
-        return next_time
+        immediate_run = now + timedelta(seconds=30)
+        log.info("Next window has passed - scheduling immediate run in 30 seconds")
+        log.info("Immediate run time: %s", immediate_run.isoformat())
+        return immediate_run
 
-    log.info("=== NEXT SCHEDULED RUN ===")
-    log.info("Cluster ID: %d", cluster_id)
-    log.info("Latest Timestamp: %s", latest_timestamp.isoformat())
-    log.info("Next Run Time: %s", next_expected_window.isoformat())
-    log.info("Time until next run: %s", next_expected_window - now)
-    log.info("==============================")
+    # Don't schedule too far into the future (safety check)
+    max_future = now + timedelta(hours=COLLECTION_WINDOW_HOURS_FOR_BACKFILL * 2)
+    log.info("Maximum allowed future time: %s", max_future.isoformat())
+    
+    if next_expected_window > max_future:
+        log.warning(
+            "Next run time too far in future for cluster_id=%d, scheduling in %d minutes",
+            cluster_id,
+            MIN_SCHEDULE_INTERVAL_MIN,
+        )
+        adjusted_time = now + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
+        log.info("Adjusted run time to minimum interval: %s", adjusted_time.isoformat())
+        return adjusted_time
+
+    log.info("\nFinal Schedule Decision:")
+    log.info("-"*50)
+    log.info("Selected run time: %s", next_expected_window.isoformat())
+    log.info("Time until execution: %s", next_expected_window - now)
+    log.info("="*70)
     
     return next_expected_window
+
 
 
 # -------------------- Helpers --------------------
@@ -801,12 +841,13 @@ def collect_cluster_data(cluster_cfg: Dict) -> None:
     """
     Smart collection for a single cluster - handles backfilling and current data.
     First collects daily windows, then fills in hourly gaps.
+    Ensures sequential processing: daily data first, then hourly data.
     """
     cluster_id = cluster_cfg["cluster_id"]
     cluster_name = cluster_cfg.get("cluster_name", f"id-{cluster_id}")
-
+    
     try:
-        log.info("\n=== Starting Daily Window Collection ===")
+        log.info("\n=== PHASE 1: Daily Window Collection ===")
         # First get and collect daily windows
         daily_windows = get_missing_windows(cluster_id)
         latest_successful_time = None
@@ -819,6 +860,7 @@ def collect_cluster_data(cluster_cfg: Dict) -> None:
                 len(daily_windows),
                 cluster_name,
             )
+            log.info("Processing daily windows sequentially...")
 
             # Collect each daily window
             daily_success_count = 0
@@ -957,99 +999,55 @@ def fetch_timestamp_data(cluster_cfg: Dict, start_time: datetime, end_time: date
             str(e)
         )
         return False
-
-def collect_hourly_data(cluster_cfg: Dict) -> None:
-    """
-    Collect data in hourly intervals from the last recorded timestamp to current hour.
-    Ensures sequential processing of intervals.
-    """
-    now = datetime.now(timezone.utc)
-    # Round down current time to the last hour
-    current_hour = now.replace(minute=0, second=0, microsecond=0)
     
-    # Get the latest timestamp from backend
-    latest_ts = get_latest_timestamp(cluster_cfg["cluster_id"])
-    if not latest_ts:
-        log.warning("No previous timestamp found, defaulting to 1 hour ago")
-        start_time = current_hour - timedelta(hours=1)
-    else:
-        # Start from the next hour after the latest timestamp
-        start_time = latest_ts.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
-    
-    cluster_name = cluster_cfg.get("cluster_name", f"id-{cluster_cfg['cluster_id']}")
-    
-    log.info(
-        "Starting hourly collection | cluster=%s | from=%s to=%s",
-        cluster_name,
-        start_time.isoformat(),
-        current_hour.isoformat()
-    )
-    
-    current = start_time
-    while current < current_hour:
-        next_hour = current + timedelta(hours=1)
-        if not fetch_timestamp_data(cluster_cfg, current, next_hour):
-            log.error(
-                "Stopping hourly collection due to error | cluster=%s | failed_window=%s",
-                cluster_name,
-                current.isoformat()
-            )
-            break
-        current = next_hour
-    
-    log.info(
-        "Completed hourly collection | cluster=%s | processed_until=%s",
-        cluster_name,
-        (current - timedelta(hours=1)).isoformat()
-    )
 
 # -------------------- Scheduler Management --------------------
 JOB_PREFIX = "cluster-"
 
 
 def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) -> None:
-    """Collect hourly data for all clusters and schedule the next run based on COLLECTION_WINDOW_HOURS_FOR_BACKFILL."""
+    """Collect data and schedule the next run based on the new timestamp."""
+    log.info("\n" + "*"*80)
+    log.info("COLLECTION AND RESCHEDULING PROCESS STARTED".center(80))
+    log.info("*"*80)
+    
     cluster_id = cluster_cfg["cluster_id"]
     cluster_name = cluster_cfg.get("cluster_name", f"id-{cluster_id}")
-
-    log.info("\n=== COLLECTION AND RESCHEDULE FLOW ===")
-    log.info("Starting collection and reschedule for cluster: %s (ID: %d)", cluster_name, cluster_id)
     
-    try:
-        # Get all active clusters and collect their data
-        clusters = get_active_clusters()
-        for cfg in clusters:
-            try:
-                # Collect data for each cluster
-                collect_cluster_data(cfg)
-                log.info(
-                    "Collected data for cluster | cluster=%s",
-                    cfg.get("cluster_name", f"id-{cfg['cluster_id']}")
-                )
-            except Exception as e:
-                log.error(
-                    "Failed to collect data for cluster | cluster=%s err=%s",
-                    cfg.get("cluster_name", f"id-{cfg['cluster_id']}"),
-                    e
-                )
+    log.info("\nCLUSTER DETAILS:")
+    log.info("-"*50)
+    log.info("Cluster Name: %s", cluster_name)
+    log.info("Cluster ID: %d", cluster_id)
+    log.info("-"*50)
 
-        log.info("\n=== SCHEDULING NEXT RUN ===")
-        # Calculate next run time based on latest timestamp in DB
+    try:
+        log.info("\nPHASE 1: DATA COLLECTION")
+        log.info("-"*50)
+        collect_cluster_data(cluster_cfg)
+        log.info("Data collection completed successfully")
+
+        log.info("\nPHASE 2: SCHEDULING NEXT RUN")
+        log.info("-"*50)
         next_run_time = calculate_next_run_time(cluster_id)
-        if next_run_time is None:
-            log.error(
-                "Failed to calculate next run time | cluster=%s | scheduling retry in %d minutes",
-                cluster_name,
-                MIN_SCHEDULE_INTERVAL_MIN
-            )
-            next_run_time = datetime.now(timezone.utc) + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
-            log.info("Fallback: Scheduling retry in %d minutes at %s", 
-                    MIN_SCHEDULE_INTERVAL_MIN, next_run_time)
+        
+        if next_run_time:
+            # Avoid scheduling if next run is too soon (prevents infinite loops)
+            now = datetime.now(timezone.utc)
+            min_interval = now + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
+            
+            log.info("Scheduling Analysis:")
+            log.info("  Current time (UTC): %s", now.isoformat())
+            log.info("  Minimum allowed interval: %s", min_interval.isoformat())
+
+            if next_run_time < min_interval:
+                next_run_time = min_interval
+                log.info(
+                    "Adjusted next run time to respect minimum interval | cluster=%s next_run=%s",
+                    cluster_name,
+                    next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
+                )
 
             job_id = f"{JOB_PREFIX}{cluster_id}"
-            log.info("Creating new job with ID: %s", job_id)
-            log.info("Scheduling collection at: %s", next_run_time)
-            
             scheduler.add_job(
                 func=collect_and_reschedule,
                 id=job_id,
@@ -1058,14 +1056,11 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
                 run_date=next_run_time,
                 replace_existing=True,
             )
-            
-            # Log all current jobs for verification
-            jobs = scheduler.get_jobs()
-            log.info("\n=== CURRENT SCHEDULED JOBS ===")
-            log.info("Total jobs: %d", len(jobs))
-            for job in jobs:
-                log.info("Job ID: %s | Next run: %s", 
-                        job.id, job.next_run_time)
+            log.info(
+                "Rescheduled next collection | cluster=%s next_run=%s",
+                cluster_name,
+                next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
+            )
 
     except Exception as e:
         log.error(
@@ -1093,43 +1088,53 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
 
 def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: List[Dict]):
     """
-    Schedule initial collection job using COLLECTION_WINDOW_HOURS_FOR_BACKFILL as the interval.
-    Only need to schedule one job since it will handle all clusters.
+    Schedule jobs based on the next expected data window for each cluster.
+    Instead of interval triggers, each job is scheduled once at the exact
+    `next_run_time` and then re-schedules itself inside `collect_and_reschedule`.
     """
-    if not clusters:
-        log.warning("No clusters to schedule jobs for")
-        return
+    log.info("\n" + "#"*80)
+    log.info("CLUSTER JOB SCHEDULING".center(80))
+    log.info("#"*80)
+    
+    log.info("\nINITIAL SETUP:")
+    log.info("-"*50)
+    log.info("Total clusters to schedule: %d", len(clusters))
+    log.info("Scheduling type: One-time with auto-reschedule")
+    log.info("-"*50)
+    
+    for cfg in clusters:
+        log.info("\nProcessing Cluster:")
+        log.info("-"*40)
+        log.info("Cluster Name: %s", cfg.get("cluster_name", f"id-{cfg['cluster_id']}"))
+        log.info("Cluster ID: %d", cfg["cluster_id"])
         
-    # Use the first cluster config for the scheduler job
-    # The job itself will fetch current clusters when it runs
-    cfg = clusters[0]
-    cluster_name = cfg.get("cluster_name", f"id-{cfg['cluster_id']}")
-    
-    # Calculate next run based on latest timestamp in DB
-    next_run = calculate_next_run_time(cfg["cluster_id"])
-    if next_run is None:
-        next_run = datetime.now(timezone.utc) + timedelta(seconds=30)
-    
-    log.info(
-        "Scheduling initial collection for all clusters | next_run=%s",
-        next_run.isoformat()
-    )
-    
-    job_id = f"{JOB_PREFIX}collector"
-    scheduler.add_job(
-        func=collect_and_reschedule,
-        id=job_id,
-        args=[cfg, scheduler],
-        trigger="date",
-        run_date=next_run,
-        replace_existing=True,
-    )
-    
-    log.info(
-        "Scheduled collection job | job=%s | next_run=%s",
-        job_id,
-        next_run.isoformat(),
-    )
+        # figure out when this cluster should next run
+        next_run_time = calculate_next_run_time(cfg["cluster_id"])
+        if not next_run_time:
+            log.warning(
+                "No next run time calculated for cluster_id=%s", cfg["cluster_id"]
+            )
+            continue
+
+        job_id = f"{JOB_PREFIX}{cfg['cluster_id']}"
+        
+        log.info("\nScheduling Details:")
+        log.info("-"*40)
+        log.info("Job ID: %s", job_id)
+        log.info("Scheduled Run Time: %s", next_run_time.isoformat())
+        log.info("Time until execution: %s", next_run_time - datetime.now(timezone.utc))
+        
+        scheduler.add_job(
+            func=collect_and_reschedule,
+            id=job_id,
+            args=[cfg, scheduler],
+            trigger="date",
+            run_date=next_run_time,
+            replace_existing=True,
+        )
+        
+        log.info("Job successfully scheduled")
+        log.info("-"*40)
 
 
 def initial_collect_all(scheduler: BackgroundScheduler):
@@ -1150,7 +1155,6 @@ def initial_collect_all(scheduler: BackgroundScheduler):
                 "Starting hourly collection after initial data | cluster=%s",
                 cfg.get("cluster_name", f"id-{cfg['cluster_id']}")
             )
-            collect_hourly_data(cfg)
             
         except Exception as e:
             log.error(
