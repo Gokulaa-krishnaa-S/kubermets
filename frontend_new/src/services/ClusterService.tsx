@@ -341,9 +341,16 @@ class ClusterService {
   /**
    * Get list of all Kubernetes instances
    */
-  async getInstanceList() {
+  async getInstanceList(userId: string) {
     try {
-      const response: AxiosResponse = await this.api.get("/getClusterNames");
+      if (!userId) {
+        throw new Error("User ID is required to fetch instance list");
+      }
+      console.log("Fetching instances for user ID:", userId);
+
+      const response: AxiosResponse = await this.api.post("/getClusterNames", {
+        user_id: userId
+      });
       return response.data;
     } catch (error) {
       console.error("Error fetching instance list:", error);

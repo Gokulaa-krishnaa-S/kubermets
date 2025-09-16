@@ -121,6 +121,9 @@ export default function Overview() {
     if (instances?.length) {
       loadData();
     }
+    else{
+      setLoading(false);
+    }
 
     // Set up interval to fetch data every 30 seconds
     const interval = setInterval(() => {

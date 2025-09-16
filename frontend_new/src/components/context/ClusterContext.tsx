@@ -24,6 +24,8 @@ interface ClusterContextType {
   selectedInstance: Instance | null;
   setSelectedInstance: (instance: Instance) => void;
   backendError?: string | null;
+  userId?: string | null;
+  refreshData: () => void;
 }
 
 const ClusterContext = createContext<ClusterContextType | undefined>(undefined);
@@ -31,79 +33,156 @@ const ClusterContext = createContext<ClusterContextType | undefined>(undefined);
 export const ClusterProvider = ({ children }: { children: ReactNode }) => {
   const [instances, setInstances] = useState<Instance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedInstance, setSelectedInstance] = useState<Instance | null>(
-    null
-  );
+  const [selectedInstance, setSelectedInstance] = useState<Instance | null>(null);
   const [backendError, setBackendError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [searchParams] = useSearchParams();
   const queryClusterId = searchParams.get("cluster_id");
 
-  useEffect(() => {
-    const fetchInstances = async () => {
-      try {
-        const data = await ClusterService.getInstanceList();
-
-        console.log(data, "-------check");
-        const instanceList = data || [];
-        setInstances(instanceList);
-        setBackendError(null);
-        console.log(
-          queryClusterId,
-          "-----------------------",
-          selectedInstance
-        );
-        if (instanceList.length > 0) {
-          // Try to match cluster_id from query param
-          const matched =
-            queryClusterId &&
-            instanceList.find((inst) => String(inst.id) === queryClusterId);
-
-          setSelectedInstance(
-            matched
-              ? matched
-              : selectedInstance
-              ? selectedInstance
-              : instanceList[0]
-          ); // fallback to first
-        }
-      } catch (error) {
-        console.error("Error fetching instances:", error);
-        setBackendError(
-          (error as any)?.message || "Failed to connect to backend service."
-        );
-      } finally {
-        setLoading(false);
+  const getTokenFromCookie = (): string | null => {
+    const getCookie = (name: string): string | null => {
+      if (typeof document === "undefined") return null;
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) {
+        return decodeURIComponent(parts.pop()?.split(";").shift() || "");
       }
+      return null;
     };
 
-    fetchInstances();
-  }, [queryClusterId]); // refetch when query param changes
-  const getInstanceList = useCallback(async () => {
+    // Try multiple possible cookie names
+    return (
+      getCookie("token") || 
+      getCookie("auth_token") || 
+      getCookie("keycloak_token") ||
+      getCookie("access_token")
+    );
+  };
+
+  const verifyToken = async (token: string): Promise<string | null> => {
     try {
-      const backendApiBaseUrl =
-        import.meta.env.VITE_BACKEND_API_BASE_URL ||
-        "";
-      const response = await fetch(`${backendApiBaseUrl}/clusters`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const response = await fetch(
+        "https://infinitai.sifymdp.digital/shell-api/api/verify",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
       if (response.ok) {
         const result = await response.json();
-        console.log("Cluster found:", result);
-        return result.data;
+        console.log("Token verified successfully:", result);
+        return result.user_id;
       } else {
-        console.error("Cluster not found or error:", response.status);
+        const errorText = await response.text();
+        console.error("Token verification failed:", response.status, errorText);
+        
+        if (response.status === 401) {
+          setBackendError("Authentication expired. Please login again.");
+        } else {
+          setBackendError("Authentication failed. Please login again.");
+        }
         return null;
       }
     } catch (error) {
-      console.error("Error checking cluster existence:", error);
+      console.error("Error verifying token:", error);
+      setBackendError("Network error during authentication. Please check your connection.");
       return null;
     }
-  }, []);
+  };
+
+  const fetchInstances = async (userId: string) => {
+    try {
+      setBackendError(null); // Clear previous errors
+      const data = await ClusterService.getInstanceList(userId);
+
+      console.log("Fetched instances:", data);
+      const instanceList = data || [];
+      setInstances(instanceList);
+
+      // Set selected instance based on query param or default to first
+      if (instanceList.length > 0) {
+        const matched = queryClusterId && 
+          instanceList.find((inst) => String(inst.id) === queryClusterId);
+
+        setSelectedInstance(
+          matched || selectedInstance || instanceList[0]
+        );
+      } else {
+        setSelectedInstance(null);
+      }
+    } catch (error) {
+      console.error("Error fetching instances:", error);
+      const errorMessage = (error as any)?.message || "Failed to load cluster data.";
+      setBackendError(errorMessage);
+      setInstances([]);
+      setSelectedInstance(null);
+    }
+  };
+
+  const refreshData = useCallback(async () => {
+    if (!userId) return;
+    
+    setLoading(true);
+    await fetchInstances(userId);
+    setLoading(false);
+  }, [userId, queryClusterId]);
+
+  const initializeAuth = async () => {
+    try {
+      console.log("Initializing authentication...");
+      setLoading(true);
+      setBackendError(null);
+
+      const token = getTokenFromCookie();
+      console.log("Token found:", !!token);
+
+      if (!token) {
+        setBackendError("No authentication token found. Please login.");
+        setUserId(null);
+        return;
+      }
+
+      const userIdFromToken = await verifyToken(token);
+      console.log("User ID from verification:", userIdFromToken);
+
+      if (userIdFromToken) {
+        setUserId(userIdFromToken);
+        await fetchInstances(userIdFromToken);
+      } else {
+        setUserId(null);
+        setInstances([]);
+        setSelectedInstance(null);
+      }
+    } catch (error) {
+      console.error("Auth initialization error:", error);
+      setBackendError("Failed to initialize authentication.");
+      setUserId(null);
+      setInstances([]);
+      setSelectedInstance(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    initializeAuth();
+  }, []); // Only run once on mount
+
+  // Separate effect for handling query parameter changes
+  useEffect(() => {
+    if (userId && instances.length > 0 && queryClusterId) {
+      const matched = instances.find((inst) => String(inst.id) === queryClusterId);
+      if (matched && matched !== selectedInstance) {
+        setSelectedInstance(matched);
+      }
+    }
+  }, [queryClusterId, instances, userId]);
+
   return (
     <ClusterContext.Provider
       value={{
@@ -112,6 +191,8 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
         selectedInstance,
         setSelectedInstance,
         backendError,
+        userId,
+        refreshData,
       }}
     >
       {children}

@@ -119,10 +119,10 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
 };
 
 export default function ClusterMetrics() {
-  const { selectedInstance }: any = useCluster();
+  const { selectedInstance,userId}: any = useCluster();
   console.log(selectedInstance?.id, "-------------");
   let cluster_id = selectedInstance?.id;
-  let user_id = selectedInstance?.user_id;
+  let user_id = userId;
   const [clusterStats, setClusterStats] = useState([]);
 
   const [clusters, setClusters] = useState([]);
@@ -812,6 +812,7 @@ export default function ClusterMetrics() {
   // Initial data load effect
   useEffect(() => {
     console.log("Initial useEffect - loading data on component mount");
+    if (!userId) return;
 
     // Get initial time range from URL
     const rangeFromUrl = searchParams.get("window") || "24h";
@@ -886,7 +887,7 @@ export default function ClusterMetrics() {
         fetchAllData(rangeFromUrl, effectiveClusterId);
       }
     }
-  }, []); // Initial load only
+  }, [userId]); // Initial load only
 
   // Auto-refresh interval effect
   useEffect(() => {
