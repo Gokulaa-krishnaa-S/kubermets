@@ -1,0 +1,66 @@
+{
+	"info": {
+		"_postman_id": "d6140777-ef67-4b42-9f3b-12b9b5f405b1",
+		"name": "Kubermets",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "26810151",
+		"_collection_link": "https://coe000-4039.postman.co/workspace/COE-Workspace~daf3f3f5-ca70-4d88-aa23-89d8aa56d7c6/collection/26810151-d6140777-ef67-4b42-9f3b-12b9b5f405b1?action=share&source=collection_link&creator=26810151"
+	},
+	"item": [
+		{
+			"name": "getall",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "kubecost direct api",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "health",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"name\": \"client-1\",\r\n  \"description\": \"East region Kubernetes cluster\",\r\n  \"api_url\": \"http://172.16.20.110/kubecost/\",\r\n  \"client_name\": \"Client A\",\r\n  \"status\": \"active\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8000/v1/health"
+			},
+			"response": []
+		},
+		{
+			"name": "Fetch",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"cluster_metrics\": [\r\n    {\r\n      \"cluster_name\": \"cluster-A\",\r\n      \"timestamp\": \"2025-08-20T10:00:00Z\",\r\n      \"window_start\": \"2025-08-13T10:00:00Z\",\r\n      \"window_end\": \"2025-08-20T10:00:00Z\",\r\n      \"window_duration\": \"7d\",\r\n      \"total_cost\": 125.50,\r\n      \"cpu_cost\": 50.25,\r\n      \"ram_cost\": 30.75,\r\n      \"pv_cost\": 10.00,\r\n      \"network_cost\": 5.50,\r\n      \"gpu_cost\": 20.00,\r\n      \"load_balancer_cost\": 3.00,\r\n      \"external_cost\": 6.00,\r\n      \"shared_cost\": 0.00,\r\n      \"cpu_core_request_average\": 4.5,\r\n      \"cpu_core_usage_average\": 3.8,\r\n      \"ram_byte_request_average\": 2147483648,\r\n      \"ram_byte_usage_average\": 1073741824,\r\n      \"gpu_request_average\": 1.0,\r\n      \"gpu_usage_average\": 0.8,\r\n      \"total_efficiency\": 0.82,\r\n      \"cpu_usage_percent\": 75.0,\r\n      \"memory_usage_percent\": 50.0,\r\n      \"memory_gb_used\": 2.0,\r\n      \"memory_gb_requested\": 4.0,\r\n      \"efficiency_percent\": 82.0,\r\n      \"cluster_status\": \"running\",\r\n      \"cluster_version\": \"v1.29.3\",\r\n      \"node_count\": 5,\r\n      \"pod_count\": 32,\r\n      \"efficiency_category\": \"optimal\",\r\n      \"is_idle_allocation\": false,\r\n      \"raw_api_response\": {\"source\": \"metrics-api\"},\r\n      \"query_params\": {\"window\": \"7d\"},\r\n      \"fetch_timestamp\": \"2025-08-20T10:05:00Z\"\r\n    }\r\n  ],\r\n  \"node_metrics\": [\r\n    {\r\n      \"node_name\": \"node-1\",\r\n      \"cluster_name\": \"cluster-A\",\r\n      \"timestamp\": \"2025-08-20T10:00:00Z\",\r\n      \"window_start\": \"2025-08-13T10:00:00Z\",\r\n      \"window_end\": \"2025-08-20T10:00:00Z\",\r\n      \"window_duration\": \"7d\",\r\n      \"total_cost\": 30.00,\r\n      \"cpu_cost\": 12.00,\r\n      \"ram_cost\": 10.00,\r\n      \"pv_cost\": 2.00,\r\n      \"network_cost\": 1.50,\r\n      \"gpu_cost\": 4.00,\r\n      \"shared_cost\": 0.50,\r\n      \"cpu_core_request_average\": 1.5,\r\n      \"cpu_core_usage_average\": 1.2,\r\n      \"ram_byte_request_average\": 1073741824,\r\n      \"ram_byte_usage_average\": 536870912,\r\n      \"gpu_request_average\": 0.5,\r\n      \"gpu_usage_average\": 0.3,\r\n      \"total_efficiency\": 0.80,\r\n      \"cpu_usage_percent\": 70.0,\r\n      \"memory_usage_percent\": 50.0,\r\n      \"memory_gb_used\": 1.0,\r\n      \"memory_gb_requested\": 2.0,\r\n      \"efficiency_percent\": 80.0,\r\n      \"node_status\": \"Healthy\",\r\n      \"node_health_score\": 95.0,\r\n      \"node_instance_type\": \"m5.large\",\r\n      \"node_zone\": \"us-east-1a\",\r\n      \"is_idle_allocation\": false,\r\n      \"is_unallocated\": false,\r\n      \"is_system_allocation\": false,\r\n      \"first_seen\": \"2025-08-01T00:00:00Z\",\r\n      \"last_seen\": \"2025-08-20T10:00:00Z\",\r\n      \"is_active\": true\r\n    }\r\n  ],\r\n  \"pod_metrics\": [\r\n    {\r\n      \"key\": \"cluster-A/node-1/pod-frontend\",\r\n      \"namespace\": \"default\",\r\n      \"name\": \"frontend\",\r\n      \"start_time\": \"2025-08-19T10:00:00Z\",\r\n      \"end_time\": \"2025-08-20T10:00:00Z\",\r\n      \"window\": \"24h\",\r\n      \"cpu_core_usage_average\": 0.3,\r\n      \"cpu_core_request_average\": 0.5,\r\n      \"cpu_cost\": 5.0,\r\n      \"ram_byte_usage_average\": 268435456,\r\n      \"ram_byte_request_average\": 536870912,\r\n      \"ram_cost\": 3.0,\r\n      \"gpu_cost\": 0.0,\r\n      \"pv_cost\": 1.0,\r\n      \"network_cost\": 0.5,\r\n      \"total_cost\": 9.5,\r\n      \"shared_cost\": 0.2,\r\n      \"ram_usage_gb\": 0.25,\r\n      \"ram_request_gb\": 0.5,\r\n      \"cpu_efficiency\": 0.6,\r\n      \"ram_efficiency\": 0.5,\r\n      \"total_efficiency\": 0.55,\r\n      \"is_idle\": false,\r\n      \"domain\": \"app-tier\",\r\n      \"raw_allocation_data\": {\"container\": \"frontend-container\"}\r\n    }\r\n  ]\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8000/v1/fetchMetrics"
+			},
+			"response": []
+		}
+	]
+}
