@@ -90,27 +90,27 @@ export default function ClusterDetailModal({
   const fetchClusterStats = async () => {
     try {
       setError(null);
-      
+
       const res = await ClusterService.getClusterDetails({
-        user_id: 1,
+        // user_id: 1,
         cluster_id: clusterId || 1,
         window: "6d",
       });
 
       console.log("Cluster API response:", res);
-      
+
       // Access the data array correctly
       const clusterData = res?.data || [];
-      
+
       if (!Array.isArray(clusterData) || clusterData.length === 0) {
         throw new Error("No cluster data received from API");
       }
-      
+
       // Filter out idle allocations and find the specific cluster
       const activeCluster = clusterData.find(
         cluster => cluster.cluster_name === clusterName && !cluster.is_idle_allocation
       );
-      
+
       if (!activeCluster) {
         console.warn(`No active cluster found with name: ${clusterName}`);
         // Try to find any cluster with the given name (including idle)
@@ -128,7 +128,7 @@ export default function ClusterDetailModal({
     } catch (err) {
       console.error("Failed to load cluster detail:", err);
       setError(err.message || "Failed to load cluster data");
-      
+
       // Set cluster-related loading states to false on error
       setLoadingCpu(false);
       setLoadingMemory(false);
@@ -173,8 +173,8 @@ export default function ClusterDetailModal({
 
       // GPU Memory Data - Not available in current API response
       setGpuMemoryData([
-        { 
-          name: cluster.cluster_name, 
+        {
+          name: cluster.cluster_name,
           used: 0, // Not available in API
           requested: 0 // Not available in API
         }
@@ -204,7 +204,7 @@ export default function ClusterDetailModal({
     try {
       const response = await podService.getActiveIdlePodCount({ cluster_id: clusterId });
       console.log("response for pod count", response);
-      
+
       // Fix: Check if response exists and has the required properties (allowing 0 values)
       if (response && typeof response.active_count === 'number' && typeof response.idle_count === 'number') {
         const newPodData = [
@@ -214,7 +214,7 @@ export default function ClusterDetailModal({
             idle: response.idle_count,
           },
         ];
-        
+
         console.log("Setting pod count data:", newPodData);
         setPodCountData(newPodData);
         console.log("pod count data set successfully - state will update on next render");
@@ -247,7 +247,7 @@ export default function ClusterDetailModal({
   // const fetchPodData = async () => {
   //   try {
   //     setError(null);
-      
+
   //     const res = await podService.getPodMetrics({
   //       user_id: 1,
   //       cluster_id: clusterId || 1,
@@ -255,12 +255,12 @@ export default function ClusterDetailModal({
   //     });
 
   //     console.log("Pod API response:", res);
-      
+
   //     // Access the data array correctly
   //     const podData = res?.data || [];
 
   //     console.log("pod data:", podData);
-      
+
   //     if (!Array.isArray(podData) || podData.length === 0) {
   //       console.warn("No pod data received from API");
   //       setPodCountData([
@@ -273,17 +273,17 @@ export default function ClusterDetailModal({
   //       setLoadingPods(false);
   //       return;
   //     }
-      
+
   //     // Count active and idle pods (excluding the __idle__ system entry)
   //     let activeCount = 0;
   //     let idleCount = 0;
-      
+
   //     podData.forEach((pod) => {
   //       // Skip the system __idle__ entry
   //       if (pod.name === "__idle__" || pod.id === "__idle__") {
   //         return;
   //       }
-        
+
   //       if (pod.isIdle) {
   //         idleCount++;
   //       } else {
@@ -300,7 +300,7 @@ export default function ClusterDetailModal({
   //     ]);
 
   //     console.log("pod data in state is:", podCountData);
-      
+
   //     setLoadingPods(false);
 
   //   } catch (err) {
@@ -377,7 +377,7 @@ export default function ClusterDetailModal({
 
         <div className="overflow-y-auto overflow-x-hidden scrollbar-hide mt-4 flex-1 pr-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            
+
             {/* CPU Usage Chart - ClusterService */}
             <ChartCard loading={loadingCpu} details={chartDetails.cpu}>
               <GroupedBarChart
@@ -421,7 +421,7 @@ export default function ClusterDetailModal({
                   colors={["#06b6d4", "#f43f5e"]}
                   dataKeys={["used", "requested"]}
                 />
-               
+
               </div>
             </ChartCard>
 
@@ -441,11 +441,11 @@ export default function ClusterDetailModal({
             <ChartCard loading={loadingVolume} details={chartDetails.volume}>
               <GroupedBarChart
                 data={volumeData}
-                
+
                 title="Volume Cost per Cluster"
                 yAxisLabel="Cost ($)"
                 colors={["#3b82f6"]}
-                dataKeys={["used","requested"]}
+                dataKeys={["used", "requested"]}
               />
             </ChartCard>
 
@@ -461,14 +461,14 @@ export default function ClusterDetailModal({
             <div>
               <span className="text-gray-600 dark:text-gray-400">CPU Efficiency:</span>
               <span className="ml-2 font-medium">
-                {cpuData[0]?.requested > 0 ? 
+                {cpuData[0]?.requested > 0 ?
                   `${((cpuData[0]?.used / cpuData[0]?.requested) * 100).toFixed(1)}%` : 'N/A'}
               </span>
             </div>
             <div>
               <span className="text-gray-600 dark:text-gray-400">Memory Efficiency:</span>
               <span className="ml-2 font-medium">
-                {memoryData[0]?.requested > 0 ? 
+                {memoryData[0]?.requested > 0 ?
                   `${((memoryData[0]?.used / memoryData[0]?.requested) * 100).toFixed(1)}%` : 'N/A'}
               </span>
             </div>
@@ -485,13 +485,13 @@ export default function ClusterDetailModal({
               <span className="ml-2 font-medium">${volumeData[0]?.used || 0}</span>
             </div>
           </div>
-          
+
           {/* Additional Pod Efficiency Metric */}
           <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
             <div className="text-sm">
               <span className="text-gray-600 dark:text-gray-400">Pod Efficiency:</span>
               <span className="ml-2 font-medium">
-                {(podCountData[0]?.active > 0 || podCountData[0]?.idle > 0) ? 
+                {(podCountData[0]?.active > 0 || podCountData[0]?.idle > 0) ?
                   `${((podCountData[0]?.active / (podCountData[0]?.active + podCountData[0]?.idle)) * 100).toFixed(1)}%` : 'N/A'}
               </span>
               <span className="ml-2 text-gray-500 text-xs">

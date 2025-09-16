@@ -119,10 +119,10 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
 };
 
 export default function ClusterMetrics() {
-  const { selectedInstance }: any = useCluster();
+  const { selectedInstance,userId}: any = useCluster();
   console.log(selectedInstance?.id, "-------------");
   let cluster_id = selectedInstance?.id;
-  let user_id = selectedInstance?.user_id;
+  let user_id = userId;
   const [clusterStats, setClusterStats] = useState([]);
 
   const [clusters, setClusters] = useState([]);
@@ -213,186 +213,171 @@ export default function ClusterMetrics() {
   };
 
   // Enhanced cluster data API call with retry logic
-  const handleCallClusterData = useCallback(
-    async (queryParams, isRetry = false) => {
-      try {
-        console.log("Calling cluster data API with:", queryParams);
-        const res = await ClusterService.getClusterDetails(queryParams);
+const handleCallClusterData = useCallback(
+  async (queryParams, isRetry = false) => {
+    try {
+      console.log("Calling cluster data API with:", queryParams);
+      const res = await ClusterService.getClusterDetails(queryParams);
 
-        if (res?.api_failed) {
-          setServerStatus("down");
-          setConnectionStatus("disconnected");
-          setIsAutoRefreshPaused(true);
-          console.warn("API reported failure:", res.data);
-          if (!res?.data) throw new Error("No data available and API failed");
-        } else {
-          setServerStatus("live");
-          setConnectionStatus("connected");
-          setRetryAttempts(0);
-          setError(null);
-          setIsAutoRefreshPaused(false);
-        }
-
-        const allocations = res?.data || [];
-        console.log(allocations, "------");
-
-        // Separate idle and active clusters
-        const idleEntry =
-          allocations.find((a) => a.cluster_name === "__idle__") || {};
-        const activeClusters = allocations.filter(
-          (a) =>
-            a.cluster_name !== "__idle__" && a.cluster_name !== "cluster-total"
-        );
-
-        // Calculate "cluster-total" by summing idle + all active
-        const totalEntry = activeClusters.concat(idleEntry).reduce(
-          (acc, cur) => {
-            acc.cpu_cost += cur.cpu_cost || 0;
-            acc.ram_cost += cur.ram_cost || 0;
-            acc.pv_cost += cur.pv_cost || 0;
-            acc.cpu_core_usage_average += cur.cpu_core_usage_average || 0;
-            acc.ram_byte_usage_average += cur.ram_byte_usage_average || 0;
-            return acc;
-          },
-          {
-            cpu_cost: 0,
-            ram_cost: 0,
-            pv_cost: 0,
-            cpu_core_usage_average: 0,
-            ram_byte_usage_average: 0,
-          }
-        );
-
-        // Prepare cluster list for UI (active only)
-        const clusterList = activeClusters.map((c) => ({
-          name: c.cluster_name,
-          cpu: c.cpu_usage_percent
-            ? `${c.cpu_usage_percent.toFixed(0)}%`
-            : "0%",
-          memory: c.memory_usage_percent
-            ? `${c.memory_usage_percent.toFixed(0)}%`
-            : "0%",
-          cost: `$${(c.total_cost || 0).toFixed(2)}`,
-          cpuCores: c.cpu_core_usage_average?.toFixed(2) || "0",
-          memoryGB: bytesToGB(c.ram_byte_usage_average || 0),
-          efficiency: c.efficiency_percent
-            ? `${c.efficiency_percent.toFixed(1)}%`
-            : "N/A",
-          version: c.cluster_version ?? "N/A",
-          nodes: c.node_count || 0,
-          pods: c.pod_count || 0,
-          status: c.cluster_status ?? "running",
-        }));
-
-        setClusters(clusterList);
-        if (clusterList?.length == 0) {
-          setClusters([
-            {
-              name: "km",
-              cpu: "0%",
-              memory: "0%",
-              cost: `$${(0).toFixed(2)}`,
-              cpuCores: "0",
-              memoryGB: 0,
-              efficiency: "N/A",
-              version: "N/A",
-              nodes: 0,
-              pods: 0,
-              status: "running",
-            },
-          ]);
-        }
-
-        // Calculate total cost (CPU + Memory + Storage)
-        const totalCost =
-          (totalEntry.cpu_cost || 0) +
-          (totalEntry.ram_cost || 0) +
-          (totalEntry.pv_cost || 0);
-
-        // Set cluster stats using computed totalEntry (active + idle) with tooltips
-        setClusterStats([
-          {
-            title: "Total Cost",
-            value: `$${totalCost.toFixed(2)}`,
-            subtitle: "CPU + Memory + Storage",
-            icon: <DollarSign className="w-4 h-4" />,
-            status: "info",
-            tooltip: METRIC_TOOLTIPS.totalCost,
-          },
-          {
-            title: "CPU Cost",
-            value: `$${(totalEntry.cpu_cost || 0).toFixed(2)}`,
-            tooltip: METRIC_TOOLTIPS.cpuCost,
-            subtitle: "This period",
-            icon: <Cpu className="w-4 h-4" />,
-            status: "info",
-          },
-          {
-            title: "Memory Cost",
-            value: `$${(totalEntry.ram_cost || 0).toFixed(2)}`,
-            subtitle: "This period",
-            icon: <Activity className="w-4 h-4" />,
-            status: "healthy",
-            tooltip: METRIC_TOOLTIPS.memoryCost,
-          },
-          {
-            title: "Storage Cost",
-            value: `$${(totalEntry.pv_cost || 0).toFixed(2)}`,
-            subtitle: "This period",
-            icon: <HardDrive className="w-4 h-4" />,
-            status: "info",
-            tooltip: METRIC_TOOLTIPS.storageCost,
-          },
-          {
-            title: "Total CPU Cores",
-            value: (totalEntry.cpu_core_usage_average || 0).toFixed(2),
-            subtitle: "In use",
-            icon: <Zap className="w-4 h-4" />,
-            status: "healthy",
-            tooltip: METRIC_TOOLTIPS.totalCpuCores,
-          },
-          {
-            title: "Total Memory",
-            value: `${bytesToGB(totalEntry.ram_byte_usage_average || 0)} GB`,
-            subtitle: "In use",
-            icon: <Database className="w-4 h-4" />,
-            status: "info",
-            tooltip: METRIC_TOOLTIPS.totalMemory,
-          },
-        ]);
-      } catch (error) {
-        console.error("Failed to fetch cluster summary", error);
-
-        if (isConnectionError(error)) {
-          setConnectionStatus("disconnected");
-          setServerStatus("down");
-
-          if (!isRetry && retryAttempts < maxRetries) {
-            console.log(
-              `Connection failed, retrying cluster data... (${retryAttempts + 1
-              }/${maxRetries})`
-            );
-            setRetryAttempts((prev) => prev + 1);
-
-            setTimeout(() => {
-              handleCallClusterData(queryParams, true);
-            }, 2000 * (retryAttempts + 1));
-
-            return;
-          }
-
-          setError(`Failed to fetch cluster data: ${error.message}`);
-          handleApiFailure(error, false);
-        } else {
-          setError(`Failed to fetch cluster data: ${error.message}`);
-          handleApiFailure(error, false);
-        }
-
-        throw error;
+      if (res?.api_failed) {
+        setServerStatus("down");
+        setConnectionStatus("disconnected");
+        setIsAutoRefreshPaused(true);
+        console.warn("API reported failure:", res.data);
+        if (!res?.data) throw new Error("No data available and API failed");
+      } else {
+        setServerStatus("live");
+        setConnectionStatus("connected");
+        setRetryAttempts(0);
+        setError(null);
+        setIsAutoRefreshPaused(false);
       }
-    },
-    [retryAttempts, maxRetries]
-  );
+
+      const allocations = res?.data || [];
+      console.log(allocations, "------");
+
+      // Separate idle and active clusters
+      const idleEntry =
+        allocations.find((a) => a.cluster_name === "__idle__") || {};
+      const activeClusters = allocations.filter(
+        (a) =>
+          a.cluster_name !== "__idle__" && a.cluster_name !== "cluster-total"
+      );
+
+      // Calculate "cluster-total" by summing idle + all active
+      const totalEntry = activeClusters.concat(idleEntry).reduce(
+        (acc, cur) => {
+          acc.cpu_cost += cur.cpu_cost || 0;
+          acc.ram_cost += cur.ram_cost || 0;
+          acc.pv_cost += cur.pv_cost || 0;
+          acc.cpu_core_usage_average += cur.cpu_core_usage_average || 0;
+          acc.ram_byte_usage_average += cur.ram_byte_usage_average || 0;
+          return acc;
+        },
+        {
+          cpu_cost: 0,
+          ram_cost: 0,
+          pv_cost: 0,
+          cpu_core_usage_average: 0,
+          ram_byte_usage_average: 0,
+        }
+      );
+
+      // Prepare cluster list for UI (active only)
+      const clusterList = activeClusters.map((c) => ({
+        name: c.cluster_name,
+        cpu: c.cpu_usage_percent
+          ? `${c.cpu_usage_percent.toFixed(0)}%`
+          : "0%",
+        memory: c.memory_usage_percent
+          ? `${c.memory_usage_percent.toFixed(0)}%`
+          : "0%",
+        cost: `$${(c.total_cost || 0).toFixed(2)}`,
+        cpuCores: c.cpu_core_usage_average?.toFixed(2) || "0",
+        memoryGB: bytesToGB(c.ram_byte_usage_average || 0),
+        efficiency: c.efficiency_percent
+          ? `${c.efficiency_percent.toFixed(1)}%`
+          : "N/A",
+        version: c.cluster_version ?? "N/A",
+        nodes: c.node_count || 0,
+        pods: c.pod_count || 0,
+        status: c.cluster_status ?? "running",
+      }));
+
+      setClusters(clusterList);
+      // Removed fallback data - show empty clusters if length is 0
+
+      // Calculate total cost (CPU + Memory + Storage)
+      const totalCost =
+        (totalEntry.cpu_cost || 0) +
+        (totalEntry.ram_cost || 0) +
+        (totalEntry.pv_cost || 0);
+
+      // Set cluster stats using computed totalEntry (active + idle) with tooltips
+      setClusterStats([
+        {
+          title: "Total Cost",
+          value: `$${totalCost.toFixed(2)}`,
+          subtitle: "Total Cost",
+          icon: <DollarSign className="w-4 h-4" />,
+          status: "info",
+          tooltip: METRIC_TOOLTIPS.totalCost,
+        },
+        {
+          title: "CPU Cost",
+          value: `$${(totalEntry.cpu_cost || 0).toFixed(2)}`,
+          tooltip: METRIC_TOOLTIPS.cpuCost,
+          subtitle: "This period",
+          icon: <Cpu className="w-4 h-4" />,
+          status: "info",
+        },
+        {
+          title: "Memory Cost",
+          value: `$${(totalEntry.ram_cost || 0).toFixed(2)}`,
+          subtitle: "This period",
+          icon: <Activity className="w-4 h-4" />,
+          status: "healthy",
+          tooltip: METRIC_TOOLTIPS.memoryCost,
+        },
+        {
+          title: "Storage Cost",
+          value: `$${(totalEntry.pv_cost || 0).toFixed(2)}`,
+          subtitle: "This period",
+          icon: <HardDrive className="w-4 h-4" />,
+          status: "info",
+          tooltip: METRIC_TOOLTIPS.storageCost,
+        },
+        {
+          title: "Total CPU Cores",
+          value: (totalEntry.cpu_core_usage_average || 0).toFixed(2),
+          subtitle: "In use",
+          icon: <Zap className="w-4 h-4" />,
+          status: "healthy",
+          tooltip: METRIC_TOOLTIPS.totalCpuCores,
+        },
+        {
+          title: "Total Memory",
+          value: `${bytesToGB(totalEntry.ram_byte_usage_average || 0)} GB`,
+          subtitle: "In use",
+          icon: <Database className="w-4 h-4" />,
+          status: "info",
+          tooltip: METRIC_TOOLTIPS.totalMemory,
+        },
+      ]);
+    } catch (error) {
+      console.error("Failed to fetch cluster summary", error);
+
+      if (isConnectionError(error)) {
+        setConnectionStatus("disconnected");
+        setServerStatus("down");
+
+        if (!isRetry && retryAttempts < maxRetries) {
+          console.log(
+            `Connection failed, retrying cluster data... (${
+              retryAttempts + 1
+            }/${maxRetries})`
+          );
+          setRetryAttempts((prev) => prev + 1);
+
+          setTimeout(() => {
+            handleCallClusterData(queryParams, true);
+          }, 2000 * (retryAttempts + 1));
+
+          return;
+        }
+
+        setError(`Failed to fetch cluster data: ${error.message}`);
+        handleApiFailure(error, false);
+      } else {
+        setError(`Failed to fetch cluster data: ${error.message}`);
+        handleApiFailure(error, false);
+      }
+
+      throw error;
+    }
+  },
+  [retryAttempts, maxRetries]
+);
 
   const handleClusterChartData = useCallback(
     async (queryParams, isRetry = false) => {
@@ -435,7 +420,7 @@ export default function ClusterMetrics() {
             name,
             used: parseFloat(
               (cluster as ClusterAllocation).cpuCoreUsageAverage?.toFixed(2) ||
-              "0"
+                "0"
             ),
             requested: parseFloat(
               (cluster as ClusterAllocation).cpuCoreRequestAverage?.toFixed(
@@ -491,7 +476,8 @@ export default function ClusterMetrics() {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying chart data... (${retryAttempts + 1
+              `Connection failed, retrying chart data... (${
+                retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -810,6 +796,7 @@ export default function ClusterMetrics() {
   // Initial data load effect
   useEffect(() => {
     console.log("Initial useEffect - loading data on component mount");
+    if (!userId) return;
 
     // Get initial time range from URL
     const rangeFromUrl = searchParams.get("window") || "24h";
@@ -883,16 +870,8 @@ export default function ClusterMetrics() {
       if (effectiveClusterId) {
         fetchAllData(rangeFromUrl, effectiveClusterId);
       }
-      else {
-        setIsLoadingData(false);
-        setIsInitialLoading(false);
-
-      }
-      // setIsLoadingData(false);
-      // setIsInitialLoading(false);
-
     }
-  }, []); // Initial load only
+  }, [userId]); // Initial load only
 
   // Auto-refresh interval effect
   useEffect(() => {
@@ -1444,10 +1423,11 @@ export default function ClusterMetrics() {
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
-                              className={`h-2 rounded-full transition-all duration-500 ${item.name === "Idle Resources"
-                                ? "bg-gray-400"
-                                : "bg-gradient-to-r from-blue-500 to-blue-600"
-                                }`}
+                              className={`h-2 rounded-full transition-all duration-500 ${
+                                item.name === "Idle Resources"
+                                  ? "bg-gray-400"
+                                  : "bg-gradient-to-r from-blue-500 to-blue-600"
+                              }`}
                               style={{ width: `${item.percentage}%` }}
                             ></div>
                           </div>

@@ -9,6 +9,7 @@ import {
   useLocation,
   Outlet,
   useSearchParams,
+  Navigate,
 } from "react-router-dom";
 import Overview from "./pages/Overview";
 import Settings from "./pages/Settings";
@@ -28,6 +29,7 @@ import SifyClusterPage from "./pages/cluster-creation/SifyClusterPage";
 import { Layout } from "@/components/layout/Layout";
 import { useState } from "react";
 import { useCluster } from "./components/context/ClusterContext";
+import { AuthRedirectWrapper } from "./authredirect";
 
 const queryClient = new QueryClient();
 
@@ -72,7 +74,7 @@ function MetricLayout() {
         title: "Pod Metrics",
         subtitle: "Pod and container resource usage and health",
       };
-    } else if (path.includes("/")) {
+    } else if (path.includes("/overview") || path === "/environment" || path === "/environment/") {
       return {
         title: "Overview",
         subtitle:
@@ -85,12 +87,12 @@ function MetricLayout() {
   const { title, subtitle } = getPageInfo();
 
   return (
-    <Layout 
-      title={title} 
+    <Layout
+      title={title}
       subtitle={subtitle}
       onDomainChange={handleDomainSelect}
     >
-      {backendError ? (
+      {backendError && !backendError.includes("No authentication token") ? (
         <div className="p-4 m-4 rounded border border-red-300 bg-red-50 text-red-700">
           Backend connection failed: {backendError}
         </div>
@@ -99,48 +101,96 @@ function MetricLayout() {
     </Layout>
   );
 }
+
+// Protected Route Component
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { userId, loading, backendError } = useCluster();
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If there's an authentication error, don't render protected content
+  if (backendError && backendError.includes("No authentication token")) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center p-6 bg-red-50 border border-red-200 rounded-lg">
+          <h2 className="text-red-800 font-semibold mb-2">Authentication Required</h2>
+          <p className="text-red-600 mb-4">{backendError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If no userId but no explicit auth error, still loading
+  if (!userId) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p>Verifying authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
 
-      <BrowserRouter basename="/environment">
+      <BrowserRouter basename="/environment-ingress">
         <ClusterProvider>
           <Routes>
-            {/* Direct routes */}
-            <Route path="/" element={<MetricLayout />}>
-              <Route path="/" element={<Overview />} />
-              <Route path="/overview" element={<Overview />} />
-              <Route path="/new" element={<K8sDashboard />} />
-              <Route path="/alerts-events" element={<AlertsAndCost />} />
-              <Route path="/billing-cost" element={<BillingAndCost />} />
-              {/* <Route path="/settings" element={<Settings />} /> */}
-              <Route path="/instance" element={<KubernetesInstanceList />} />
+            {/* Root redirect */}
+            <Route path="/" element={<Navigate to="/overview" replace />} />
+            
+            {/* Protected routes */}
+            <Route 
+              path="/*" 
+              element={
+                <ProtectedRoute>
+                  <Routes>
+                    <Route element={<MetricLayout />}>
+                      <Route path="/overview" element={<Overview />} />
+                      <Route path="/new" element={<K8sDashboard />} />
+                      <Route path="/alerts-events" element={<AlertsAndCost />} />
+                      <Route path="/billing-cost" element={<BillingAndCost />} />
+                      <Route path="/instance" element={<KubernetesInstanceList />} />
 
-              {/* Nested metric routes */}
-              <Route path="/metric/*" element={<MetricRoutes />} />
+                      {/* Nested metric routes */}
+                      <Route path="/metric/*" element={<MetricRoutes />} />
 
-              {/* Cluster Creation routes */}
-              <Route
-                path="/cluster-creation/gcp"
-                element={<GCPClusterPage />}
-              />
-              <Route
-                path="/cluster-creation/aws"
-                element={<AWSClusterPage />}
-              />
-              <Route
-                path="/cluster-creation/azure"
-                element={<AzureClusterPage />}
-              />
-              <Route
-                path="/cluster-creation/sify"
-                element={<SifyClusterPage />}
-              />
-            </Route>
-            {/* Catch-all route - MUST be last */}
-            <Route path="*" element={<NotFound />} />
+                      {/* Cluster Creation routes */}
+                      <Route path="/cluster-creation/gcp" element={<GCPClusterPage />} />
+                      <Route path="/cluster-creation/aws" element={<AWSClusterPage />} />
+                      <Route path="/cluster-creation/azure" element={<AzureClusterPage />} />
+                      <Route path="/cluster-creation/sify" element={<SifyClusterPage />} />
+                      
+                      {/* Catch-all for unknown routes */}
+                      <Route path="*" element={<NotFound />} />
+                    </Route>
+                  </Routes>
+                </ProtectedRoute>
+              } 
+            />
           </Routes>
         </ClusterProvider>
       </BrowserRouter>

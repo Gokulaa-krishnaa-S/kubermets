@@ -18,8 +18,8 @@ const getCookieValue = (name: string): string | null => {
 };
 
 export interface ClusterData {
-  id?: number;
-  user_id: number;
+  id?: string|number;
+  user_id?: string;
   cluster_type: string;
   config: any;
   created_at?: string;
