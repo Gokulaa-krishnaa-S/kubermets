@@ -50,14 +50,14 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
     setCookie("token", kcToken, maxAgeSeconds);
   };
 
-  // -------- Initialization ----------
+
   useEffect(() => {
     if (import.meta.env.VITE_PUBLIC_KEYCLOAK_ENABLED === "true") {
       initializeKeycloak();
     } else {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
   const initializeKeycloak = async () => {
@@ -74,7 +74,7 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
         setToken(token);
         syncTokenCookie(token);
 
-        // Setup token refresh
+
         const refreshInterval = setInterval(() => {
           keycloakInstance
             .updateToken(1000)
@@ -93,7 +93,7 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
             });
         }, 60000);
 
-        // cleanup
+ 
         return () => clearInterval(refreshInterval);
       } else {
         console.log("User not authenticated. Redirecting to login...");
@@ -110,7 +110,7 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
     }
   };
 
-  // -------- UI while loading ----------
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -120,7 +120,6 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
         </div>
       </div>
     );
-    // or return <Loader /> if you have a Loader component
   }
 
   return (
