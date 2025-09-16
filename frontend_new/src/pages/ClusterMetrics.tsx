@@ -119,10 +119,10 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
 };
 
 export default function ClusterMetrics() {
-  const { selectedInstance }: any = useCluster();
+  const { selectedInstance,userId}: any = useCluster();
   console.log(selectedInstance?.id, "-------------");
   let cluster_id = selectedInstance?.id;
-  let user_id = selectedInstance?.user_id;
+  let user_id = userId;
   const [clusterStats, setClusterStats] = useState([]);
 
   const [clusters, setClusters] = useState([]);
@@ -369,7 +369,8 @@ export default function ClusterMetrics() {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying cluster data... (${retryAttempts + 1
+              `Connection failed, retrying cluster data... (${
+                retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -435,7 +436,7 @@ export default function ClusterMetrics() {
             name,
             used: parseFloat(
               (cluster as ClusterAllocation).cpuCoreUsageAverage?.toFixed(2) ||
-              "0"
+                "0"
             ),
             requested: parseFloat(
               (cluster as ClusterAllocation).cpuCoreRequestAverage?.toFixed(
@@ -491,7 +492,8 @@ export default function ClusterMetrics() {
 
           if (!isRetry && retryAttempts < maxRetries) {
             console.log(
-              `Connection failed, retrying chart data... (${retryAttempts + 1
+              `Connection failed, retrying chart data... (${
+                retryAttempts + 1
               }/${maxRetries})`
             );
             setRetryAttempts((prev) => prev + 1);
@@ -810,6 +812,7 @@ export default function ClusterMetrics() {
   // Initial data load effect
   useEffect(() => {
     console.log("Initial useEffect - loading data on component mount");
+    if (!userId) return;
 
     // Get initial time range from URL
     const rangeFromUrl = searchParams.get("window") || "24h";
@@ -883,16 +886,8 @@ export default function ClusterMetrics() {
       if (effectiveClusterId) {
         fetchAllData(rangeFromUrl, effectiveClusterId);
       }
-      else {
-        setIsLoadingData(false);
-        setIsInitialLoading(false);
-
-      }
-      // setIsLoadingData(false);
-      // setIsInitialLoading(false);
-
     }
-  }, []); // Initial load only
+  }, [userId]); // Initial load only
 
   // Auto-refresh interval effect
   useEffect(() => {
@@ -1444,10 +1439,11 @@ export default function ClusterMetrics() {
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
-                              className={`h-2 rounded-full transition-all duration-500 ${item.name === "Idle Resources"
-                                ? "bg-gray-400"
-                                : "bg-gradient-to-r from-blue-500 to-blue-600"
-                                }`}
+                              className={`h-2 rounded-full transition-all duration-500 ${
+                                item.name === "Idle Resources"
+                                  ? "bg-gray-400"
+                                  : "bg-gradient-to-r from-blue-500 to-blue-600"
+                              }`}
                               style={{ width: `${item.percentage}%` }}
                             ></div>
                           </div>

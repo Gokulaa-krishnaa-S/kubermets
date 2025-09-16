@@ -3,6 +3,8 @@ import { Settings as SettingsIcon, Plus, RefreshCcw } from "lucide-react";
 import InstanceForm from "./CreateInstance";
 import ClusterService from "@/services/ClusterService";
 import { SettingsMetricsLoader } from "@/components/loader/settingsloader";
+import { useCluster } from "../../src/components/context/ClusterContext";
+
 
 interface KubernetesInstance {
   id: number;
@@ -24,11 +26,13 @@ const KubernetesInstanceList: React.FC = () => {
     useState<KubernetesInstance | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const { selectedInstance, userId }: any = useCluster();
+
 
   const fetchInstances = async () => {
     try {
       setRefreshing(true);
-      const res = await ClusterService.getInstanceList();
+      const res = await ClusterService.getInstanceList(userId);
       setInstances(res?.instances || []);
     } catch (err: any) {
       console.error("Error fetching instances:", err);
@@ -41,10 +45,12 @@ const KubernetesInstanceList: React.FC = () => {
   };
 
   useEffect(() => {
-    setIsInitialLoading(true);
+    if (!userId) return; // wait until userId is available
 
+    setIsInitialLoading(true);
     fetchInstances();
-  }, []);
+  }, [userId]); // re-run whenever userId changes
+
 
   const handleCreate = () => {
     setEditingInstance(null);
@@ -162,11 +168,10 @@ const KubernetesInstanceList: React.FC = () => {
                     {instance.name}
                   </h3>
                   <span
-                    className={`px-2 py-1 text-xs rounded-full font-medium ${
-                      instance.status === "active"
+                    className={`px-2 py-1 text-xs rounded-full font-medium ${instance.status === "active"
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"
-                    }`}
+                      }`}
                   >
                     {instance.status}
                   </span>

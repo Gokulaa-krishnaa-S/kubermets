@@ -181,11 +181,11 @@ const NodeMetricsDashboard = () => {
     avgEfficiency: 0,
   });
 
-  const { selectedInstance }: any = useCluster();
+  const { selectedInstance, userId }: any = useCluster();
   console.log(selectedInstance);
 
   let cluster_id = selectedInstance?.id;
-  let user_id = selectedInstance?.user_id;
+  let user_id = userId;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState("24h");

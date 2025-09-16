@@ -54,7 +54,6 @@ RETRY_DELAY_SEC = int(os.getenv("RETRY_DELAY_SEC", "15"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 MAX_BACKFILL_WINDOWS = int(os.getenv("MAX_BACKFILL_WINDOWS", "7"))
 MIN_SCHEDULE_INTERVAL_MIN = int(os.getenv("MIN_SCHEDULE_INTERVAL_MIN", "30"))
-MAX_THRESHOLD = int(os.getenv("MAX_THRESHOLD", "24"))  # maximum number of 1h intervals to try
 CLUSTER_ID = int(os.getenv("CLUSTER_ID", "1"))
 CLUSTER_NAME = (os.getenv("CLUSTER_NAME", "cluster_one"))
 USER_ID = (os.getenv("USER_ID", "1"))
@@ -717,63 +716,18 @@ def collect_cluster_data(cluster_cfg: Dict) -> None:
             cluster_name,
         )
 
+        # Collect each missing window
         success_count = 0
-        # Process all but the last window as usual
-        for idx, (start_time, end_time) in enumerate(missing_windows):
-            # If this is the last window (latest 24h), break into 1h intervals
-            if idx == len(missing_windows) - 1:
-                total_hours = int((end_time - start_time).total_seconds() // 3600)
-                # Use MAX_THRESHOLD from env, but don't exceed available hours
-                threshold = min(MAX_THRESHOLD, total_hours)
-                one_hour_slots = []
-                slot_start = start_time
-                for i in range(threshold):
-                    slot_end = slot_start + timedelta(hours=1)
-                    if slot_end > end_time:
-                        break
-                    one_hour_slots.append((slot_start, slot_end))
-                    slot_start = slot_end
-
-                slot_success = 0
-                slot_data_available = []
-                for slot_start, slot_end in one_hour_slots:
-                    try:
-                        # Try to collect each 1h slot
-                        log.info(f"Collecting 1h slot: {slot_start} - {slot_end}")
-                        result = collect_window(cluster_cfg, slot_start, slot_end)
-                        if result:
-                            slot_success += 1
-                            slot_data_available.append(True)
-                        else:
-                            slot_data_available.append(False)
-                    except Exception as e:
-                        log.error(f"Failed to collect 1h slot: {slot_start} - {slot_end} | {e}")
-                        slot_data_available.append(False)
-
-                # If all slots succeeded, done
-                if all(slot_data_available) and slot_success == len(one_hour_slots):
-                    log.info(f"All 1h slots collected for latest window | cluster={cluster_name}")
-                    success_count += slot_success
-                else:
-                    # If any slot failed, fetch MAX_THRESHOLD hours as a single slot
-                    log.warning(f"Partial/no data for some 1h slots, fetching {threshold}h as single slot")
-                    big_slot_start = start_time
-                    big_slot_end = start_time + timedelta(hours=threshold)
-                    if big_slot_end > end_time:
-                        big_slot_end = end_time
-                    if collect_window(cluster_cfg, big_slot_start, big_slot_end):
-                        success_count += 1
+        for start_time, end_time in missing_windows:
+            if collect_window(cluster_cfg, start_time, end_time):
+                success_count += 1
             else:
-                # For older windows, collect as usual
-                if collect_window(cluster_cfg, start_time, end_time):
-                    success_count += 1
-                else:
-                    # Stop on first failure to maintain data continuity
-                    log.error(
-                        "Stopping collection due to failed window | cluster=%s",
-                        cluster_name,
-                    )
-                    break
+                # Stop on first failure to maintain data continuity
+                log.error(
+                    "Stopping collection due to failed window | cluster=%s",
+                    cluster_name,
+                )
+                break
 
         log.info(
             "Collected %d/%d windows | cluster=%s",
@@ -1142,7 +1096,9 @@ if __name__ == "__main__":
 #         API_PORT,
 #     )
 
-#     # keep main thread alive 
+#     # keep main thread alive
+#     try:
+#         while True:
 #             time.sleep(1)
 #     except KeyboardInterrupt:
 #         shutdown("KeyboardInterrupt", None)

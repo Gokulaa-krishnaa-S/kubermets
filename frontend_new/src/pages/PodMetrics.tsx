@@ -155,10 +155,10 @@ const SearchInput: React.FC<SearchProps> = ({
 };
 
 const KubecostDashboard = () => {
-  let { selectedInstance }: any = useCluster();
+  let { selectedInstance, userId }: any = useCluster();
   console.log(selectedInstance);
   let cluster_id = selectedInstance?.id;
-  let user_id = selectedInstance?.user_id;
+  let user_id = userId;
   const [data, setData] = useState(null);
   // const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);

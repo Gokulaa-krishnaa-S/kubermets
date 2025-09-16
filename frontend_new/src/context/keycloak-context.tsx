@@ -66,7 +66,7 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
                 onLoad: "login-required",
                 checkLoginIframe: false,
             });
-
+            console.log("Authenticated:", authenticated);
             setAuthenticated(authenticated);
 
             if (authenticated) {
