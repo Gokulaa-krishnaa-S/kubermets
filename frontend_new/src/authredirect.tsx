@@ -17,8 +17,8 @@ export function AuthRedirectWrapper({ children }: { children: React.ReactNode })
       return;
     }
 
-    if (userId && location.pathname === "/environment") {
-      navigate("/environment/overview", { replace: true });
+    if (userId && location.pathname === "/environment-ingress") {
+      navigate("/environment-ingress/overview", { replace: true });
     }
   }, [loading, userId, backendError, navigate, location.pathname]);
 

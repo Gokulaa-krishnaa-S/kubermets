@@ -155,12 +155,8 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-<<<<<<< HEAD
 
       <BrowserRouter basename="/environment-ingress">
-=======
-      <BrowserRouter basename="/environment">
->>>>>>> 2cb802dfb284cf4732a29c52c1a26d2ee43632b2
         <ClusterProvider>
           <Routes>
             {/* Root redirect */}
