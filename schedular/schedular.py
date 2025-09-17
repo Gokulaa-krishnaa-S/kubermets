@@ -787,7 +787,6 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
         log.error(
             "Collection and reschedule failed | cluster=%s err=%s", cluster_name, e
         )
-        # Retry in minimum interval on error
         retry_time = datetime.now(timezone.utc) + timedelta(
             minutes=MIN_SCHEDULE_INTERVAL_MIN
         )
@@ -878,7 +877,7 @@ def main():
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    # initial bootstrapping
+  
     initial_collect_all(scheduler)
 
     log.info(
@@ -900,7 +899,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-#     # -------------------- FastAPI Endpoints --------------------
+# -------------------- FastAPI Endpoints --------------------
 
 # @app.get("/health", response_model=HealthResponse)
 # async def health_check():

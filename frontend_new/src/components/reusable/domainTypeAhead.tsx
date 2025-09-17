@@ -107,7 +107,6 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
     setSearchTerm("");
     setOpen(false);
     console.log(instance);
-    // 🔑 update query param when cluster changes
     setSearchParams((prev) => {
       const newParams = new URLSearchParams(prev);
       newParams.set("cluster_id", String(instance.id));
@@ -122,7 +121,6 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
   );
 
 
-  // Hide dropdown on overview and cluster creation pages
   const hideOnRoutes = ["/overview", "/cluster-creation", "/pages/overview", "/pages/cluster-creation", "/cluster-creation/gcp", "/pages/cluster-creation/gcp"];
   if (hideOnRoutes.some((route) => location.pathname.startsWith(route))) {
     return null;
