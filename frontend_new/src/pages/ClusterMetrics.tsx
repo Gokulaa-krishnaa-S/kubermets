@@ -12,7 +12,7 @@ import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
 
-// Import the standardized connection status components
+
 import {
   ConnectionStatusBanner,
   NetworkStatusIndicator,
@@ -41,7 +41,7 @@ import {
   Info,
 } from "lucide-react";
 
-// Tooltip definitions based on Excel INFO column
+
 const METRIC_TOOLTIPS = {
   totalCost:
     "Sum of all cluster costs: CPU cost + Memory cost + Storage cost across all clusters for the selected time period",
@@ -92,7 +92,7 @@ const METRIC_TOOLTIPS = {
     "Visual representation of how costs are distributed across clusters and idle resources",
 };
 
-// Tooltip Component
+
 const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -119,10 +119,10 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
 };
 
 export default function ClusterMetrics() {
-  const { selectedInstance }: any = useCluster();
+  const { selectedInstance, userId }: any = useCluster();
   console.log(selectedInstance?.id, "-------------");
   let cluster_id = selectedInstance?.id;
-  let user_id = selectedInstance?.user_id;
+  let user_id = userId;
   const [clusterStats, setClusterStats] = useState([]);
 
   const [clusters, setClusters] = useState([]);
@@ -285,36 +285,24 @@ export default function ClusterMetrics() {
         }));
 
         setClusters(clusterList);
-        if (clusterList?.length == 0) {
-          setClusters([
-            {
-              name: "km",
-              cpu: "0%",
-              memory: "0%",
-              cost: `$${(0).toFixed(2)}`,
-              cpuCores: "0",
-              memoryGB: 0,
-              efficiency: "N/A",
-              version: "N/A",
-              nodes: 0,
-              pods: 0,
-              status: "running",
-            },
-          ]);
-        }
+        // Removed fallback data - show empty clusters if length is 0
 
         // Calculate total cost (CPU + Memory + Storage)
-        const totalCost =
-          (totalEntry.cpu_cost || 0) +
-          (totalEntry.ram_cost || 0) +
-          (totalEntry.pv_cost || 0);
+        // const totalCost =
+        //   (totalEntry.cpu_cost || 0) +
+        //   (totalEntry.ram_cost || 0) +
+        //   (totalEntry.pv_cost || 0);
+
+        const totalCost = activeClusters.reduce((sum, cluster) => {
+          return sum + (cluster.total_cost || 0);
+        }, 0);
 
         // Set cluster stats using computed totalEntry (active + idle) with tooltips
         setClusterStats([
           {
             title: "Total Cost",
             value: `$${totalCost.toFixed(2)}`,
-            subtitle: "CPU + Memory + Storage",
+            subtitle: "Total Cost",
             icon: <DollarSign className="w-4 h-4" />,
             status: "info",
             tooltip: METRIC_TOOLTIPS.totalCost,
@@ -807,9 +795,10 @@ export default function ClusterMetrics() {
     }
   }, []);
 
-  // Initial data load effect
+
   useEffect(() => {
     console.log("Initial useEffect - loading data on component mount");
+    if (!userId) return;
 
     // Get initial time range from URL
     const rangeFromUrl = searchParams.get("window") || "24h";
@@ -840,59 +829,14 @@ export default function ClusterMetrics() {
         }
       });
 
-      // checkClusterExists(effectiveClusterId).then((clusterData) => {
-      //   if (clusterData) {
-      //     let clusterName = "Unknown Cluster";
-      //     if (clusterData.config) {
-      //       try {
-      //         const config =
-      //           typeof clusterData.config === "string"
-      //             ? JSON.parse(clusterData.config)
-      //             : clusterData.config;
-      //         clusterName =
-      //           config?.clusterName ||
-      //           config?.cluster?.clusterName ||
-      //           clusterName;
-      //       } catch (error) {
-      //         console.error("Error parsing cluster config:", error);
-      //       }
-      //     }
 
-      //     console.log(
-      //       `Inserting new cluster: ${clusterName} (ID: ${effectiveClusterId})`
-      //     );
-
-      //     callInsertClusterAPI(effectiveClusterId, clusterName).then(
-      //       (result) => {
-      //         if (result) {
-      //           console.log("Cluster successfully added to monitoring system");
-      //           fetchAllData(rangeFromUrl, effectiveClusterId);
-      //         } else {
-      //           console.error("Failed to add cluster to monitoring system");
-      //           fetchAllData(rangeFromUrl, effectiveClusterId);
-      //         }
-      //       }
-      //     );
-      //   } else {
-      //     console.error("Cluster not found, cannot add to monitoring system");
-      //     fetchAllData(rangeFromUrl, effectiveClusterId);
-      //   }
-      // });
     } else {
       // Load initial data for existing clusters
       if (effectiveClusterId) {
         fetchAllData(rangeFromUrl, effectiveClusterId);
       }
-      else {
-        setIsLoadingData(false);
-        setIsInitialLoading(false);
-
-      }
-      // setIsLoadingData(false);
-      // setIsInitialLoading(false);
-
     }
-  }, []); // Initial load only
+  }, [userId]); // Initial load only
 
   // Auto-refresh interval effect
   useEffect(() => {
@@ -1445,8 +1389,8 @@ export default function ClusterMetrics() {
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full transition-all duration-500 ${item.name === "Idle Resources"
-                                ? "bg-gray-400"
-                                : "bg-gradient-to-r from-blue-500 to-blue-600"
+                                  ? "bg-gray-400"
+                                  : "bg-gradient-to-r from-blue-500 to-blue-600"
                                 }`}
                               style={{ width: `${item.percentage}%` }}
                             ></div>

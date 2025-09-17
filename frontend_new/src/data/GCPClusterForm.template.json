@@ -248,7 +248,9 @@
           "options": [
             { "value": "nvidia-l4", "label": "NVIDIA L4" },
             { "value": "nvidia-tesla-a100", "label": "NVIDIA Tesla A100" },
-            { "value": "nvidia-a100-80gb", "label": "NVIDIA A100 80GB" }
+            { "value": "nvidia-a100-80gb", "label": "NVIDIA A100 80GB" },
+            { "value": "nvidia-h100", "label": "NVIDIA H100" }
+
           ]
         },
         {
@@ -256,7 +258,41 @@
           "type": "select",
           "label": "Machine Type",
           "required": false,
-          "options": []
+          "dependsOn": "gpu_np_gpu_type",
+          "options": [
+            { "when": "nvidia-l4", "options": [
+              { "value": "g2-standard-4", "label": "g2-standard-4" },
+              { "value": "g2-standard-8", "label": "g2-standard-8" },
+              { "value": "g2-standard-12", "label": "g2-standard-12" },
+              { "value": "g2-standard-16", "label": "g2-standard-16" },
+              { "value": "g2-standard-24", "label": "g2-standard-24" },
+              { "value": "g2-standard-32", "label": "g2-standard-32" },
+              { "value": "g2-standard-48", "label": "g2-standard-48" },
+              { "value": "g2-standard-96", "label": "g2-standard-96" }
+            ]},
+            { "when": "nvidia-a100-80gb", "options": [
+              { "value": "a2-ultragpu-1g", "label": "a2-ultragpu-1g" },
+              { "value": "a2-ultragpu-2g", "label": "a2-ultragpu-2g" },
+              { "value": "a2-ultragpu-4g", "label": "a2-ultragpu-4g" },
+              { "value": "a2-ultragpu-8g", "label": "a2-ultragpu-8g" }
+            ]},
+            { "when": "nvidia-tesla-a100", "options": [
+              { "value": "a2-highgpu-1g", "label": "a2-highgpu-1g" },
+              { "value": "a2-highgpu-2g", "label": "a2-highgpu-2g" },
+              { "value": "a2-highgpu-4g", "label": "a2-highgpu-4g" },
+              { "value": "a2-highgpu-8g", "label": "a2-highgpu-8g" },
+              { "value": "a2-highgpu-16g", "label": "a2-highgpu-16g" }
+            ]},
+            { "when": "nvidia-h100", "options": [
+              { "value": "a3-highgpu-1g", "label": "a3-highgpu-1g" },
+              { "value": "a3-highgpu-2g", "label": "a3-highgpu-2g" },
+              { "value": "a3-highgpu-4g", "label": "a3-highgpu-4g" },
+              { "value": "a3-highgpu-8g", "label": "a3-highgpu-8g" }
+            ]},
+            { "when": "", "options": [
+              { "value": "_placeholder_", "label": "Select a GPU Type first" }
+            ]}
+          ]
         },
         {
           "name": "gpu_np_min_node_count",

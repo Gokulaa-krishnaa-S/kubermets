@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import ClusterService from "@/services/ClusterService";
+import { useCluster } from "../context/ClusterContext";
+
+
 
 interface Instance {
   id: number;
@@ -16,11 +19,13 @@ const DomainDropdown: React.FC<DomainDropdownProps> = ({ onSelect }) => {
   const [instances, setInstances] = useState<Instance[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string>("");
+    const { selectedInstance,userId}: any = useCluster();
+
 
   useEffect(() => {
     const fetchInstances = async () => {
       try {
-        const data = await ClusterService.getInstanceList();
+        const data = await ClusterService.getInstanceList(userId);
         if (data?.instances?.length) {
           setInstances(data.instances);
           const firstHash = data.instances[0].unique_hash;
@@ -35,7 +40,7 @@ const DomainDropdown: React.FC<DomainDropdownProps> = ({ onSelect }) => {
     };
 
     fetchInstances();
-  }, []); // run only once
+  }, []);
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const hash = event.target.value;

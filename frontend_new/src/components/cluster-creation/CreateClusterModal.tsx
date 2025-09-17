@@ -15,28 +15,28 @@ const clusterOptions = [
     id: 'gcp' as const,
     title: 'GCP GKE',
     description: 'Google Kubernetes Engine',
-    icon: '/environment/gcp.jpg',
+    icon: '/environment-ingress/gcp.jpg',
     color: 'bg-blue-50 border-blue-200 hover:bg-blue-100'
   },
   {
     id: 'aws' as const,
     title: 'AWS EKS',
     description: 'Amazon Elastic Kubernetes Service',
-    icon: '/environment/aws.jpg',
+    icon: '/environment-ingress/aws.jpg',
     color: 'bg-orange-50 border-orange-200 hover:bg-orange-100'
   },
   {
     id: 'azure' as const,
     title: 'Azure AKS',
     description: 'Azure Kubernetes Service',
-    icon: '/environment/azure.jpg',
+    icon: '/environment-ingress/azure.jpg',
     color: 'bg-blue-50 border-blue-200 hover:bg-blue-100'
   },
   {
     id: 'sify' as const,
     title: 'Sify Cloud',
     description: 'Sify Cloud Platform',
-    icon: '/environment/sify.jpg',
+    icon: '/environment-ingress/sify.jpg',
     color: 'bg-purple-50 border-purple-200 hover:bg-purple-100'
   }
 ];
@@ -60,11 +60,11 @@ export function CreateClusterModal({ isOpen, onClose }: CreateClusterModalProps)
   return (
     <>
       {/* Backdrop */}
-      <div 
+      <div
         className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300"
         onClick={handleClose}
       />
-      
+
       {/* Modal */}
       <div className="fixed right-0 top-0 h-full w-full max-w-4xl bg-background border-l shadow-2xl z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
         {/* Header */}

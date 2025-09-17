@@ -32,7 +32,7 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
     }
   }, [clusterId]);
 
-  const loadClusterData = async (id: number) => {
+  const loadClusterData = async (id: any) => {
     try {
       setLoading(true);
       const response = await clusterCreationApi.getClusterById(id);
@@ -73,37 +73,39 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
 
   const handleSubmit = async (data: any) => {
     try {
-      setLoading(true);
-      setSubmitStatus({ type: null });
-      setErrorMessage('');
+      // setLoading(true);
+      // setSubmitStatus({ type: null });
+      // setErrorMessage('');
 
       // Prepare cluster data
+      console.log('Form data to submit:', data);
       const clusterData: ClusterData = {
         ...(clusterId && { id: clusterId }),
-        user_id: 1, // This should come from auth context
+        // user_id: 1, // This should come from auth context
         cluster_type: 'gcp',
         config: data,
       };
+      console.log('Submitting cluster data******:', clusterData);
 
       const response = await clusterCreationApi.createOrUpdateCluster(clusterData);
-      
+
       // Show success status
-      setSubmitStatus({ 
-        type: 'success', 
+      setSubmitStatus({
+        type: 'success',
         messages: [isEditing ? 'Cluster updated successfully!' : 'Cluster creation is in progress...']
       });
-      
+
       // Auto-redirect to cluster metrics after 5 seconds
       setTimeout(() => {
         if (onSubmit) {
           onSubmit(response.data, isEditing);
         }
-        
+
         // Redirect to cluster metrics page with cluster details
         const clusterId = response.data?.id;
         const clusterType = 'gcp';
         const creationType = 'new';
-        
+
         navigate(`/metric/cluster?cluster_id=${clusterId}&cluster_type=${clusterType}&creation_type=${creationType}`);
       }, 5000);
 
@@ -119,13 +121,13 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
       console.error('Error submitting form:', error);
       const errorMsg = error instanceof Error ? error.message : 'Cluster creation failed';
       setErrorMessage(errorMsg);
-      
+
       // Show error status
-      setSubmitStatus({ 
-        type: 'error', 
+      setSubmitStatus({
+        type: 'error',
         messages: [errorMsg]
       });
-      
+
     } finally {
       setLoading(false);
     }
@@ -167,7 +169,7 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
               Configure your Google Kubernetes Engine cluster settings
             </p>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* Add Existing Button */}
             <Button
@@ -181,7 +183,7 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
             </Button>
           </div>
         </div>
-        
+
         {errorMessage && (
           <div className="mt-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
             <p className="text-sm text-destructive">{errorMessage}</p>

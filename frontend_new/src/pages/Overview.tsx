@@ -26,6 +26,7 @@ import TopBar from "@/components/header/header";
 import { ResponsiveLoader } from "@/components/loader/loader";
 import { useOutletContext } from "react-router-dom";
 
+
 // Overview page metric tooltips
 const OVERVIEW_METRIC_TOOLTIPS = {
   // Overall metrics
@@ -104,6 +105,12 @@ export default function Overview() {
   const navigate = useNavigate();
   const { onDomainSelect }: any = useOutletContext();
   const { instances }: any = useCluster();
+
+
+  const { selectedInstance, userId }: any = useCluster();
+  let user_id = userId;
+
+  
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -138,7 +145,7 @@ export default function Overview() {
 
   const fetchDashboardSummary = async () => {
     try {
-      const res = await ClusterService.getAllMetrics(); // New API method
+      const res = await ClusterService.getAllMetrics(user_id); // New API method
       console.log(instances);
       console.log(res, "------------------");
 

@@ -525,6 +525,12 @@ def fetch_metrics():
     data = request.get_json()
     if not data:
         return jsonify({"error": "No data provided"}), 400
+    
+    clear = data.get("clear", False)  # default False if not provided
+    window_start = data.get("window_start")
+    window_end = data.get("window_end")
+
+    print("window and clear information", clear, window_start,window_end)
 
     results = {"cluster_metrics": 0, "node_metrics": 0, "pod_metrics": 0, "errors": []}
     session = db_manager.get_session()
@@ -534,12 +540,7 @@ def fetch_metrics():
         snapshots = data.get("snapshots", [])
         user_id = data.get("user_id")
         cluster_id = data.get("cluster_id")
-        print(
-            "kjhghjkl;'-------------------------cluster_i",
-            cluster_id,
-            snapshots,
-            "---------------END-----------------",
-        )
+       
         for snapshot in snapshots:
             allocations = snapshot.get("allocations", {})
             window_info = snapshot.get("window", {})
@@ -621,7 +622,6 @@ def fetch_metrics():
                         "user_id": user_id,
                         "raw_api_response": allocation_data,
                     }
-                    print(cluster_entry)
                     cluster_obj = ClusterMetrics(**cluster_entry)
                     session.add(cluster_obj)
                     session.flush()  # This assigns the ID to cluster_obj
@@ -776,10 +776,7 @@ def fetch_metrics():
                                             "cluster_id": cluster_id,
                                             "user_id": user_id,
                                         }
-                                        print(
-                                            "within node'-------------------------cluster_i",
-                                            cluster_id,
-                                        )
+                                      
 
                                         node_obj = NodeMetrics(**node_entry)
                                         session.add(node_obj)
@@ -946,6 +943,43 @@ def fetch_metrics():
                     )
 
         session.commit()
+        if clear:
+            # Delete matching entries from all three tables
+            try:
+                # Delete from PodMetrics
+                session.query(PodMetrics).filter(
+                    PodMetrics.user_id == user_id,
+                    PodMetrics.cluster_id == cluster_id,
+                    PodMetrics.start_time >=  window_start,
+                    PodMetrics.end_time <= window_end,
+                    PodMetrics.window == '1h'
+                ).delete(synchronize_session=False)
+
+                # Delete from NodeMetrics
+                session.query(NodeMetrics).filter(
+                    NodeMetrics.user_id == user_id,
+                    NodeMetrics.cluster_id == cluster_id,
+                    NodeMetrics.window_start >= window_start,
+                    NodeMetrics.window_end <= window_end,
+                    NodeMetrics.window_duration == '1h'
+                ).delete(synchronize_session=False)
+
+                # Delete from ClusterMetrics
+                session.query(ClusterMetrics).filter(
+                    ClusterMetrics.user_id == user_id,
+                    ClusterMetrics.cluster_id == cluster_id,
+                    ClusterMetrics.window_start >= window_start,
+                    ClusterMetrics.window_end <= window_end,
+                    ClusterMetrics.window_duration == '1h'
+                ).delete(synchronize_session=False)
+
+                session.commit()
+                print(f"Successfully deleted overlapping records for cluster {cluster_id}")
+            except Exception as e:
+                session.rollback()
+                print(f"Error deleting overlapping records: {str(e)}")
+                raise
+
         return jsonify({"message": "Metrics ingested successfully", **results}), 201
 
     except Exception as e:
