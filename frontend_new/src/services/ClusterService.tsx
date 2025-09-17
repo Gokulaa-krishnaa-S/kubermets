@@ -390,9 +390,11 @@ class ClusterService {
   /**
    * @deprecated Use getDashboardSummary() instead
    */
-  async getAllMetrics() {
+  async getAllMetrics(user_id: string) {
     try {
-      const response: AxiosResponse = await this.api.get(`dashboard/summary`);
+      const response: AxiosResponse = await this.api.get(`dashboard/summary`, {
+        params: { user_id }
+      });
       console.log(response, "--------------------------");
       return response.data;
     } catch (error) {

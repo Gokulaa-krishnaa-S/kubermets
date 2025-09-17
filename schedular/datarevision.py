@@ -169,21 +169,21 @@ def start_revision_scheduler(parent_scheduler: Optional[BackgroundScheduler] = N
     log.info("Time until next run: %s", next_run - now)
     log.info("-"*50)
 
-    scheduler.add_job(
-        run_revision_for_all_clusters,
-        trigger=CronTrigger(minute="*/2"),  # every 2 minutes
-        id='daily_revision',
-        name='Daily Data Revision',
-        replace_existing=True
-    )
-
     # scheduler.add_job(
     #     run_revision_for_all_clusters,
-    #     trigger=CronTrigger(hour=0, minute=0),  # midnight UTC
+    #     trigger=CronTrigger(minute="*/2"),  # every 2 minutes
     #     id='daily_revision',
     #     name='Daily Data Revision',
     #     replace_existing=True
     # )
+
+    scheduler.add_job(
+        run_revision_for_all_clusters,
+        trigger=CronTrigger(hour=0, minute=0),  # midnight UTC
+        id='daily_revision',
+        name='Daily Data Revision',
+        replace_existing=True
+    )
     # Only start if we created a new scheduler
     if parent_scheduler is None:
         scheduler.start()
