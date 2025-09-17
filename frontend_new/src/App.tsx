@@ -124,8 +124,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
         <div className="text-center p-6 bg-red-50 border border-red-200 rounded-lg">
           <h2 className="text-red-800 font-semibold mb-2">Authentication Required</h2>
           <p className="text-red-600 mb-4">{backendError}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Retry Login
@@ -155,20 +155,16 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-<<<<<<< HEAD
 
       <BrowserRouter basename="/environment-ingress">
-=======
-      <BrowserRouter basename="/environment">
->>>>>>> 2cb802dfb284cf4732a29c52c1a26d2ee43632b2
         <ClusterProvider>
           <Routes>
             {/* Root redirect */}
             <Route path="/" element={<Navigate to="/overview" replace />} />
-            
+
             {/* Protected routes */}
-            <Route 
-              path="/*" 
+            <Route
+              path="/*"
               element={
                 <ProtectedRoute>
                   <Routes>
@@ -187,13 +183,13 @@ const App = () => (
                       <Route path="/cluster-creation/aws" element={<AWSClusterPage />} />
                       <Route path="/cluster-creation/azure" element={<AzureClusterPage />} />
                       <Route path="/cluster-creation/sify" element={<SifyClusterPage />} />
-                      
+
                       {/* Catch-all for unknown routes */}
                       <Route path="*" element={<NotFound />} />
                     </Route>
                   </Routes>
                 </ProtectedRoute>
-              } 
+              }
             />
           </Routes>
         </ClusterProvider>
