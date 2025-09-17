@@ -17,12 +17,12 @@ export function AuthRedirectWrapper({ children }: { children: React.ReactNode })
       return;
     }
 
-    if (userId && location.pathname === "/environment") {
-      navigate("/environment/overview", { replace: true });
+    if (userId && location.pathname === "/environment-ingress") {
+      navigate("/environment-ingress/overview", { replace: true });
     }
   }, [loading, userId, backendError, navigate, location.pathname]);
 
-  // Show loading state while authenticating
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -34,7 +34,7 @@ export function AuthRedirectWrapper({ children }: { children: React.ReactNode })
     );
   }
 
-  // Show error state if authentication failed
+
   if (backendError && backendError.includes("No authentication token")) {
     return (
       <div className="flex items-center justify-center min-h-screen">

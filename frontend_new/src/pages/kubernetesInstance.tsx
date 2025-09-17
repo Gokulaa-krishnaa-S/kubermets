@@ -45,11 +45,11 @@ const KubernetesInstanceList: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!userId) return; // wait until userId is available
+    if (!userId) return; 
 
     setIsInitialLoading(true);
     fetchInstances();
-  }, [userId]); // re-run whenever userId changes
+  }, [userId]);
 
 
   const handleCreate = () => {
