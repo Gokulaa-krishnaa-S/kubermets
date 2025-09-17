@@ -315,6 +315,9 @@ class dataFormatter:
         cluster_id: int,
         node_mapping: Dict = None,
         pod_mapping: Dict = None,
+        clear: bool = False,
+        window_start:datetime = None,
+        window_end: datetime = None  
     ) -> Dict:
         """Format the complete kubecost response according to schema structure with enhanced mapping"""
 
@@ -322,6 +325,7 @@ class dataFormatter:
 
         for snapshot_set in kubecost_data.get("data", {}).get("sets", []):
             formatted_allocations = {}
+            
 
             for allocation_name, allocation_data in snapshot_set.get(
                 "allocations", {}
@@ -431,11 +435,16 @@ class dataFormatter:
                 {
                     "allocations": formatted_allocations,
                     "window": snapshot_set.get("window", {}),
+                    
                 }
             )
 
         return {
             "user_id": user_id,
             "cluster_id": cluster_id,
-            "snapshots": formatted_snapshots,
+            "clear":clear,
+            "window_start": window_start.isoformat(),
+            "window_end":window_end.isoformat(),
+            "snapshots": formatted_snapshots
+            
         }

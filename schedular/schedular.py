@@ -43,6 +43,11 @@ from helpers.hepler import HelperClass
 from helpers.formatting import dataFormatter
 
 
+# Import revision scheduler functions conditionally to avoid circular imports
+def import_revision_scheduler():
+    from datarevision import start_revision_scheduler, shutdown_revision_scheduler
+    return start_revision_scheduler, shutdown_revision_scheduler
+
 formatter = dataFormatter()
 helper = HelperClass()
 load_dotenv()
@@ -713,6 +718,7 @@ def send_snapshots_to_backend(
     window_end: datetime,
     node_mapping: Dict = None,
     pod_mapping: Dict = None,
+    clear: bool = False, 
 ) -> None:
     """
     Format and POST snapshots to App 1 ingestion endpoint with window metadata and enhanced mapping.
@@ -722,7 +728,7 @@ def send_snapshots_to_backend(
     # Format the data according to schema with enhanced mapping
 
     formatted_payload = formatter.format_kubecost_response(
-        kubecost_data, user_id, cluster_id, node_mapping, pod_mapping
+        kubecost_data, user_id, cluster_id, node_mapping, pod_mapping,clear,window_start,window_end
     )
 
 
@@ -804,6 +810,7 @@ def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime) 
                 end_time,
                 node_mapping,
                 pod_mapping,
+                False
             )
             log.info(
                 "Window collection success | cluster=%s window=%s-%s | mapped_nodes=%d | mapped_pods=%d",
@@ -979,7 +986,8 @@ def fetch_timestamp_data(cluster_cfg: Dict, start_time: datetime, end_time: date
             start_time,
             end_time,
             node_mapping,
-            pod_mapping
+            pod_mapping,
+            False
         )
         
         log.info(
@@ -1176,11 +1184,25 @@ def main():
         jobstores=jobstores, executors=executors, job_defaults=job_defaults
     )
     scheduler.start()
+    
+    # Import and start revision scheduler
+    start_revision_scheduler, _ = import_revision_scheduler()
+    revision_scheduler = start_revision_scheduler(scheduler)
 
     # graceful shutdown
     def shutdown(signum, frame):
-        log.info("Shutting down scheduler (signal=%s)...", signum)
+        log.info("\n" + "="*70)
+        log.info("SHUTTING DOWN SCHEDULERS".center(70))
+        log.info("="*70)
+        
+        log.info("Shutting down main scheduler...")
         scheduler.shutdown(wait=True)
+        
+        # Import and shutdown data revision scheduler
+        _, shutdown_revision_scheduler = import_revision_scheduler()
+        shutdown_revision_scheduler()
+        
+        log.info("All schedulers shut down successfully")
         sys.exit(0)
 
     signal.signal(signal.SIGINT, shutdown)
@@ -1188,7 +1210,11 @@ def main():
 
     # initial bootstrapping (includes both historical and hourly data)
     initial_collect_all(scheduler)
-
+    
+    # Initialize data revision scheduler
+    log.info("\nInitializing data revision scheduler...")
+    revision_scheduler = start_revision_scheduler(scheduler)
+    
     log.info(
         "Enhanced scheduler started | Backend=%s window=%d hours max_backfill=%d min_interval=%d min",
         BACKEND_API_URL,
@@ -1196,6 +1222,7 @@ def main():
         MAX_BACKFILL_WINDOWS,
         MIN_SCHEDULE_INTERVAL_MIN,
     )
+    log.info("Data revision scheduler enabled - runs daily at 00:00 UTC")
 
     # keep main thread alive
     try:
