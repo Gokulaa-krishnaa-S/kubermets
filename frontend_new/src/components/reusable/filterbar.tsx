@@ -19,6 +19,8 @@ import { useNavigate } from "react-router-dom";
 import { useCluster } from "../context/ClusterContext";
 
 const predefinedOptions = [
+  { label: "Last 3h", value: "3h" },
+  { label: "Last 12h", value: "12h" },
   { label: "Last 24h", value: "24h" },
   { label: "Last 48h", value: "48h" },
   { label: "Last 7 days", value: "7d" },
