@@ -288,10 +288,13 @@ const handleCallClusterData = useCallback(
       // Removed fallback data - show empty clusters if length is 0
 
       // Calculate total cost (CPU + Memory + Storage)
-      const totalCost =
-        (totalEntry.cpu_cost || 0) +
-        (totalEntry.ram_cost || 0) +
-        (totalEntry.pv_cost || 0);
+      // const totalCost =
+      //   (totalEntry.cpu_cost || 0) +
+      //   (totalEntry.ram_cost || 0) +
+      //   (totalEntry.pv_cost || 0);
+
+      const totalCost = totalEntry.total_cost || 0;
+      console.log(totalCost, "total cost-----");
 
       // Set cluster stats using computed totalEntry (active + idle) with tooltips
       setClusterStats([
@@ -793,7 +796,7 @@ const handleCallClusterData = useCallback(
     }
   }, []);
 
-  // Initial data load effect
+
   useEffect(() => {
     console.log("Initial useEffect - loading data on component mount");
     if (!userId) return;
@@ -827,44 +830,7 @@ const handleCallClusterData = useCallback(
         }
       });
 
-      // checkClusterExists(effectiveClusterId).then((clusterData) => {
-      //   if (clusterData) {
-      //     let clusterName = "Unknown Cluster";
-      //     if (clusterData.config) {
-      //       try {
-      //         const config =
-      //           typeof clusterData.config === "string"
-      //             ? JSON.parse(clusterData.config)
-      //             : clusterData.config;
-      //         clusterName =
-      //           config?.clusterName ||
-      //           config?.cluster?.clusterName ||
-      //           clusterName;
-      //       } catch (error) {
-      //         console.error("Error parsing cluster config:", error);
-      //       }
-      //     }
 
-      //     console.log(
-      //       `Inserting new cluster: ${clusterName} (ID: ${effectiveClusterId})`
-      //     );
-
-      //     callInsertClusterAPI(effectiveClusterId, clusterName).then(
-      //       (result) => {
-      //         if (result) {
-      //           console.log("Cluster successfully added to monitoring system");
-      //           fetchAllData(rangeFromUrl, effectiveClusterId);
-      //         } else {
-      //           console.error("Failed to add cluster to monitoring system");
-      //           fetchAllData(rangeFromUrl, effectiveClusterId);
-      //         }
-      //       }
-      //     );
-      //   } else {
-      //     console.error("Cluster not found, cannot add to monitoring system");
-      //     fetchAllData(rangeFromUrl, effectiveClusterId);
-      //   }
-      // });
     } else {
       // Load initial data for existing clusters
       if (effectiveClusterId) {
