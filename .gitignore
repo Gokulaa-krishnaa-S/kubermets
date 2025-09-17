@@ -30,6 +30,7 @@ ExternalFiles
 cvenv
 
 .venv
+backend/venv-downgrade
 .env
 wvenv
 cvenv

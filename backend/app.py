@@ -55,7 +55,7 @@ def create_app():
         session.close()
         logger.info("Database connection established successfully")
     except Exception as e:
-        logger.error(f"Database connection failed: {str(e)}")
+        logger.error("Database connection failed: {}".format(str(e)))
         logger.error(
             "Please ensure PostgreSQL is running and DATABASE_URL is correctly configured"
         )
@@ -77,7 +77,7 @@ def health_check():
         session.close()
         db_status = "healthy"
     except Exception as e:
-        db_status = f"unhealthy: {str(e)}"
+        db_status = "unhealthy: {}".format(str(e))
 
     health_data = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -122,5 +122,7 @@ if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     debug = os.getenv("FLASK_DEBUG", "False").lower() == "true"
 
-    logger.info(f"Starting Kubecost Monitoring API on port {port}")
+    # logger.info(f"Starting Kubecost Monitoring API on port {port}")
+    logger.info("Starting Kubecost Monitoring API on port {}".format(port))
+
     app.run(host="0.0.0.0", port=port, debug=debug)
