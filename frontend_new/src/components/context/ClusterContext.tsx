@@ -51,7 +51,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
       return null;
     };
 
-    // Try multiple possible cookie names
+
     return (
       getCookie("token") || 
       getCookie("auth_token") || 
@@ -97,14 +97,14 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchInstances = async (userId: string) => {
     try {
-      setBackendError(null); // Clear previous errors
+      setBackendError(null); 
       const data = await ClusterService.getInstanceList(userId);
 
       console.log("Fetched instances:", data);
       const instanceList = data || [];
       setInstances(instanceList);
 
-      // Set selected instance based on query param or default to first
+
       if (instanceList.length > 0) {
         const matched = queryClusterId && 
           instanceList.find((inst) => String(inst.id) === queryClusterId);
@@ -171,9 +171,9 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     initializeAuth();
-  }, []); // Only run once on mount
+  }, []);
 
-  // Separate effect for handling query parameter changes
+
   useEffect(() => {
     if (userId && instances.length > 0 && queryClusterId) {
       const matched = instances.find((inst) => String(inst.id) === queryClusterId);

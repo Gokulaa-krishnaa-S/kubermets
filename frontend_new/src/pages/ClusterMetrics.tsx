@@ -12,7 +12,7 @@ import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
 
-// Import the standardized connection status components
+
 import {
   ConnectionStatusBanner,
   NetworkStatusIndicator,
@@ -41,7 +41,7 @@ import {
   Info,
 } from "lucide-react";
 
-// Tooltip definitions based on Excel INFO column
+
 const METRIC_TOOLTIPS = {
   totalCost:
     "Sum of all cluster costs: CPU cost + Memory cost + Storage cost across all clusters for the selected time period",
@@ -92,7 +92,7 @@ const METRIC_TOOLTIPS = {
     "Visual representation of how costs are distributed across clusters and idle resources",
 };
 
-// Tooltip Component
+
 const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 

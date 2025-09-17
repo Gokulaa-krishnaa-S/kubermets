@@ -2,7 +2,6 @@
 
 import React, { createContext, useState, useEffect, useContext } from "react";
 import keycloakInstance from "@/lib/keycloak";
-// import Loader from "@/components/Loader";
 
 type KeycloakContextType = {
   authenticated: boolean;
