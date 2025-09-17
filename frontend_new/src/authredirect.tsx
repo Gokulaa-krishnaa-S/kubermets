@@ -22,7 +22,7 @@ export function AuthRedirectWrapper({ children }: { children: React.ReactNode })
     }
   }, [loading, userId, backendError, navigate, location.pathname]);
 
-  // Show loading state while authenticating
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -34,7 +34,7 @@ export function AuthRedirectWrapper({ children }: { children: React.ReactNode })
     );
   }
 
-  // Show error state if authentication failed
+
   if (backendError && backendError.includes("No authentication token")) {
     return (
       <div className="flex items-center justify-center min-h-screen">

@@ -40,7 +40,7 @@ const DomainDropdown: React.FC<DomainDropdownProps> = ({ onSelect }) => {
     };
 
     fetchInstances();
-  }, []); // run only once
+  }, []);
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const hash = event.target.value;

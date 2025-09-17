@@ -39,7 +39,7 @@ function MetricLayout() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { backendError } = useCluster();
 
-  // Handle domain selection from Header - this will be shared across all metric pages
+
   const handleDomainSelect = (hash: string) => {
     console.log("Selected Hash in MetricRoutes:", hash);
     setSelectedHash(hash);
@@ -50,7 +50,7 @@ function MetricLayout() {
     });
   };
 
-  // Get current page info based on route
+
   const getPageInfo = () => {
     const path = location.pathname;
     if (path.includes("/cluster-creation")) {
@@ -102,7 +102,7 @@ function MetricLayout() {
   );
 }
 
-// Protected Route Component
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { userId, loading, backendError } = useCluster();
 
@@ -117,15 +117,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If there's an authentication error, don't render protected content
+
   if (backendError && backendError.includes("No authentication token")) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center p-6 bg-red-50 border border-red-200 rounded-lg">
           <h2 className="text-red-800 font-semibold mb-2">Authentication Required</h2>
           <p className="text-red-600 mb-4">{backendError}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Retry Login
@@ -135,7 +135,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If no userId but no explicit auth error, still loading
+
   if (!userId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -159,12 +159,12 @@ const App = () => (
       <BrowserRouter basename="/environment-ingress">
         <ClusterProvider>
           <Routes>
-            {/* Root redirect */}
+
             <Route path="/" element={<Navigate to="/overview" replace />} />
-            
-            {/* Protected routes */}
-            <Route 
-              path="/*" 
+
+
+            <Route
+              path="/*"
               element={
                 <ProtectedRoute>
                   <Routes>
@@ -175,21 +175,21 @@ const App = () => (
                       <Route path="/billing-cost" element={<BillingAndCost />} />
                       <Route path="/instance" element={<KubernetesInstanceList />} />
 
-                      {/* Nested metric routes */}
+
                       <Route path="/metric/*" element={<MetricRoutes />} />
 
-                      {/* Cluster Creation routes */}
+
                       <Route path="/cluster-creation/gcp" element={<GCPClusterPage />} />
                       <Route path="/cluster-creation/aws" element={<AWSClusterPage />} />
                       <Route path="/cluster-creation/azure" element={<AzureClusterPage />} />
                       <Route path="/cluster-creation/sify" element={<SifyClusterPage />} />
-                      
-                      {/* Catch-all for unknown routes */}
+
+
                       <Route path="*" element={<NotFound />} />
                     </Route>
                   </Routes>
                 </ProtectedRoute>
-              } 
+              }
             />
           </Routes>
         </ClusterProvider>

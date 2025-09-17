@@ -2,7 +2,6 @@
 
 import React, { createContext, useState, useEffect, useContext } from "react";
 import keycloakInstance from "@/lib/keycloak";
-// import Loader from "@/components/Loader";
 
 type KeycloakContextType = {
   authenticated: boolean;
@@ -17,7 +16,7 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // -------- Cookie Helpers ----------
+
   const setCookie = (name: string, value: string, maxAgeSeconds?: number) => {
     if (typeof document === "undefined") return;
     let cookie = `${encodeURIComponent(name)}=${encodeURIComponent(value)}; path=/; SameSite=Lax`;
