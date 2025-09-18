@@ -20,8 +20,6 @@ import { BillingAndCost } from "./pages/BillingAndCost";
 import KubernetesInstanceList from "./pages/kubernetesInstance";
 import MetricRoutes from "./pages/MetricRoutes";
 import { ClusterProvider } from "./components/context/ClusterContext";
-
-// Cluster Creation Pages
 import GCPClusterPage from "./pages/cluster-creation/GCPClusterPage";
 import AWSClusterPage from "./pages/cluster-creation/AWSClusterPage";
 import AzureClusterPage from "./pages/cluster-creation/AzureClusterPage";
