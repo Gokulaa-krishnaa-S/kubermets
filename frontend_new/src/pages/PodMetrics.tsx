@@ -1515,13 +1515,12 @@ const KubecostDashboard = () => {
                         className="w-1/3 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("name")}
                       >
-                        <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podName}>
+                        {/* <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podName}> */}
                           <div className="flex items-center gap-1">
                             <span>Pod Name {getSortIcon("name")}</span>
 
-                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" /> */}
                           </div>
-                        </TooltipWrapper>
+                        {/* </TooltipWrapper> */}
                       </th>
 
                       {/* CPU Cost */}
