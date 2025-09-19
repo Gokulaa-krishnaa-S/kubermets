@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useLocation } from 'react-router-dom';
 import AdvancedFilter from "@/components/reusable/advancedFilter";
 import {
   Server,
@@ -66,7 +67,7 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (
-    <div className={`relative group inline-block ${className}`}>
+    <div className={`relative group inline-block ${className} `}>
       {/* Wrapped content */}
       {children}
 
@@ -81,7 +82,7 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
 
       {/* Tooltip */}
       {showTooltip && tooltip && (
-        <div className="absolute top-8 right-0 z-50 w-44 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border">
+        <div className="absolute top-8 right-0 z-50 w-44 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border " >
           <div className="relative">
             {tooltip}
             {/* Tooltip arrow */}
@@ -167,6 +168,7 @@ import {
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
+   const location = useLocation();
   type SummaryStats = {
     totalNodes: number;
     totalCost: number;
@@ -568,8 +570,9 @@ const NodeMetricsDashboard = () => {
 
   // Reset current page when filters change
   useEffect(() => {
+      window.scrollTo(0, 0);
     setCurrentPage(1);
-  }, [searchTerm, filters]);
+  }, [searchTerm, filters,location.pathname]);
 
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
@@ -1508,37 +1511,51 @@ const NodeMetricsDashboard = () => {
                     </th>
                   </tr>
                 </thead>
-                <tbody>
-                  {currentNodes.map((node, index) => (
-                    <tr
-                      key={startIndex + index}
-                      className="border-b transition-colors"
-                    >
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="p-2 rounded-lg"
-                            style={{ background: "hsl(var(--primary) / 0.1)" }}
-                          >
-                            <Server
-                              className="w-4 h-4"
-                              style={{ color: "hsl(var(--primary))" }}
-                            />
-                          </div>
-                          <span className="font-medium">{node.name}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <StatusBadge status={node.status} />
-                      </td>
-                      <td className="p-4">{node.cpuUsage}%</td>
-                      <td className="p-4">{node.ramUtilization}%</td>
-                      <td className="p-4">${node.totalCost}</td>
-                      <td className="p-4">{node.efficiency}%</td>
-                      <td className="p-4">{node.uptime}</td>
-                    </tr>
-                  ))}
-                </tbody>
+<tbody>
+  {currentNodes.length === 0 ? (
+    <tr>
+      <td colSpan={7} className="p-16 text-center">
+        <div className="flex flex-col items-center gap-3 text-gray-500">
+          <Server className="w-12 h-12 text-gray-300" />
+          <div>
+            <h3 className="font-medium text-gray-900 mb-1">No node details found</h3>
+            <p className="text-sm text-gray-500">No data available</p>
+          </div>
+        </div>
+      </td>
+    </tr>
+  ) : (
+    currentNodes.map((node, index) => (
+      <tr
+        key={startIndex + index}
+        className="border-b transition-colors"
+      >
+        <td className="p-4">
+          <div className="flex items-center gap-3">
+            <div
+              className="p-2 rounded-lg"
+              style={{ background: "hsl(var(--primary) / 0.1)" }}
+            >
+              <Server
+                className="w-4 h-4"
+                style={{ color: "hsl(var(--primary))" }}
+              />
+            </div>
+            <span className="font-medium">{node.name}</span>
+          </div>
+        </td>
+        <td className="p-4">
+          <StatusBadge status={node.status} />
+        </td>
+        <td className="p-4">{node.cpuUsage}%</td>
+        <td className="p-4">{node.ramUtilization}%</td>
+        <td className="p-4">${node.totalCost}</td>
+        <td className="p-4">{node.efficiency}%</td>
+        <td className="p-4">{node.uptime}</td>
+      </tr>
+    ))
+  )}
+</tbody>
               </table>
             </div>
 
