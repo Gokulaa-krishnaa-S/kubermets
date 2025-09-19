@@ -1157,7 +1157,7 @@ def initial_collect_all(scheduler: BackgroundScheduler):
             # First do the historical data collection
             collect_cluster_data(cfg)
             
-            # Then immediately do today's hourly collection for this cluster
+          
             log.info(
                 "Starting hourly collection after initial data | cluster=%s",
                 cfg.get("cluster_name", f"id-{cfg['cluster_id']}")

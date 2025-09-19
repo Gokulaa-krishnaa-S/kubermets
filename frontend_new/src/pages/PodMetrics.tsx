@@ -34,7 +34,7 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
-        <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" />
+        <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" />
       </div>
 
       {/* Tooltip */}
@@ -472,6 +472,7 @@ const KubecostDashboard = () => {
 
   // Enhanced useEffect with connection status handling
   useEffect(() => {
+    
     const rangeFromUrl = searchParams.get("window") || "24h";
     setIsInitialLoading(true);
     setSelectedTimeRange(rangeFromUrl);
@@ -1523,7 +1524,7 @@ const KubecostDashboard = () => {
                           <div className="flex items-center gap-1">
                             <span>Pod Name {getSortIcon("name")}</span>
 
-                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
+                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" /> */}
                           </div>
                         </TooltipWrapper>
                       </th>
@@ -1554,7 +1555,7 @@ const KubecostDashboard = () => {
                             <span>Memory Cost {getSortIcon("ramCost")}</span>
                           </div>
 
-                          {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
+                          {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" /> */}
                         </TooltipWrapper>
                       </th>
 
@@ -1571,7 +1572,7 @@ const KubecostDashboard = () => {
                             <span>Storage Cost {getSortIcon("pvCost")}</span>
                           </div>
 
-                          {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
+                          {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" /> */}
                         </TooltipWrapper>
                       </th>
 
@@ -1582,7 +1583,7 @@ const KubecostDashboard = () => {
                         >
                           <div className="flex items-center justify-center gap-1">
                             <span>Efficiency</span>
-                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
+                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" /> */}
                           </div>
                         </TooltipWrapper>
                       </th>
@@ -1598,7 +1599,7 @@ const KubecostDashboard = () => {
                           <div className="flex items-center justify-center gap-1">
                             <span>Total Cost {getSortIcon("totalCost")}</span>
 
-                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" /> */}
+                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" /> */}
                           </div>
                         </TooltipWrapper>
                       </th>

@@ -186,7 +186,7 @@ class ClusterService {
     try {
       const apiBaseUrl = import.meta.env.VITE_API_BASE_URL; // pulled from env
       const response: AxiosResponse = await axios.get(
-        `${apiBaseUrl}/clusters`,
+        `${apiBaseUrl}clusters`,
         {
           params: queryParams,
           headers: {

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { useNavigate } from 'react-router-dom';
 
@@ -69,11 +69,17 @@ export function CreateClusterModal({ isOpen, onClose }: CreateClusterModalProps)
       <div className="fixed right-0 top-0 h-full w-full max-w-4xl bg-background border-l shadow-2xl z-50 transform transition-transform duration-300 ease-in-out translate-x-0">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b bg-background/95 backdrop-blur sticky top-0 z-10">
-          <div>
+          <div className="flex items-center gap-3">
+            {/* Back Button */}
+            <button
+              onClick={handleClose}
+              className="p-2 hover:bg-muted rounded-lg transition-colors flex items-center gap-2"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm font-medium"></span>
+            </button>
+
             <h2 className="text-2xl font-bold">Choose a Cloud Provider</h2>
-            {/* <p className="text-muted-foreground mt-1">
-              Choose a cloud provider to create your Kubernetes cluster
-            </p> */}
           </div>
           <button
             onClick={handleClose}

@@ -76,7 +76,7 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
-        <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" />
+        <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" />
       </div>
 
       {/* Tooltip */}

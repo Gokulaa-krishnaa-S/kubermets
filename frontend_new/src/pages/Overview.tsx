@@ -16,7 +16,7 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
-  Info,
+  Info as InfoIcon,
 } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import ClusterService from "@/services/ClusterService";
@@ -72,15 +72,14 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
     <div className={`relative group inline-block ${className}`}>
       {/* Wrapped content */}
       {children}
-
-      {/* Info icon (only visible on hover of parent) */}
       <div
         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
       >
-        <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help" />
+        <InfoIcon className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" />
       </div>
+
 
       {/* Tooltip */}
       {showTooltip && tooltip && (
@@ -110,7 +109,7 @@ export default function Overview() {
   const { selectedInstance, userId }: any = useCluster();
   let user_id = userId;
 
-  
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -128,7 +127,7 @@ export default function Overview() {
     if (instances?.length) {
       loadData();
     }
-    else{
+    else {
       setLoading(false);
     }
 
@@ -221,9 +220,8 @@ export default function Overview() {
     return (
       <ResponsiveLoader
         title="Overview"
-        subtitle={`Loading Kubernetes metrics across ${
-          aggregated?.clusterCount || 0
-        } clusters...`}
+        subtitle={`Loading Kubernetes metrics across ${aggregated?.clusterCount || 0
+          } clusters...`}
       />
     );
   }
@@ -236,8 +234,7 @@ export default function Overview() {
       path: "/metric/cluster",
       metrics: [
         `${aggregated?.totalCost?.toFixed(2) || "0.00"} Total Cost`,
-        `${
-          (aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"
+        `${(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"
         }% Avg Efficiency`,
         `${aggregated?.avgCpuUsage?.toFixed(1) || "0.0"}% Avg CPU Utilization`,
       ],
@@ -251,8 +248,7 @@ export default function Overview() {
       metrics: [
         `${aggregated?.totalNodes || 0} Total Nodes`,
         `${aggregated?.healthyNodes || 0} Healthy`,
-        `${
-          (aggregated?.nodeAvgEfficiency * 100)?.toFixed(1) || "0.0"
+        `${(aggregated?.nodeAvgEfficiency * 100)?.toFixed(1) || "0.0"
         }% Avg Efficiency`,
       ],
       status: aggregated?.warningNodes > 0 ? "warning" : "healthy",
@@ -313,7 +309,7 @@ export default function Overview() {
                 ${aggregated?.totalCost?.toFixed(2) || "0.00"}
               </div>
               <p className="text-xs text-muted-foreground">
-                Across {aggregated?.clusterCount || 0} clusters
+                Across {clusters?.length || 0} clusters
               </p>
             </CardContent>
           </Card>
@@ -329,11 +325,10 @@ export default function Overview() {
             </CardHeader>
             <CardContent>
               <div
-                className={`text-2xl font-bold ${
-                  aggregated?.avgEfficiency > 0.5
+                className={`text-2xl font-bold ${aggregated?.avgEfficiency > 0.5
                     ? "text-green-600"
                     : "text-yellow-600"
-                }`}
+                  }`}
               >
                 {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
               </div>
@@ -436,21 +431,20 @@ export default function Overview() {
                 category.status === "healthy"
                   ? "#10b981"
                   : category.status === "warning"
-                  ? "#f59e0b"
-                  : "#ef4444",
+                    ? "#f59e0b"
+                    : "#ef4444",
             }}
             onClick={() => navigate(`${category.path}`)}
           >
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div
-                  className={`p-2 rounded-lg ${
-                    category.status === "healthy"
+                  className={`p-2 rounded-lg ${category.status === "healthy"
                       ? "bg-green-100"
                       : category.status === "warning"
-                      ? "bg-yellow-100"
-                      : "bg-red-100"
-                  }`}
+                        ? "bg-yellow-100"
+                        : "bg-red-100"
+                    }`}
                 >
                   <div className={getStatusColor(category.status)}>
                     {category.icon}
@@ -475,13 +469,12 @@ export default function Overview() {
                     className="flex items-center gap-2 text-sm"
                   >
                     <div
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        category.status === "healthy"
+                      className={`w-1.5 h-1.5 rounded-full ${category.status === "healthy"
                           ? "bg-green-500"
                           : category.status === "warning"
-                          ? "bg-yellow-500"
-                          : "bg-red-500"
-                      }`}
+                            ? "bg-yellow-500"
+                            : "bg-red-500"
+                        }`}
                     />
                     <span className="text-muted-foreground">{metric}</span>
                   </div>
@@ -574,11 +567,10 @@ export default function Overview() {
                       aggregated?.avgEfficiency > 0.5 ? "healthy" : "warning"
                     )}
                     <span
-                      className={`font-medium ${
-                        aggregated?.avgEfficiency > 0.5
+                      className={`font-medium ${aggregated?.avgEfficiency > 0.5
                           ? "text-green-600"
                           : "text-yellow-600"
-                      }`}
+                        }`}
                     >
                       {(aggregated?.avgEfficiency * 100)?.toFixed(1) || "0.0"}%
                     </span>
@@ -608,8 +600,8 @@ export default function Overview() {
                     {aggregated?.avgEfficiency < 0.5
                       ? "High"
                       : aggregated?.avgEfficiency < 0.8
-                      ? "Medium"
-                      : "Low"}
+                        ? "Medium"
+                        : "Low"}
                   </span>
                 </div>
               </TooltipWrapper>
@@ -711,11 +703,10 @@ export default function Overview() {
                           ${cluster.cluster?.totalCost?.toFixed(2) || "0.00"}
                         </td>
                         <td
-                          className={`p-4 font-medium ${
-                            cluster.cluster?.efficiency > 0.5
+                          className={`p-4 font-medium ${cluster.cluster?.efficiency > 0.5
                               ? "text-emerald-600"
                               : "text-amber-600"
-                          }`}
+                            }`}
                         >
                           {((cluster.cluster?.efficiency || 0) * 100).toFixed(
                             1
