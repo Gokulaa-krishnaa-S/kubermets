@@ -5,7 +5,6 @@ import { useTheme } from "next-themes";
 import { useCallback, useState } from "react";
 import DomainTypeAhead from "../reusable/domainTypeAhead";
 
-
 interface HeaderProps {
   title: string;
   subtitle?: string;
@@ -25,7 +24,6 @@ export function Header({
 }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const [selectedHash, setSelectedHash] = useState<string>("");
-
   const handleDomainSelect = useCallback(
     (hash: string) => {
       console.log("Domain selected:", hash);
@@ -38,7 +36,6 @@ export function Header({
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-2 sm:px-6">
-        
         {/* Left Section */}
         <div className="flex items-center gap-3 min-w-0">
           <SidebarTrigger className="lg:hidden shrink-0" />
