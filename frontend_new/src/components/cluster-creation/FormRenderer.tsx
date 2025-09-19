@@ -233,7 +233,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-pointer" />
                 </Tooltip>
               )}
             </Label>
@@ -258,7 +258,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-pointer" />
                 </Tooltip>
               )}
             </Label>
@@ -294,7 +294,7 @@ export default function FormRenderer({
               </Label>
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-pointer" />
                 </Tooltip>
               )}
             </div>
@@ -312,7 +312,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-pointer" />
                 </Tooltip>
               )}
             </Label>
@@ -351,7 +351,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-pointer" />
                 </Tooltip>
               )}
             </Label>
@@ -388,7 +388,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-pointer" />
                 </Tooltip>
               )}
             </Label>
@@ -501,7 +501,7 @@ export default function FormRenderer({
               {field.required && <span className="text-destructive ml-1">*</span>}
               {field.helpText && (
                 <Tooltip content={field.helpText}>
-                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-help" />
+                  <Info className="w-4 h-4 ml-2 text-[#9db309] cursor-pointer" />
                 </Tooltip>
               )}
             </Label>

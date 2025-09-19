@@ -42,21 +42,9 @@ const metricItems = [
   { title: "Cluster Metrics", url: "/metric/cluster", icon: Server },
   { title: "Node Metrics", url: "/metric/nodes", icon: Box },
   { title: "Pods & Containers", url: "/metric/pods", icon: Layers },
-  // { title: "Instances", url: "/instance", icon: Layers },
-
-  // { title: "Deployments", url: "/deployments", icon: Activity },
-  // { title: "Control Plane", url: "/control-plane", icon: Shield },
-  // { title: "Resource Usage", url: "/resources", icon: TrendingUp },
-  // { title: "Networking", url: "/networking", icon: Network },
-  // { title: "Storage", url: "/storage", icon: HardDrive },
-  // { title: "Alerts & Events", url: "/alerts-events", icon: BarChart3 },
 ];
 
-// Cluster creation items moved to main navigation
-
 const platformItems = [
-  // { title: "Billing & Cost", url: "/billing-cost", icon: DollarSign },
-  // { title: "Settings", url: "/settings", icon: Settings },
 ];
 
 interface AppSidebarProps {
@@ -69,18 +57,20 @@ export function AppSidebar({ onCreateClusterClick }: AppSidebarProps) {
   const currentPath = location.pathname;
   const collapsed = state === "collapsed";
   const { selectedInstance }: any = useCluster();
-  const isActive = (path: string) => {
-    if (path === "/") return currentPath === "/";
-    return currentPath.startsWith(path);
+
+  // Custom active checker for metric items with query params
+  const isMetricItemActive = (basePath: string) => {
+    return currentPath === basePath;
   };
 
-  const getNavClassName = (active: boolean) =>
-    cn(
-      "w-full justify-start transition-all duration-200",
-      active
-        ? "bg-primary text-primary-foreground shadow-card"
-        : "hover:bg-accent hover:text-accent-foreground"
+  function getNavClassName(isActive: boolean): string {
+    return cn(
+      "flex items-center gap-2 px-3 py-2 rounded-md transition-colors",
+      isActive
+        ? "bg-primary text-primary-foreground"
+        : "hover:bg-muted hover:text-foreground"
     );
+  }
 
   return (
     <Sidebar
@@ -120,18 +110,17 @@ export function AppSidebar({ onCreateClusterClick }: AppSidebarProps) {
                   {item.action ? (
                     <SidebarMenuButton 
                       onClick={() => onCreateClusterClick?.()}
-                      className={getNavClassName(false)}
+                      isActive={false}
                     >
                       <item.icon className="w-4 h-4" />
                       {!collapsed && <span>{item.title}</span>}
                     </SidebarMenuButton>
                   ) : (
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={item.url}
-                        end={item.url === "/"}
-                        className={({ isActive }) => getNavClassName(isActive)}
-                      >
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={currentPath === item.url}
+                    >
+                      <NavLink to={item.url}>
                         <item.icon className="w-4 h-4" />
                         {!collapsed && <span>{item.title}</span>}
                       </NavLink>
@@ -151,18 +140,21 @@ export function AppSidebar({ onCreateClusterClick }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
               {metricItems.map((item) => {
-                // build URL with cluster_id if selected
+                // Build URL with cluster_id if selected
                 const url = selectedInstance?.id
                   ? `${item.url}?cluster_id=${selectedInstance.id}`
                   : item.url;
+                
+               
+                const isCurrentlyActive = isMetricItemActive(item.url);
 
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink
-                        to={url}
-                        className={({ isActive }) => getNavClassName(isActive)}
-                      >
+                    <SidebarMenuButton 
+                      asChild 
+                      isActive={isCurrentlyActive}
+                    >
+                      <NavLink to={item.url}>
                         <item.icon className="w-4 h-4" />
                         {!collapsed && <span>{item.title}</span>}
                       </NavLink>
@@ -173,8 +165,6 @@ export function AppSidebar({ onCreateClusterClick }: AppSidebarProps) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* Cluster Creation moved to Main navigation */}
 
         {/* Platform Navigation */}
         {platformItems.length > 0 && (
@@ -189,7 +179,7 @@ export function AppSidebar({ onCreateClusterClick }: AppSidebarProps) {
                     <SidebarMenuButton asChild>
                       <NavLink
                         to={item.url}
-                        className={({ isActive }) => getNavClassName(isActive)}
+                        className={() => getNavClassName(currentPath === item.url)}
                       >
                         <item.icon className="w-4 h-4" />
                         {!collapsed && <span>{item.title}</span>}

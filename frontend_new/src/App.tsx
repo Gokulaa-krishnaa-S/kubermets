@@ -172,11 +172,7 @@ const App = () => (
                       <Route path="/alerts-events" element={<AlertsAndCost />} />
                       <Route path="/billing-cost" element={<BillingAndCost />} />
                       <Route path="/instance" element={<KubernetesInstanceList />} />
-
-
                       <Route path="/metric/*" element={<MetricRoutes />} />
-
-
                       <Route path="/cluster-creation/gcp" element={<GCPClusterPage />} />
                       <Route path="/cluster-creation/aws" element={<AWSClusterPage />} />
                       <Route path="/cluster-creation/azure" element={<AzureClusterPage />} />

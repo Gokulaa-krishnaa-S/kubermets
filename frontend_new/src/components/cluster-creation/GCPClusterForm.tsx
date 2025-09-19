@@ -68,8 +68,14 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
       const zoneValues: string[] = gcpZonesByRegion[region] || [];
       zonesField.options = zoneValues.map((z) => ({ value: z, label: z }));
     }
+
+    const credentialField = clone.fields.find((f: any) => f.name === 'credentialName');
+    if (credentialField) {
+      credentialField.required = !showExistingCluster;
+      // required in create flow, optional in attach flow
+    }
     setComputedTemplate(clone);
-  }, [formData.gcpRegion]);
+  }, [formData.gcpRegion, showExistingCluster]);
 
   const handleSubmit = async (data: any) => {
     try {

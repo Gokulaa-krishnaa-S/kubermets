@@ -67,6 +67,7 @@ export default function ClusterDetailModal({
   clusterId,
   clusterName,
   onClose,
+  userId
 }) {
   const [cpuData, setCpuData] = useState([]);
   const [memoryData, setMemoryData] = useState([]);
@@ -92,7 +93,7 @@ export default function ClusterDetailModal({
       setError(null);
 
       const res = await ClusterService.getClusterDetails({
-        // user_id: 1,
+        user_id: userId,
         cluster_id: clusterId || 1,
         window: "6d",
       });
