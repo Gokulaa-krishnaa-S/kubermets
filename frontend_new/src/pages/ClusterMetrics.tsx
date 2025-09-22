@@ -11,6 +11,7 @@ import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
+import { useLocation } from 'react-router-dom';
 import ClusterLogs from "@/components/logs/ClusterLogs";
 
 import {
@@ -121,6 +122,7 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
 
 export default function ClusterMetrics() {
   const { selectedInstance, userId }: any = useCluster();
+  const location = useLocation();
   console.log(selectedInstance?.id, "iddd2-------------");
   let cluster_id = selectedInstance?.id;
   let user_id = userId;
@@ -805,6 +807,7 @@ export default function ClusterMetrics() {
   }, []);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     console.log("Initial useEffect - loading data on component mount");
     if (!userId) return;
 
@@ -842,7 +845,7 @@ export default function ClusterMetrics() {
         fetchAllData(rangeFromUrl, effectiveClusterId);
       }
     }
-  }, [userId]); // Initial load only
+  }, [userId, location.pathname]); // Initial load only
 
   // Auto-refresh interval effect
   useEffect(() => {
