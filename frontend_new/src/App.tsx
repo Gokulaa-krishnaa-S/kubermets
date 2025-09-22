@@ -159,6 +159,8 @@ const App = () => (
           <Routes>
 
             <Route path="/" element={<Navigate to="/overview" replace />} />
+
+            {/* Protected routes */}
             <Route
               path="/*"
               element={
@@ -175,6 +177,8 @@ const App = () => (
                       <Route path="/cluster-creation/aws" element={<AWSClusterPage />} />
                       <Route path="/cluster-creation/azure" element={<AzureClusterPage />} />
                       <Route path="/cluster-creation/sify" element={<SifyClusterPage />} />
+
+                      {/* Catch-all for unknown routes */}
                       <Route path="*" element={<NotFound />} />
                     </Route>
                   </Routes>

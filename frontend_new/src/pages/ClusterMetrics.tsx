@@ -271,6 +271,7 @@ export default function ClusterMetrics() {
 
         const activeCluster = activeClusters[0];
 
+
         if (activeCluster) {
           const clusterData = {
             name: activeCluster.cluster_name,
@@ -293,6 +294,7 @@ export default function ClusterMetrics() {
 
             rawData: activeCluster,
           };
+
 
           setCluster(clusterData);
         } else {
@@ -906,6 +908,7 @@ export default function ClusterMetrics() {
 
     const cpuUsage = parseFloat(cluster.cpu.replace("%", "")) || 0;
     const memoryUsage = parseFloat(cluster.memory.replace("%", "")) || 0;
+
     const efficiency = cluster.efficiency !== "N/A"
       ? parseFloat(cluster.efficiency.replace("%", "")) || 0
       : 0;
@@ -964,7 +967,8 @@ export default function ClusterMetrics() {
       memory: memoryEfficiency,
       overall: overallEfficiency
     };
-  };
+  };  
+  
 
 
   const ProgressBar = ({ label, value, max, color, unit, tooltip }) => (

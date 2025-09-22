@@ -11,6 +11,7 @@
           "type": "text",
           "label": "Credential Name",
           "helpText": "A friendly name to identify this credential",
+          "required": true,
           "placeholder": "e.g., gcp-account"
         },
         {

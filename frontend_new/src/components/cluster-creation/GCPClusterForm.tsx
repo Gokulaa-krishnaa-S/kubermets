@@ -111,6 +111,7 @@ export default function GCPClusterForm({ clusterId, onSubmit, onCancel }: GCPClu
         const clusterId = response.data?.id;
         const clusterType = 'gcp';
         const creationType = 'new';
+        // const jobId = response.data?.job_id;
 
         navigate(`/metric/cluster?cluster_id=${clusterId}&cluster_type=${clusterType}&creation_type=${creationType}`);
       }, 5000);
