@@ -337,7 +337,7 @@ def dashboard_summary():
     Dashboard summary: aggregated metrics for all clusters from DB
     """
     window = request.args.get("window", "7d")
-    user_id = request.args.get("user_id", "1")  # Optional multi-user support
+    user_id = request.args.get("user_id", "1")  
 
     session = db_manager.get_session()
     try:
@@ -362,6 +362,7 @@ def dashboard_summary():
             )
             .all()
         )
+        print(rows, "rows123")
 
         if not rows:
             return (

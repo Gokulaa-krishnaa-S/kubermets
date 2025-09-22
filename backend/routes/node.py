@@ -27,6 +27,7 @@ def build_metrics_query(session, model, filters, group_by_fields, aggregates):
     return query
 
 
+
 NODE_AGGREGATES = [
     NodeMetrics.node_name,
     func.sum(NodeMetrics.total_cost).label("total_cost"),
@@ -106,6 +107,7 @@ def get_node_metrics():
             return jsonify({"error": "cluster_id is required"}), 400
 
         duration = request.args.get("duration", "24h")
+        print(duration,cluster_id,user_id,"==================/nodes")
 
         result = get_node_data(
             session=session,
