@@ -11,6 +11,7 @@ import ClusterDetailModal from "@/components/modals/ClusterDetailModal";
 import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
+import ClusterLogs from "@/components/logs/ClusterLogs";
 
 import {
   ConnectionStatusBanner,
@@ -38,6 +39,8 @@ import {
   Coins,
   WifiOff,
   Info,
+  Terminal,
+  Eye,
 } from "lucide-react";
 
 const METRIC_TOOLTIPS = {
@@ -142,6 +145,11 @@ export default function ClusterMetrics() {
   const [showClusterModal, setShowClusterModal] = useState(false);
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Logs state
+  const [showLogs, setShowLogs] = useState(false);
+  const [isLogsMaximized, setIsLogsMaximized] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
 
   // Standardized connection status states
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
@@ -265,7 +273,7 @@ export default function ClusterMetrics() {
 
         // Get the first active cluster (since this is single cluster view)
         const activeCluster = activeClusters[0];
-        
+
         if (activeCluster) {
           const clusterData = {
             name: activeCluster.cluster_name,
@@ -288,7 +296,7 @@ export default function ClusterMetrics() {
             // Add raw data for efficiency calculations
             rawData: activeCluster,
           };
-          
+
           setCluster(clusterData);
         } else {
           setCluster(null);
@@ -889,8 +897,8 @@ export default function ClusterMetrics() {
 
     const cpuUsage = parseFloat(cluster.cpu.replace("%", "")) || 0;
     const memoryUsage = parseFloat(cluster.memory.replace("%", "")) || 0;
-    const efficiency = cluster.efficiency !== "N/A" 
-      ? parseFloat(cluster.efficiency.replace("%", "")) || 0 
+    const efficiency = cluster.efficiency !== "N/A"
+      ? parseFloat(cluster.efficiency.replace("%", "")) || 0
       : 0;
 
     return [
@@ -926,26 +934,26 @@ export default function ClusterMetrics() {
     if (!cluster || !cluster.rawData) return { cpu: 0, memory: 0, overall: 0 };
 
     const rawData = cluster.rawData;
-    
+
     // Calculate CPU efficiency
-    const cpuEfficiency = rawData.cpu_core_request_average > 0 
+    const cpuEfficiency = rawData.cpu_core_request_average > 0
       ? Math.round((rawData.cpu_core_usage_average / rawData.cpu_core_request_average) * 100)
       : 0;
-    
+
     // Calculate Memory efficiency
     const memoryEfficiency = rawData.ram_byte_request_average > 0
       ? Math.round((rawData.ram_byte_usage_average / rawData.ram_byte_request_average) * 100)
       : 0;
 
     // Overall efficiency
-    const overallEfficiency = rawData.efficiency_percent 
-      ? Math.round(rawData.efficiency_percent) 
+    const overallEfficiency = rawData.efficiency_percent
+      ? Math.round(rawData.efficiency_percent)
       : 0;
 
-    return { 
-      cpu: cpuEfficiency, 
-      memory: memoryEfficiency, 
-      overall: overallEfficiency 
+    return {
+      cpu: cpuEfficiency,
+      memory: memoryEfficiency,
+      overall: overallEfficiency
     };
   };
 
@@ -1104,6 +1112,28 @@ export default function ClusterMetrics() {
                       <p className="text-sm text-gray-400">
                         Please check your cluster configuration and try refreshing
                       </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedJobId(cluster_id);
+                            setShowLogs(true);
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                        >
+                          <Terminal className="w-4 h-4" />
+                          View Logs
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedCluster(cluster.name);
+                            setShowClusterModal(true);
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200"
+                        >
+                          <Eye className="w-4 h-4" />
+                          Details
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <TooltipWrapper
@@ -1243,6 +1273,28 @@ export default function ClusterMetrics() {
                                 : "just now"}
                             </span>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedJobId(cluster_id);
+                                setShowLogs(true);
+                              }}
+                              className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                            >
+                              <Terminal className="w-4 h-4" />
+                              View Logs
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedCluster(cluster.name);
+                                setShowClusterModal(true);
+                              }}
+                              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Details
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </TooltipWrapper>
@@ -1379,11 +1431,10 @@ export default function ClusterMetrics() {
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
                             <div
-                              className={`h-2 rounded-full transition-all duration-500 ${
-                                item.name === "Idle Resources"
-                                  ? "bg-gray-400"
-                                  : "bg-gradient-to-r from-blue-500 to-blue-600"
-                              }`}
+                              className={`h-2 rounded-full transition-all duration-500 ${item.name === "Idle Resources"
+                                ? "bg-gray-400"
+                                : "bg-gradient-to-r from-blue-500 to-blue-600"
+                                }`}
                               style={{ width: `${item.percentage}%` }}
                             ></div>
                           </div>
@@ -1463,6 +1514,21 @@ export default function ClusterMetrics() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Cluster Logs Modal */}
+      {showLogs && (
+        <ClusterLogs
+          clusterId={cluster_id}
+          jobId={selectedJobId}
+          isOpen={showLogs}
+          onClose={() => {
+            setShowLogs(false);
+            setSelectedJobId(null);
+          }}
+          onMaximize={() => setIsLogsMaximized(!isLogsMaximized)}
+          isMaximized={isLogsMaximized}
+        />
       )}
     </div>
   );

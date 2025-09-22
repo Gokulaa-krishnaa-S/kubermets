@@ -108,7 +108,7 @@ export function AppSidebar({ onCreateClusterClick }: AppSidebarProps) {
               {mainItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   {item.action ? (
-                    <SidebarMenuButton 
+                    <SidebarMenuButton
                       onClick={() => onCreateClusterClick?.()}
                       isActive={false}
                     >
@@ -116,8 +116,8 @@ export function AppSidebar({ onCreateClusterClick }: AppSidebarProps) {
                       {!collapsed && <span>{item.title}</span>}
                     </SidebarMenuButton>
                   ) : (
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       isActive={currentPath === item.url}
                     >
                       <NavLink to={item.url}>
@@ -144,14 +144,14 @@ export function AppSidebar({ onCreateClusterClick }: AppSidebarProps) {
                 const url = selectedInstance?.id
                   ? `${item.url}?cluster_id=${selectedInstance.id}`
                   : item.url;
-                
-               
+
+
                 const isCurrentlyActive = isMetricItemActive(item.url);
 
                 return (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild 
+                    <SidebarMenuButton
+                      asChild
                       isActive={isCurrentlyActive}
                     >
                       <NavLink to={item.url}>

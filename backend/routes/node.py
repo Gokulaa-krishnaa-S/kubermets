@@ -100,7 +100,8 @@ def get_node_data(
 def get_node_metrics():
     session = db_manager.get_session()
     try:
-        cluster_id = request.args.get("cluster_id")
+        # cluster_id = request.args.get("cluster_id")
+        cluster_id = request.args.get("cluster_id", 89)
         user_id = request.args.get("user_id")
         if not cluster_id:
             return jsonify({"error": "cluster_id is required"}), 400

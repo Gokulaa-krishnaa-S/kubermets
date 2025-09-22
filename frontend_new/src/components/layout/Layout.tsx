@@ -31,7 +31,7 @@ export function Layout({
   const handleDomainSelect = (hash: string) => {
     console.log("Domain selected in Layout:", hash);
     setSelectedDomain(hash);
-    
+
     // Call external callback if provided
     if (onDomainChange) {
       onDomainChange(hash);
