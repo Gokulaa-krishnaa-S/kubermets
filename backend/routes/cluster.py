@@ -4,11 +4,9 @@ from models.model import ClusterMetrics, NodeMetrics, PodMetrics
 from models.model import db_manager
 from sqlalchemy import desc, asc, func
 from routes.node import get_node_data
-
 from datetime import datetime, timedelta, timezone
 import os
 from service.data_service import generate_uuid
-
 
 UPLOAD_FOLDER = "uploads/providers"
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
@@ -138,7 +136,6 @@ def get_cluster_metrics():
                     "is_idle_allocation": row.is_idle_allocation,
                     "timestamps": [],
                 }
-
             agg = aggregated[key]
 
             # Sum cost metrics

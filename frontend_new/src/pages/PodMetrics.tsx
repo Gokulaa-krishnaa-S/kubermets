@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLocation } from 'react-router-dom';
 import {
   TrendingUp,
@@ -20,7 +20,7 @@ import {
 
 import AdvancedFilter from "@/components/reusable/advancedFilter";
 
-// Tooltip Component
+
 const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -81,27 +81,27 @@ import {
 } from "./ConnectionStatusBanner";
 
 const POD_METRIC_TOOLTIPS = {
-  // Overall pod metrics
+
   totalCost:
     "Total pod cost (CPU + Memory + Storage + Network + Shared). Key KPI for cost tracking.",
   activePods: "Number of running pods with allocated resources.",
   idleCost: "Cost of unused cluster capacity (waste).",
   avgEfficiency: "Average resource efficiency = Usage ÷ Requests.",
 
-  // Pod cost breakdown
+
   totalCpuCost: "Total CPU cost based on requests and runtime.",
   totalMemoryCost: "Total memory cost from requested GB-hours.",
   totalStorageCost: "Persistent + ephemeral storage costs.",
   podCount: "Number of pods with allocated cost.",
   computeCost: "CPU + Memory cost (excludes storage & extras).",
 
-  // Pod cost distribution
+
   cpuDistribution: "CPU cost share of total cluster cost.",
   memoryDistribution: "Memory cost share of total cluster cost.",
   storageDistribution: "Storage cost share of total cluster cost.",
   sharedDistribution: "Shared infra costs (e.g., LBs, services).",
 
-  // Individual pod details
+
   podName: "Kubernetes pod identifier (namespace/pod-name).",
   podCpuCost: "Pod CPU cost = Request × Time × Rate.",
   podCpuUsage: "Actual CPU usage vs requested cores.",
@@ -115,12 +115,13 @@ const POD_METRIC_TOOLTIPS = {
   podTotalCost: "Full pod cost (CPU + Memory + Storage + Network + Shared).",
 };
 
-// Search Component
+
 interface SearchProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   placeholder?: string;
   className?: string;
+  isSticky?: boolean;
 }
 
 const SearchInput: React.FC<SearchProps> = ({
@@ -128,6 +129,7 @@ const SearchInput: React.FC<SearchProps> = ({
   onSearchChange,
   placeholder = "Search pods...",
   className = "",
+  isSticky = false,
 }) => {
   return (
     <div className={`relative ${className}`}>
@@ -139,7 +141,15 @@ const SearchInput: React.FC<SearchProps> = ({
         value={searchTerm}
         onChange={(e) => onSearchChange(e.target.value)}
         placeholder={placeholder}
-        className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+        className={`
+          block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md leading-5 
+          placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 
+          focus:ring-blue-500 focus:border-blue-500 text-sm transition-all duration-200
+          ${isSticky
+            ? 'bg-white/90 backdrop-blur-sm border-white/30 focus:bg-white'
+            : 'bg-white'
+          }
+        `}
       />
       {searchTerm && (
         <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -157,12 +167,11 @@ const SearchInput: React.FC<SearchProps> = ({
 
 const KubecostDashboard = () => {
   let { selectedInstance, userId }: any = useCluster();
-   const location = useLocation();
+  const location = useLocation();
   console.log(selectedInstance);
   let cluster_id = selectedInstance?.id;
   let user_id = userId;
   const [data, setData] = useState(null);
-  // const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [sortField, setSortField] = useState("totalCost");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -171,14 +180,19 @@ const KubecostDashboard = () => {
     return searchParams.get("window") || "24h";
   });
 
-  // Advanced Filter States
+
   const [filters, setFilters] = useState({
     node: [],
     namespace: [],
     deployment: [],
   });
 
-  // Mock filter data for pods page
+
+  const [isSticky, setIsSticky] = useState(false);
+  const filterBarRef = useRef(null);
+  const stickyPlaceholderRef = useRef(null);
+
+
   const podFilterConfig = {
     node: [
       { value: "node-1", label: "node-1", count: 30 },
@@ -201,14 +215,13 @@ const KubecostDashboard = () => {
     setFilters(newFilters);
     console.log("Pod Filters changed:", newFilters);
 
-    // Apply filters to your API call
-    // fetchPodData({ ...queryParams, filters: newFilters });
+
   };
 
-  // Search state
+
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
-  // Pagination states
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showPodModal, setShowPodModal] = useState(false);
@@ -216,13 +229,13 @@ const KubecostDashboard = () => {
   const [podDetails, setPodDetails] = useState([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Enhanced connection status states (matching NodeMetrics)
+
   const [refreshInterval, setRefreshInterval] = useState(30000);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // Standardized connection status tracking (from NodeMetrics)
+
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "disconnected"
@@ -230,6 +243,20 @@ const KubecostDashboard = () => {
   const [retryAttempts, setRetryAttempts] = useState(0);
   const [maxRetries, setMaxRetries] = useState(3);
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
+
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (filterBarRef.current && stickyPlaceholderRef.current) {
+        const rect = stickyPlaceholderRef.current.getBoundingClientRect();
+        const shouldBeSticky = rect.top <= 0;
+        setIsSticky(shouldBeSticky);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const getWindowFromSelectedTimeRange = (range: string): string => {
     switch (range) {
@@ -264,7 +291,7 @@ const KubecostDashboard = () => {
     }
   };
 
-  // Connection error detection (from NodeMetrics)
+
   const isConnectionError = (error) => {
     if (!error) return false;
 
@@ -288,7 +315,7 @@ const KubecostDashboard = () => {
     );
   };
 
-  // API failure handler (from NodeMetrics)
+
   const handleApiFailure = (error: any, showToast = true) => {
     setServerStatus("down");
     setConnectionStatus("disconnected");
@@ -303,13 +330,12 @@ const KubecostDashboard = () => {
     }
   };
 
-  // Enhanced fetchData with retry logic
+
   const fetchData = useCallback(
     async (showToast = false, isRetry = false) => {
       try {
         if (!isRetry) {
           setIsRefreshing(showToast);
-          // setIsLoadingData(true);
           setError(null);
         }
 
@@ -327,7 +353,7 @@ const KubecostDashboard = () => {
         const response = await podService.getPodMetrics(queryParams);
         console.log("API Response:", response);
 
-        // Transform the database response to match your frontend format
+
         const transformedData = {
           sets: [
             {
@@ -369,7 +395,7 @@ const KubecostDashboard = () => {
         setData(transformedData);
         setLastUpdated(new Date());
 
-        // Reset connection status and retry attempts on success
+
         setServerStatus("live");
         setConnectionStatus("connected");
         setRetryAttempts(0);
@@ -398,7 +424,7 @@ const KubecostDashboard = () => {
             );
             setRetryAttempts((prev) => prev + 1);
 
-            // Retry after a delay with exponential backoff
+
             setTimeout(() => {
               fetchData(showToast, true);
             }, 2000 * (retryAttempts + 1));
@@ -415,7 +441,7 @@ const KubecostDashboard = () => {
           handleApiFailure(err, false);
         }
 
-        // Don't clear data on error to show cached data
+
         if (!data) {
           setData({ sets: [{ allocations: {} }] });
         }
@@ -436,14 +462,14 @@ const KubecostDashboard = () => {
     ]
   );
 
-  // Retry handler (from NodeMetrics)
+
   const handleRetry = () => {
     setRetryAttempts(0);
     setError(null);
     fetchData(false);
   };
 
-  // Enhanced refresh handler (from NodeMetrics)
+
   const refreshAllData = async (showToast = true) => {
     setIsRefreshing(true);
     try {
@@ -451,7 +477,7 @@ const KubecostDashboard = () => {
         await fetchData(showToast);
       }
 
-      // If this was a manual refresh and server is back online, resume auto-refresh
+
       if (serverStatus === "live") {
         setIsAutoRefreshPaused(false);
         console.log("Server is back online - resuming auto-refresh");
@@ -471,15 +497,15 @@ const KubecostDashboard = () => {
     }
   };
 
-  // Enhanced useEffect with connection status handling
+
   useEffect(() => {
-      window.scrollTo(0, 0);
+    window.scrollTo(0, 0);
 
     const rangeFromUrl = searchParams.get("window") || "24h";
     setIsInitialLoading(true);
     setSelectedTimeRange(rangeFromUrl);
 
-    // ✅ Merge instead of overwrite
+
     const newParams = new URLSearchParams(searchParams);
     newParams.set("window", rangeFromUrl);
     setSearchParams(newParams);
@@ -491,9 +517,9 @@ const KubecostDashboard = () => {
       setIsLoadingData(false);
       setIsInitialLoading(false);
     }
-  }, [cluster_id, user_id, location.pathname]); // Initial load only
+  }, [cluster_id, user_id, location.pathname]);
 
-  // Enhanced auto-refresh with pause logic
+
   useEffect(() => {
     let intervalId;
 
@@ -517,7 +543,7 @@ const KubecostDashboard = () => {
     };
   }, [refreshInterval, cluster_id, isAutoRefreshPaused, serverStatus]);
 
-  // Time range change effect
+
   useEffect(() => {
     if (cluster_id) {
       const newParams = new URLSearchParams(searchParams);
@@ -527,7 +553,7 @@ const KubecostDashboard = () => {
     }
   }, [selectedTimeRange]);
 
-  // Enhanced pod details handler with error handling
+
   const handlePodDetails = async (name) => {
     setSelectedPod(name);
     setShowPodModal(true);
@@ -613,7 +639,7 @@ const KubecostDashboard = () => {
       console.error("Error fetching pod details:", error);
       setPodDetails([]);
 
-      // Handle connection errors for pod details
+
       if (isConnectionError(error)) {
         toast({
           title: "Connection Error",
@@ -625,7 +651,7 @@ const KubecostDashboard = () => {
     }
   };
 
-  // Rest of your existing component logic...
+
   const processedData = useMemo(() => {
     if (!data?.sets?.[0]?.allocations)
       return { pods: [], idle: null, totalCost: 0 };
@@ -636,7 +662,7 @@ const KubecostDashboard = () => {
     let idle = null;
     let totalCost = 0;
 
-    // Mock nodes array to randomly assign to pods
+
     const mockNodes = ["node-1", "node-2", "node-3"];
 
     Object.entries(allocations).forEach(([key, allocationRaw], index) => {
@@ -649,8 +675,8 @@ const KubecostDashboard = () => {
           ...allocation,
           id: key,
           namespace: key.split("-")[0] || "default",
-          // Add mock node assignment - this makes the filter work
-          node: mockNodes[index % mockNodes.length], // Cycles through node-1, node-2, node-3
+
+          node: mockNodes[index % mockNodes.length],
           ramUsageGB: (
             allocation.ramByteUsageAverage /
             (1024 * 1024 * 1024)
@@ -678,26 +704,25 @@ const KubecostDashboard = () => {
     return { pods, idle, totalCost };
   }, [data]);
 
-  // Filter pods based on selected filters
   const filteredPods = useMemo(() => {
     if (!processedData?.pods) return [];
 
     return processedData.pods.filter((pod) => {
-      // Apply node filter
+
       if (filters.node?.length > 0) {
         if (!filters.node.includes(pod.node)) {
           return false;
         }
       }
 
-      // Apply namespace filter
+
       if (filters.namespace?.length > 0) {
         if (!filters.namespace.includes(pod.namespace)) {
           return false;
         }
       }
 
-      // Apply deployment filter
+
       if (filters.deployment?.length > 0) {
         const podDeployment =
           pod.deployment || pod.name.split("-").slice(0, -2).join("-");
@@ -708,7 +733,7 @@ const KubecostDashboard = () => {
 
       return true;
     });
-  }, [processedData.pods, filters]); // Fixed: Complete dependency array
+  }, [processedData.pods, filters]);
 
   const filteredAndSortedPods = useMemo(() => {
     console.log(filteredPods);
@@ -745,8 +770,8 @@ const KubecostDashboard = () => {
 
   const chartData = useMemo(() => {
     return filteredAndSortedPods.map((pod) => ({
-      name: pod.name.length > 12 ? `${pod.name.substring(0, 8)}...` : pod.name, // Truncate long names
-      fullName: pod.name, // Keep full name for tooltips
+      name: pod.name.length > 12 ? `${pod.name.substring(0, 8)}...` : pod.name,
+      fullName: pod.name,
       totalCost: parseFloat(pod.totalCost.toFixed(2)),
       cpuCost: parseFloat(pod.cpuCost.toFixed(2)),
       ramCost: parseFloat(pod.ramCost.toFixed(2)),
@@ -798,7 +823,7 @@ const KubecostDashboard = () => {
     setCurrentPage(1);
   };
 
-  const formatCurrency = (value) => `$${value?.toFixed(2) || "0.00"}`;
+  const formatCurrency = (value) => `${value?.toFixed(2) || "0.00"}`;
   const formatBytes = (bytes) => {
     if (!bytes) return "0 B";
     const sizes = ["B", "KB", "MB", "GB"];
@@ -811,7 +836,7 @@ const KubecostDashboard = () => {
     return sortDirection === "asc" ? "↑" : "↓";
   };
 
-  // Error Display Component (from NodeMetrics)
+
   if (
     error &&
     !isInitialLoading &&
@@ -849,85 +874,118 @@ const KubecostDashboard = () => {
 
   return (
     <>
-      <div className=" ">
+      <div className="">
         <div className="min-h-screen sm:p-4 md:p-6">
           <div className="mx-auto max-w-full">
-            {/* Enhanced Filter Bar with Network Status Indicator */}
-            <div className="bg-white rounded-xl shadow-sm mb-6">
-              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
-                {/* Left side - Time Range */}
-                <div className="flex items-center gap-4">
-                  <Days
-                    selectedTimeRange={selectedTimeRange}
-                    onTimeRangeChange={setSelectedTimeRange}
-                    variant="select"
-                    buttonOptions={["1h", "6h", "24h", "7d", "30d"]}
-                  />
-                </div>
 
-                {/* Center - Search */}
-                <div className="flex-1 max-w-md">
-                  <SearchInput
-                    searchTerm={searchTerm}
-                    onSearchChange={setSearchTerm}
-                    placeholder="Search pods by pod name and namespace"
-                  />
-                </div>
+            <div
+              ref={stickyPlaceholderRef}
+              className={`transition-all duration-300 ${isSticky ? 'h-20' : 'h-0'}`}
+            />
 
-                {/* Right side - Filters, Navigation and Refresh Controls */}
-                <div className="flex items-center gap-3">
-                  {/* New Advanced Filter */}
-                  {/* <AdvancedFilter
-                    pageType="pod"
-                    filterConfig={podFilterConfig}
-                    filters={filters}
-                    onFiltersChange={handleFiltersChange}
-                    isLoading={loading}
-                    showClearAll={true}
-                  /> */}
 
-                  {/* Navigation buttons */}
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        navigate({
-                          pathname: "/metric/cluster",
-                          search: `?cluster_id=${selectedInstance.id}`,
-                        });
-                      }}
-                    >
-                      Cluster
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        navigate({
-                          pathname: "/metric/nodes",
-                          search: `?cluster_id=${selectedInstance.id}`,
-                        });
-                      }}
-                    >
-                      Node
-                    </Button>
+            <div
+              ref={filterBarRef}
+              className={`
+                transition-all duration-300 ease-in-out z-50 mb-6
+                ${isSticky
+                  ? `fixed top-0 left-64 right-0 mx-0 px-4 md:px-6 py-4
+                     bg-white/80 backdrop-blur-lg border-b border-white/20
+                     shadow-lg shadow-black/5`
+                  : 'relative bg-white rounded-xl shadow-sm'
+                }
+              `}
+            >
+              <div className={`
+                mx-auto max-w-full
+                ${isSticky ? '' : 'p-4 md:p-6'}
+              `}>
+                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
+
+                  <div className="flex items-center gap-4">
+                    <Days
+                      selectedTimeRange={selectedTimeRange}
+                      onTimeRangeChange={setSelectedTimeRange}
+                      variant="select"
+                      buttonOptions={["1h", "6h", "24h", "7d", "30d"]}
+                    />
                   </div>
 
-                  <Refresh
-                    onRefresh={refreshAllData}
-                    refreshInterval={refreshInterval}
-                    onRefreshIntervalChange={setRefreshInterval}
-                    isRefreshing={isRefreshing}
-                    lastUpdated={lastUpdated}
-                  />
-                </div>
-              </div>
 
-              {/* Search and Filter Results Info */}
-              {(searchTerm ||
-                Object.values(filters).some((f) => f.length > 0)) && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex-1 max-w-md">
+                    <SearchInput
+                      searchTerm={searchTerm}
+                      onSearchChange={setSearchTerm}
+                      placeholder="Search pods by pod name and namespace"
+                      isSticky={isSticky}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-3">
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          navigate({
+                            pathname: "/metric/cluster",
+                            search: `?cluster_id=${selectedInstance.id}`,
+                          });
+                        }}
+                        className={`
+                          transition-all duration-200
+                          ${isSticky
+                            ? 'bg-white/90 backdrop-blur-sm hover:bg-white text-blue-600 border border-blue-200 shadow-sm'
+                            : ''
+                          }
+                        `}
+                      >
+                        Cluster
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          navigate({
+                            pathname: "/metric/nodes",
+                            search: `?cluster_id=${selectedInstance.id}`,
+                          });
+                        }}
+                        className={`
+                          transition-all duration-200
+                          ${isSticky
+                            ? 'bg-white/90 backdrop-blur-sm hover:bg-white text-blue-600 border border-blue-200 shadow-sm'
+                            : ''
+                          }
+                        `}
+                      >
+                        Node
+                      </Button>
+                    </div>
+
+                    <Refresh
+                      onRefresh={refreshAllData}
+                      refreshInterval={refreshInterval}
+                      onRefreshIntervalChange={setRefreshInterval}
+                      isRefreshing={isRefreshing}
+                      lastUpdated={lastUpdated}
+                      className={`
+                        ${isSticky
+                          ? '[&>button]:bg-white/90 [&>button]:backdrop-blur-sm [&>button]:border-white/30'
+                          : ''
+                        }
+                      `}
+                    />
+                  </div>
+                </div>
+
+
+                {(searchTerm || Object.values(filters).some((f) => f.length > 0)) && (
+                  <div className={`
+                    transition-all duration-300
+                    ${isSticky ? 'mt-4 pt-4 border-t border-white/20' : 'mt-4 pt-4 border-t border-gray-200'}
+                  `}>
                     <div className="flex items-center justify-between text-sm text-gray-600">
                       <div className="flex items-center gap-4">
                         <span>
@@ -936,12 +994,11 @@ const KubecostDashboard = () => {
                             : filteredAndSortedPods.length === 1
                               ? "1 pod found"
                               : `${filteredAndSortedPods.length} pods found`}
-                          {(searchTerm ||
-                            Object.values(filters).some((f) => f.length > 0)) &&
+                          {(searchTerm || Object.values(filters).some((f) => f.length > 0)) &&
                             " with current filters"}
                         </span>
 
-                        {/* Show active filters */}
+
                         {Object.values(filters).some((f) => f.length > 0) && (
                           <div className="flex items-center gap-2">
                             <span>Filters:</span>
@@ -952,7 +1009,13 @@ const KubecostDashboard = () => {
                                 return (
                                   <span
                                     key={filterType}
-                                    className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                                    className={`
+                                      inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full
+                                      ${isSticky
+                                        ? 'bg-blue-200/50 text-blue-800 backdrop-blur-sm'
+                                        : 'bg-blue-100 text-blue-800'
+                                      }
+                                    `}
                                   >
                                     {filterType}: {filterValues.length}
                                   </span>
@@ -963,34 +1026,42 @@ const KubecostDashboard = () => {
                         )}
                       </div>
 
-                      {(searchTerm ||
-                        Object.values(filters).some((f) => f.length > 0)) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSearchTerm("");
-                              setFilters({
-                                node: [],
-                                namespace: [],
-                                deployment: [],
-                              });
-                            }}
-                            className="text-blue-600 hover:text-blue-700"
-                          >
-                            Clear all
-                          </Button>
-                        )}
+                      {(searchTerm || Object.values(filters).some((f) => f.length > 0)) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSearchTerm("");
+                            setFilters({
+                              node: [],
+                              namespace: [],
+                              deployment: [],
+                            });
+                          }}
+                          className={`
+                            transition-all duration-200
+                            ${isSticky
+                              ? 'text-blue-600 hover:text-blue-700 hover:bg-white/50 backdrop-blur-sm'
+                              : 'text-blue-600 hover:text-blue-700'
+                            }
+                          `}
+                        >
+                          Clear all
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
+              </div>
             </div>
 
-            {/* Loading Banner */}
             {isLoadingData && <LoadingBanner message="Loading pod data..." />}
 
-            {/* Summary Cards with Tooltips */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+
+            <div className={`
+              grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8
+              ${isSticky ? 'mt-4' : ''}
+            `}>
               <TooltipWrapper
                 tooltip={POD_METRIC_TOOLTIPS.totalCost}
                 className="w-full"
@@ -1103,9 +1174,9 @@ const KubecostDashboard = () => {
               </TooltipWrapper>
             </div>
 
-            {/* Charts Section */}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
-              {/* Cost Over Time Chart with Tooltips */}
+
               <div className="md:col-span-2 bg-white rounded-2xl p-4 sm:p-6 border border-slate-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 sm:mb-8 pb-4 border-b border-slate-100 gap-4">
                   <div className="flex items-center gap-3 mb-4 sm:mb-0">
@@ -1253,7 +1324,7 @@ const KubecostDashboard = () => {
                                 return (
                                   <div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200">
                                     <p className="font-semibold text-slate-800 mb-2 text-sm break-words">
-                                      {fullName} {/* Show full pod name */}
+                                      {fullName}
                                     </p>
                                     <div className="space-y-1">
                                       {payload.map((entry, index) => (
@@ -1378,7 +1449,7 @@ const KubecostDashboard = () => {
                 </div>
               </div>
 
-              {/* Cost Distribution Pie Chart with Tooltips */}
+
               <div className="w-full">
                 <div className="bg-white rounded-xl p-4 sm:p-6 border border-slate-200 shadow-sm">
                   <TooltipWrapper tooltip="Cost distribution breakdown shows how your cluster spending is allocated across different resource types, helping identify optimization opportunities.">
@@ -1430,7 +1501,7 @@ const KubecostDashboard = () => {
                   </div>
                 </div>
 
-                {/* Idle Resources Section with Tooltip */}
+
                 {processedData.idle && (
                   <TooltipWrapper
                     tooltip={POD_METRIC_TOOLTIPS.idleCost}
@@ -1493,7 +1564,7 @@ const KubecostDashboard = () => {
               </div>
             </div>
 
-            {/* Pod Details Table with Enhanced Tooltips */}
+
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
               <div className="p-4 sm:p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -1510,20 +1581,20 @@ const KubecostDashboard = () => {
                 <table className="min-w-[1200px] w-full table-fixed">
                   <thead className="bg-gray-50 sticky top-0 z-10">
                     <tr>
-                      {/* Pod Name */}
+
                       <th
                         className="w-1/3 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("name")}
                       >
-                        {/* <TooltipWrapper tooltip={POD_METRIC_TOOLTIPS.podName}> */}
-                          <div className="flex items-center gap-1">
-                            <span>Pod Name {getSortIcon("name")}</span>
 
-                          </div>
-                        {/* </TooltipWrapper> */}
+                        <div className="flex items-center gap-1">
+                          <span>Pod Name {getSortIcon("name")}</span>
+
+                        </div>
+
                       </th>
 
-                      {/* CPU Cost */}
+
                       <th
                         className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("cpuCost")}
@@ -1537,7 +1608,7 @@ const KubecostDashboard = () => {
                         </TooltipWrapper>
                       </th>
 
-                      {/* Memory Cost */}
+
                       <th
                         className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("ramCost")}
@@ -1549,11 +1620,11 @@ const KubecostDashboard = () => {
                             <span>Memory Cost {getSortIcon("ramCost")}</span>
                           </div>
 
-                          {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" /> */}
+
                         </TooltipWrapper>
                       </th>
 
-                      {/* Storage Cost */}
+
                       <th
                         className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("pvCost")}
@@ -1566,7 +1637,7 @@ const KubecostDashboard = () => {
                             <span>Storage Cost {getSortIcon("pvCost")}</span>
                           </div>
 
-                          {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" /> */}
+
                         </TooltipWrapper>
                       </th>
 
@@ -1577,12 +1648,12 @@ const KubecostDashboard = () => {
                         >
                           <div className="flex items-center justify-center gap-1">
                             <span>Efficiency</span>
-                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" /> */}
+
                           </div>
                         </TooltipWrapper>
                       </th>
 
-                      {/* Total Cost */}
+
                       <th
                         className="w-1/6 px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                         onClick={() => handleSort("totalCost")}
@@ -1593,7 +1664,7 @@ const KubecostDashboard = () => {
                           <div className="flex items-center justify-center gap-1">
                             <span>Total Cost {getSortIcon("totalCost")}</span>
 
-                            {/* <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" /> */}
+
                           </div>
                         </TooltipWrapper>
                       </th>
@@ -1604,7 +1675,7 @@ const KubecostDashboard = () => {
                       <tr
                         key={pod.id}
                         className="hover:bg-gray-50 transition-colors "
-                      // onClick={() => handlePodDetails(pod.name)}
+
                       >
                         <td className="px-4 py-4">
                           <div className="flex items-center min-w-0">
@@ -1702,10 +1773,10 @@ const KubecostDashboard = () => {
                 </table>
               </div>
 
-              {/* Enhanced Pagination Controls */}
+
               <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 sm:gap-4 w-full">
-                  {/* Rows per page selector */}
+
                   <div className="flex items-center gap-3">
                     <span className="text-sm text-gray-700">Rows per page</span>
                     <select
@@ -1722,7 +1793,7 @@ const KubecostDashboard = () => {
                     </select>
                   </div>
 
-                  {/* Page info and navigation */}
+
                   <div className="flex items-center gap-4">
                     <span className="text-sm text-gray-700">
                       {startIndex + 1}-{Math.min(endIndex, totalItems)} of{" "}
@@ -1746,7 +1817,6 @@ const KubecostDashboard = () => {
                         <ChevronLeft className="w-4 h-4" />
                       </button>
 
-                      {/* Page numbers */}
                       <div className="flex items-center gap-1">
                         {Array.from(
                           { length: Math.min(5, totalPages) },

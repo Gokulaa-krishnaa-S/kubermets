@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLocation } from 'react-router-dom';
 import AdvancedFilter from "@/components/reusable/advancedFilter";
@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 const NODE_METRIC_TOOLTIPS = {
-  // Overall node metrics
+
   activeNodes:
     "Total number of nodes currently counted (including idle nodes) in the cluster",
   totalNodeCost: "Sum of all node costs during the selected time period",
@@ -28,26 +28,24 @@ const NODE_METRIC_TOOLTIPS = {
   avgEfficiency:
     "Average efficiency across all nodes: (sum of node efficiency %) ÷ total nodes",
 
-  // Node status distribution
   healthyNodes:
     "Number of nodes in a healthy state (default from node_status unless overridden by CPU/Memory thresholds)",
   warningNodes: "Number of nodes in warning state (CPU > 80% or RAM > 85%)",
   criticalNodes: "Number of nodes in critical state (CPU > 90% or RAM > 95%)",
 
-  // Cost breakdown
+
   ramCost: "Total cost attributed to RAM usage across all nodes",
   storageCost: "Total cost attributed to storage usage across all nodes",
   cpuCost: "Total cost attributed to CPU usage across all nodes",
   pvCost: "Persistent volume cost (if applicable) attributed to nodes",
 
-  // Resource utilization
   nodeCpuUsage:
     "CPU usage percentage per node = (CPU cores used ÷ CPU cores requested) × 100",
   nodeRamUsage:
     "RAM usage percentage per node = (Memory used ÷ Memory requested) × 100 (capped at 100%)",
   nodeEfficiency: "Efficiency percentage per node = efficiency_percent × 100",
 
-  // Node details
+
   nodeStatus:
     "Current operational state of the node (overridden to Warning or Critical based on utilization thresholds)",
   nodeCpu:
@@ -62,16 +60,15 @@ const NODE_METRIC_TOOLTIPS = {
   totalNodes: "Total number of nodes currently active in the cluster",
 };
 
-// Tooltip Component
+
 const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   const [showTooltip, setShowTooltip] = useState(false);
 
   return (
     <div className={`relative group inline-block ${className} `}>
-      {/* Wrapped content */}
+
       {children}
 
-      {/* Info icon (only visible on hover of parent) */}
       <div
         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         onMouseEnter={() => setShowTooltip(true)}
@@ -80,12 +77,12 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
         <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-pointer" />
       </div>
 
-      {/* Tooltip */}
+
       {showTooltip && tooltip && (
         <div className="absolute top-8 right-0 z-50 w-44 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg border " >
           <div className="relative">
             {tooltip}
-            {/* Tooltip arrow */}
+
             <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900 transform rotate-45"></div>
           </div>
         </div>
@@ -94,7 +91,7 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
   );
 };
 
-// Search Component
+
 interface SearchProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
@@ -159,7 +156,7 @@ import { NodeMetricsLoader } from "@/components/loader/nodeloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
 import NodeService from "@/services/NodeService";
 
-// Import the standardized connection status components
+
 import {
   ConnectionStatusBanner,
   NetworkStatusIndicator,
@@ -168,7 +165,10 @@ import {
 
 const NodeMetricsDashboard = () => {
   const [nodeData, setNodeData] = useState([]);
-   const location = useLocation();
+  const location = useLocation();
+  const [isSticky, setIsSticky] = useState(false);
+  const filterBarRef = useRef(null);
+  const stickyPlaceholderRef = useRef(null);
   type SummaryStats = {
     totalNodes: number;
     totalCost: number;
@@ -196,18 +196,18 @@ const NodeMetricsDashboard = () => {
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Advanced Filter States
+
   const [filters, setFilters] = useState({
     pod: [],
     deployment: [],
     namespace: [],
   });
 
-  // Search state
+
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
-  // Mock filter data for nodes page - you should replace this with actual data
+
   const nodeFilterConfig = {
     pod: [
       { value: "nginx-pod-1", label: "nginx-pod-1", count: 15 },
@@ -236,11 +236,10 @@ const NodeMetricsDashboard = () => {
     setFilters(newFilters);
     console.log("Node Filters changed:", newFilters);
 
-    // Apply filters to your API call
-    // fetchNodeData({ ...queryParams, filters: newFilters });
+
   };
 
-  // Standardized connection status tracking
+
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "disconnected"
@@ -252,7 +251,7 @@ const NodeMetricsDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-  // Pagination states
+
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(3);
 
@@ -271,11 +270,6 @@ const NodeMetricsDashboard = () => {
         cluster_id: cluster_id,
         user_id: user_id,
         duration: timeRange,
-        // Add filter parameters
-        // ...(searchTerm && { search: searchTerm }),
-        // ...(filters.pod?.length > 0 && { pods: filters.pod }),
-        // ...(filters.deployment?.length > 0 && { deployments: filters.deployment }),
-        // ...(filters.namespace?.length > 0 && { namespaces: filters.namespace }),
       };
 
       const response = await NodeService.getNodeAllocationSummary(queryParams);
@@ -292,7 +286,7 @@ const NodeMetricsDashboard = () => {
     const errorMessage = error.message?.toLowerCase() || "";
     const errorCode = error.code || error.status;
 
-    // Check for common connection error patterns
+
     return (
       errorMessage.includes("network") ||
       errorMessage.includes("connection") ||
@@ -328,7 +322,7 @@ const NodeMetricsDashboard = () => {
     async (queryParams, isRetry = false) => {
       try {
         if (!isRetry) {
-          // setIsLoadingData(true);
+
           setError(null);
         }
 
@@ -342,12 +336,11 @@ const NodeMetricsDashboard = () => {
         const allocations = response;
         const totalNodes = response.length;
 
-        // Filter based on search term and filters
+
         let filteredAllocations = response.filter(
           (node) => !node.node_name.startsWith("__")
         );
 
-        // Apply search filter
         if (searchTerm) {
           filteredAllocations = filteredAllocations.filter((node) =>
             node.node_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -426,16 +419,16 @@ const NodeMetricsDashboard = () => {
             pvCost: node.pv_cost.toFixed(2),
             efficiency: (node.total_efficiency * 100).toFixed(2),
             uptime: calculateUptime(node.first_seen, node.last_seen),
-            // Add fields that would be used for filtering
-            pods: node.pods || [], // Assuming this comes from your API
-            deployments: node.deployments || [], // Assuming this comes from your API
-            namespaces: node.namespaces || [], // Assuming this comes from your API
+
+            pods: node.pods || [],
+            deployments: node.deployments || [],
+            namespaces: node.namespaces || [],
           };
         });
 
         setNodeData(processedNodes);
 
-        // Reset connection status and retry attempts on success
+
         setServerStatus("live");
         setConnectionStatus("connected");
         setRetryAttempts(0);
@@ -455,10 +448,9 @@ const NodeMetricsDashboard = () => {
             );
             setRetryAttempts((prev) => prev + 1);
 
-            // Retry after a delay
             setTimeout(() => {
               fetchNodeData(queryParams, true);
-            }, 2000 * (retryAttempts + 1)); // Exponential backoff
+            }, 2000 * (retryAttempts + 1));
 
             return;
           }
@@ -482,12 +474,12 @@ const NodeMetricsDashboard = () => {
     [thresholds, retryAttempts, maxRetries, searchTerm, filters]
   );
 
-  // Filter nodes based on selected filters and search term
+
   const filteredNodeData = useMemo(() => {
     if (!nodeData.length) return [];
 
     return nodeData.filter((node) => {
-      // Apply search filter
+
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         if (!node.name.toLowerCase().includes(searchLower)) {
@@ -495,16 +487,15 @@ const NodeMetricsDashboard = () => {
         }
       }
 
-      // Apply pod filter
       if (filters.pod?.length > 0) {
-        const nodePods = node.pods || []; // Assuming node has pods array
+        const nodePods = node.pods || [];
         const hasMatchingPod = nodePods.some((pod) =>
           filters.pod.includes(pod.name || pod)
         );
         if (!hasMatchingPod) return false;
       }
 
-      // Apply namespace filter
+
       if (filters.namespace?.length > 0) {
         const nodeNamespaces = node.namespaces || [];
         const hasMatchingNamespace = nodeNamespaces.some((ns) =>
@@ -513,7 +504,7 @@ const NodeMetricsDashboard = () => {
         if (!hasMatchingNamespace) return false;
       }
 
-      // Apply deployment filter
+
       if (filters.deployment?.length > 0) {
         const nodeDeployments = node.deployments || [];
         const hasMatchingDeployment = nodeDeployments.some((deployment) =>
@@ -534,7 +525,7 @@ const NodeMetricsDashboard = () => {
       await fetchNodeData(queryParams);
       setLastUpdated(new Date());
 
-      // If this was a manual refresh and server is back online, resume auto-refresh
+
       if (serverStatus === "live") {
         setIsAutoRefreshPaused(false);
         console.log("Server is back online - resuming auto-refresh");
@@ -568,16 +559,28 @@ const NodeMetricsDashboard = () => {
     refreshAllData(false);
   };
 
-  // Reset current page when filters change
   useEffect(() => {
-      window.scrollTo(0, 0);
+    const handleScroll = () => {
+      if (filterBarRef.current && stickyPlaceholderRef.current) {
+        const rect = stickyPlaceholderRef.current.getBoundingClientRect();
+        const shouldBeSticky = rect.top <= 0;
+        setIsSticky(shouldBeSticky);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
     setCurrentPage(1);
-  }, [searchTerm, filters,location.pathname]);
+  }, [searchTerm, filters, location.pathname]);
 
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
     setIsInitialLoading(true);
-
     console.log(cluster_id, "cluster_id in NodeMetrics");
     setTimeRange(rangeFromUrl);
     if (!cluster_id) {
@@ -689,7 +692,7 @@ const NodeMetricsDashboard = () => {
     }
   };
 
-  // Custom Tooltip Component
+
   const CustomTooltip = ({ active, payload, label, formatter }) => {
     if (active && payload && payload.length) {
       return (
@@ -844,14 +847,14 @@ const NodeMetricsDashboard = () => {
           : "hsl(var(--chart-cpu))",
   }));
 
-  // Pagination logic
+
   const totalItems = filteredNodeData.length;
   const totalPages = Math.ceil(totalItems / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const currentNodes = filteredNodeData.slice(startIndex, endIndex);
 
-  // Reset to first page when data changes
+
   useEffect(() => {
     setCurrentPage(1);
   }, [filteredNodeData]);
@@ -865,7 +868,7 @@ const NodeMetricsDashboard = () => {
     setCurrentPage(1);
   };
 
-  // Pagination component
+
   const Pagination = () => {
     const getPageNumbers = () => {
       const pages = [];
@@ -907,7 +910,6 @@ const NodeMetricsDashboard = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Page Size Selector */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Show:</span>
             <select
@@ -923,7 +925,7 @@ const NodeMetricsDashboard = () => {
             </select>
           </div>
 
-          {/* Page Navigation */}
+
           <div className="flex items-center gap-1">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
@@ -941,10 +943,10 @@ const NodeMetricsDashboard = () => {
                 }
                 disabled={page === "..."}
                 className={`px-3 py-1 text-sm border rounded transition-colors ${page === currentPage
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : page === "..."
-                      ? "border-transparent cursor-default"
-                      : "border-border bg-background text-foreground hover:bg-muted"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : page === "..."
+                    ? "border-transparent cursor-default"
+                    : "border-border bg-background text-foreground hover:bg-muted"
                   }`}
               >
                 {page}
@@ -964,7 +966,7 @@ const NodeMetricsDashboard = () => {
     );
   };
 
-  // Error Display Component
+
   if (
     error &&
     !isInitialLoading &&
@@ -1003,181 +1005,230 @@ const NodeMetricsDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className=" mx-auto p-4 lg:p-6">
-        {/* Enhanced Filter Bar with Network Status Indicator */}
-        <div className="bg-white rounded-xl shadow-sm mb-6">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
-            {/* Left side - Time Range */}
-            <div className="flex items-center gap-4">
-              <Days
-                selectedTimeRange={timeRange}
-                onTimeRangeChange={handleTimeRangeChange}
-                variant="select"
-                buttonOptions={["1h", "6h", "24h", "7d", "30d"]}
-              />
-            </div>
 
-            {/* Center - Search */}
-            <div className="flex-1 max-w-md">
-              <SearchInput
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                placeholder="Search nodes by name"
-              />
-            </div>
+        <div
+          ref={stickyPlaceholderRef}
+          className={`transition-all duration-300 ${isSticky ? 'h-20' : 'h-0'}`}
+        />
 
-            {/* Right side - Filters, Navigation and Refresh Controls */}
-            <div className="flex items-center gap-3">
-              {/* Advanced Filter */}
-              {/* <AdvancedFilter
-                pageType="node"
-                filterConfig={nodeFilterConfig}
-                filters={filters}
-                onFiltersChange={handleFiltersChange}
-                isLoading={loading}
-                showClearAll={true}
-              /> */}
 
-              {/* Navigation buttons */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => {
-                    navigate({
-                      pathname: "/metric/cluster",
-                      search: `?cluster_id=${selectedInstance.id}`,
-                    });
-                  }}
-                >
-                  Cluster
-                </Button>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => {
-                    navigate({
-                      pathname: "/metric/pods",
-                      search: `?cluster_id=${selectedInstance.id}`,
-                    });
-                  }}
-                >
-                  Pod
-                </Button>
+        <div
+          ref={filterBarRef}
+          className={`
+          transition-all duration-300 ease-in-out z-50 mb-6
+          ${isSticky
+              ? `fixed top-0 left-64 right-0 mx-0 px-4 md:px-6 py-4
+               bg-white/80 backdrop-blur-lg border-b border-white/20
+               shadow-lg shadow-black/5`
+              : 'relative bg-white rounded-xl shadow-sm'
+            }
+        `}
+        >
+          <div className={`
+          mx-auto w-full
+          ${isSticky ? 'max-w-none' : 'p-4 md:p-6 max-w-full'}
+        `}>
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
+
+              <div className="flex items-center gap-4">
+                <Days
+                  selectedTimeRange={timeRange}
+                  onTimeRangeChange={handleTimeRangeChange}
+                  variant="select"
+                  buttonOptions={["1h", "6h", "24h", "7d", "30d"]}
+                />
               </div>
 
-              <Refresh
-                onRefresh={refreshAllData}
-                refreshInterval={refreshInterval}
-                onRefreshIntervalChange={handleRefreshIntervalChange}
-                isRefreshing={isRefreshing}
-                lastUpdated={lastUpdated}
-              />
-            </div>
-          </div>
 
-          {/* Search and Filter Results Info */}
-          {(searchTerm || Object.values(filters).some((f) => f.length > 0)) && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="flex items-center justify-between text-sm text-gray-600">
-                <div className="flex items-center gap-4">
-                  <span>
-                    {filteredNodeData.length === 0
-                      ? "No nodes found"
-                      : filteredNodeData.length === 1
-                        ? "1 node found"
-                        : `${filteredNodeData.length} nodes found`}
-                    {(searchTerm ||
-                      Object.values(filters).some((f) => f.length > 0)) &&
-                      " with current filters"}
-                  </span>
+              <div className="flex-1 max-w-md">
+                <SearchInput
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  placeholder="Search nodes by name"
+                />
+              </div>
 
-                  {/* Show active filters */}
-                  {Object.values(filters).some((f) => f.length > 0) && (
-                    <div className="flex items-center gap-2">
-                      <span>Filters:</span>
-                      {Object.entries(filters).map(
-                        ([filterType, filterValues]) => {
-                          if (!filterValues || filterValues.length === 0)
-                            return null;
-                          return (
-                            <span
-                              key={filterType}
-                              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-                            >
-                              {filterType}: {filterValues.length}
-                            </span>
-                          );
-                        }
-                      )}
-                    </div>
-                  )}
+
+              <div className="flex items-center gap-3">
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      navigate({
+                        pathname: "/metric/cluster",
+                        search: `?cluster_id=${selectedInstance.id}`,
+                      });
+                    }}
+                    className={`
+                    transition-all duration-200
+                    ${isSticky
+                        ? 'bg-white/90 backdrop-blur-sm hover:bg-white text-blue-600 border border-blue-200 shadow-sm'
+                        : ''
+                      }
+                  `}
+                  >
+                    Cluster
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      navigate({
+                        pathname: "/metric/pods",
+                        search: `?cluster_id=${selectedInstance.id}`,
+                      });
+                    }}
+                    className={`
+                    transition-all duration-200
+                    ${isSticky
+                        ? 'bg-white/90 backdrop-blur-sm hover:bg-white text-blue-600 border border-blue-200 shadow-sm'
+                        : ''
+                      }
+                  `}
+                  >
+                    Pod
+                  </Button>
                 </div>
 
-                {(searchTerm ||
-                  Object.values(filters).some((f) => f.length > 0)) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSearchTerm("");
-                        setFilters({ pod: [], deployment: [], namespace: [] });
-                      }}
-                      className="text-blue-600 hover:text-blue-700"
-                    >
-                      Clear all
-                    </Button>
-                  )}
+                <Refresh
+                  onRefresh={refreshAllData}
+                  refreshInterval={refreshInterval}
+                  onRefreshIntervalChange={handleRefreshIntervalChange}
+                  isRefreshing={isRefreshing}
+                  lastUpdated={lastUpdated}
+                  className={`
+                  ${isSticky
+                      ? '[&>button]:bg-white/90 [&>button]:backdrop-blur-sm [&>button]:border-white/30'
+                      : ''
+                    }
+                `}
+                />
               </div>
             </div>
-          )}
+
+
+            {(searchTerm || Object.values(filters).some((f) => f.length > 0)) && (
+              <div className={`
+              transition-all duration-300
+              ${isSticky ? 'mt-4 pt-4 border-t border-white/20' : 'mt-4 pt-4 border-t border-gray-200'}
+            `}>
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <div className="flex items-center gap-4">
+                    <span>
+                      {filteredNodeData.length === 0
+                        ? "No nodes found"
+                        : filteredNodeData.length === 1
+                          ? "1 node found"
+                          : `${filteredNodeData.length} nodes found`}
+                      {(searchTerm ||
+                        Object.values(filters).some((f) => f.length > 0)) &&
+                        " with current filters"}
+                    </span>
+
+
+                    {Object.values(filters).some((f) => f.length > 0) && (
+                      <div className="flex items-center gap-2">
+                        <span>Filters:</span>
+                        {Object.entries(filters).map(
+                          ([filterType, filterValues]) => {
+                            if (!filterValues || filterValues.length === 0)
+                              return null;
+                            return (
+                              <span
+                                key={filterType}
+                                className={`
+                                inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full
+                                ${isSticky
+                                    ? 'bg-blue-200/50 text-blue-800 backdrop-blur-sm'
+                                    : 'bg-blue-100 text-blue-800'
+                                  }
+                              `}
+                              >
+                                {filterType}: {filterValues.length}
+                              </span>
+                            );
+                          }
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {(searchTerm ||
+                    Object.values(filters).some((f) => f.length > 0)) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSearchTerm("");
+                          setFilters({ pod: [], deployment: [], namespace: [] });
+                        }}
+                        className={`
+                        transition-all duration-200
+                        ${isSticky
+                            ? 'text-blue-600 hover:text-blue-700 hover:bg-white/50 backdrop-blur-sm'
+                            : 'text-blue-600 hover:text-blue-700'
+                          }
+                      `}
+                      >
+                        Clear all
+                      </Button>
+                    )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Loading Banner */}
+
         {isLoadingData && <LoadingBanner message="Loading node data..." />}
 
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-            Node Metrics Dashboard
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Monitor cluster performance and resource utilization
-          </p>
-        </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
-          <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.activeNodes}>
-            <MetricCard
-              title="Active Nodes"
-              value={filteredNodeData.length?.toString() || "0"}
-              subtitle="Filtered nodes shown"
-              icon={<Server className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
-              status="info"
-              trend={undefined}
-            />
-          </TooltipWrapper>
+        <div className={`${isSticky ? 'mt-4' : ''}`}>
 
-          <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.totalNodeCost}>
-            <MetricCard
-              title="Total Cost"
-              value={`${filteredNodeData
+          <div className="mb-6">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+              Node Metrics Dashboard
+            </h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Monitor cluster performance and resource utilization
+            </p>
+          </div>
+
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6">
+            <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.activeNodes}>
+              <MetricCard
+                title="Active Nodes"
+                value={filteredNodeData.length?.toString() || "0"}
+                subtitle="Filtered nodes shown"
+                icon={<Server className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
+                status="info"
+                trend={undefined}
+              />
+            </TooltipWrapper>
+
+            <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.totalNodeCost}>
+              <MetricCard
+                title="Total Cost"
+                value={`${filteredNodeData
                   .reduce((sum, node) => sum + parseFloat(node.totalCost), 0)
                   .toFixed(2) || "0.00"
-                }`}
-              subtitle={`Last ${timeRange}`}
-              icon={
-                <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
-              }
-              status="info"
-              trend={undefined}
-            />
-          </TooltipWrapper>
+                  }`}
+                subtitle={`Last ${timeRange}`}
+                icon={
+                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600" />
+                }
+                status="info"
+                trend={undefined}
+              />
+            </TooltipWrapper>
 
-          <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgCpuUsage}>
-            <MetricCard
-              title="Avg CPU Usage"
-              value={`${filteredNodeData.length > 0
+            <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgCpuUsage}>
+              <MetricCard
+                title="Avg CPU Usage"
+                value={`${filteredNodeData.length > 0
                   ? (
                     filteredNodeData.reduce(
                       (sum, node) => sum + parseFloat(node.cpuUsage),
@@ -1185,28 +1236,28 @@ const NodeMetricsDashboard = () => {
                     ) / filteredNodeData.length
                   ).toFixed(1)
                   : "0.0"
-                }%`}
-              subtitle="Across filtered nodes"
-              icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />}
-              status={
-                filteredNodeData.length > 0 &&
-                  filteredNodeData.reduce(
-                    (sum, node) => sum + parseFloat(node.cpuUsage),
-                    0
-                  ) /
-                  filteredNodeData.length >
-                  thresholds.cpuUsageWarning
-                  ? "warning"
-                  : "healthy"
-              }
-              trend={undefined}
-            />
-          </TooltipWrapper>
+                  }%`}
+                subtitle="Across filtered nodes"
+                icon={<Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />}
+                status={
+                  filteredNodeData.length > 0 &&
+                    filteredNodeData.reduce(
+                      (sum, node) => sum + parseFloat(node.cpuUsage),
+                      0
+                    ) /
+                    filteredNodeData.length >
+                    thresholds.cpuUsageWarning
+                    ? "warning"
+                    : "healthy"
+                }
+                trend={undefined}
+              />
+            </TooltipWrapper>
 
-          <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgEfficiency}>
-            <MetricCard
-              title="Avg Efficiency"
-              value={`${filteredNodeData.length > 0
+            <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.avgEfficiency}>
+              <MetricCard
+                title="Avg Efficiency"
+                value={`${filteredNodeData.length > 0
                   ? (
                     filteredNodeData.reduce(
                       (sum, node) => sum + parseFloat(node.efficiency),
@@ -1214,88 +1265,159 @@ const NodeMetricsDashboard = () => {
                     ) / filteredNodeData.length
                   ).toFixed(1)
                   : "0.0"
-                }%`}
-              subtitle="Resource utilization"
-              icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
-              status={
-                filteredNodeData.length > 0 &&
-                  filteredNodeData.reduce(
-                    (sum, node) => sum + parseFloat(node.efficiency),
-                    0
-                  ) /
-                  filteredNodeData.length <
-                  thresholds.efficiencyWarning
-                  ? "warning"
-                  : "healthy"
-              }
-              trend={undefined}
-            />
-          </TooltipWrapper>
-        </div>
+                  }%`}
+                subtitle="Resource utilization"
+                icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />}
+                status={
+                  filteredNodeData.length > 0 &&
+                    filteredNodeData.reduce(
+                      (sum, node) => sum + parseFloat(node.efficiency),
+                      0
+                    ) /
+                    filteredNodeData.length <
+                    thresholds.efficiencyWarning
+                    ? "warning"
+                    : "healthy"
+                }
+                trend={undefined}
+              />
+            </TooltipWrapper>
+          </div>
 
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-          {/* Status Distribution */}
-          <Card className="h-fit">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <div className="p-1.5 rounded bg-primary/10">
-                  <Activity className="w-4 h-4 text-primary" />
+
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
+
+            <Card className="h-fit">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <div className="p-1.5 rounded bg-primary/10">
+                    <Activity className="w-4 h-4 text-primary" />
+                  </div>
+                  Node Status Distribution
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="h-[250px] sm:h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                        label={({ name, value, percent }) =>
+                          `${name}: ${value} (${(percent * 100).toFixed(0)}%)`
+                        }
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={
+                          <CustomTooltip
+                            formatter={(value) => [`${value} nodes`]}
+                            active={undefined}
+                            payload={undefined}
+                            label={undefined}
+                          />
+                        }
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-                Node Status Distribution
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="h-[250px] sm:h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                      label={({ name, value, percent }) =>
-                        `${name}: ${value} (${(percent * 100).toFixed(0)}%)`
-                      }
+              </CardContent>
+            </Card>
+
+
+            <Card className="h-fit">
+              <CardHeader className="pb-4">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <div className="p-1.5 rounded bg-emerald-100 dark:bg-emerald-900/30">
+                    <DollarSign className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  Cost Breakdown by Node
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="h-[250px] sm:h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={costBreakdownData}
+                      margin={{ top: 20, right: 20, bottom: 5, left: 5 }}
                     >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      content={
-                        <CustomTooltip
-                          formatter={(value) => [`${value} nodes`]}
-                          active={undefined}
-                          payload={undefined}
-                          label={undefined}
-                        />
-                      }
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Cost Breakdown */}
-          <Card className="h-fit">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <div className="p-1.5 rounded bg-emerald-100 dark:bg-emerald-900/30">
-                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="hsl(var(--border))"
+                        opacity={0.3}
+                      />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 12 }}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12 }}
+                        stroke="hsl(var(--muted-foreground))"
+                      />
+                      <Tooltip
+                        content={
+                          <CustomTooltip
+                            formatter={(value) => [`${value.toFixed(2)}`]}
+                            active={undefined}
+                            payload={undefined}
+                            label={undefined}
+                          />
+                        }
+                      />
+                      <Bar
+                        dataKey="cpu"
+                        stackId="cost"
+                        fill="hsl(var(--chart-cpu))"
+                        name="CPU"
+                        radius={[0, 0, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="ram"
+                        stackId="cost"
+                        fill="hsl(var(--chart-ram))"
+                        name="RAM"
+                        radius={[0, 0, 0, 0]}
+                      />
+                      <Bar
+                        dataKey="storage"
+                        stackId="cost"
+                        fill="hsl(var(--chart-storage))"
+                        name="Storage"
+                        radius={[2, 2, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-                Cost Breakdown by Node
+              </CardContent>
+            </Card>
+          </div>
+
+
+          <Card className="mb-6">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-base sm:text-lg">
+                  <div className="p-1.5 rounded bg-blue-100 dark:bg-blue-900/30">
+                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                  </div>
+                  Resource Utilization Trends
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
-              <div className="h-[250px] sm:h-[300px]">
+              <div className="h-[250px] sm:h-[350px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={costBreakdownData}
+                  <LineChart
+                    data={utilizationData}
                     margin={{ top: 20, right: 20, bottom: 5, left: 5 }}
                   >
                     <CartesianGrid
@@ -1315,254 +1437,184 @@ const NodeMetricsDashboard = () => {
                     <Tooltip
                       content={
                         <CustomTooltip
-                          formatter={(value) => [`${value.toFixed(2)}`]}
+                          formatter={(value) => [`${value}%`]}
                           active={undefined}
                           payload={undefined}
                           label={undefined}
                         />
                       }
                     />
-                    <Bar
-                      dataKey="cpu"
-                      stackId="cost"
-                      fill="hsl(var(--chart-cpu))"
-                      name="CPU"
-                      radius={[0, 0, 0, 0]}
+                    <Line
+                      type="monotone"
+                      dataKey="cpuUsage"
+                      stroke="hsl(var(--chart-cpu-line))"
+                      strokeWidth={3}
+                      name="CPU Usage"
+                      dot={{
+                        fill: "hsl(var(--chart-cpu-line))",
+                        strokeWidth: 2,
+                        r: 4,
+                      }}
+                      activeDot={{
+                        r: 6,
+                        stroke: "hsl(var(--chart-cpu-line))",
+                        strokeWidth: 2,
+                      }}
                     />
-                    <Bar
-                      dataKey="ram"
-                      stackId="cost"
-                      fill="hsl(var(--chart-ram))"
-                      name="RAM"
-                      radius={[0, 0, 0, 0]}
+                    <Line
+                      type="monotone"
+                      dataKey="ramUsage"
+                      stroke="hsl(var(--chart-ram))"
+                      strokeWidth={3}
+                      name="RAM Usage"
+                      dot={{
+                        fill: "hsl(var(--chart-ram))",
+                        strokeWidth: 2,
+                        r: 4,
+                      }}
+                      activeDot={{
+                        r: 6,
+                        stroke: "hsl(var(--chart-ram))",
+                        strokeWidth: 2,
+                      }}
                     />
-                    <Bar
-                      dataKey="storage"
-                      stackId="cost"
-                      fill="hsl(var(--chart-storage))"
-                      name="Storage"
-                      radius={[2, 2, 0, 0]}
+                    <Line
+                      type="monotone"
+                      dataKey="efficiency"
+                      stroke="hsl(var(--chart-storage))"
+                      strokeWidth={3}
+                      name="Efficiency"
+                      dot={{
+                        fill: "hsl(var(--chart-storage))",
+                        strokeWidth: 2,
+                        r: 4,
+                      }}
+                      activeDot={{
+                        r: 6,
+                        stroke: "hsl(var(--chart-storage))",
+                        strokeWidth: 2,
+                      }}
                     />
-                  </BarChart>
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Resource Utilization Chart */}
-        <Card className="mb-6">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-base sm:text-lg">
-                <div className="p-1.5 rounded bg-blue-100 dark:bg-blue-900/30">
-                  <TrendingUp className="w-4 h-4 text-blue-600" />
+
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-base sm:text-lg">
+                  <div className="p-1.5 rounded bg-purple-100 dark:bg-purple-900/30">
+                    <Server className="w-4 h-4 text-purple-600" />
+                  </div>
+                  Node Details
                 </div>
-                Resource Utilization Trends
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="h-[250px] sm:h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={utilizationData}
-                  margin={{ top: 20, right: 20, bottom: 5, left: 5 }}
+                <div className="text-sm text-muted-foreground">
+                  {totalItems} nodes total
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="hidden lg:block overflow-x-auto">
+                <table
+                  className={`w-full ${serverStatus === "down" ? "opacity-75" : ""
+                    }`}
                 >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="hsl(var(--border))"
-                    opacity={0.3}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 12 }}
-                    stroke="hsl(var(--muted-foreground))"
-                  />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    stroke="hsl(var(--muted-foreground))"
-                  />
-                  <Tooltip
-                    content={
-                      <CustomTooltip
-                        formatter={(value) => [`${value}%`]}
-                        active={undefined}
-                        payload={undefined}
-                        label={undefined}
-                      />
-                    }
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="cpuUsage"
-                    stroke="hsl(var(--chart-cpu-line))"
-                    strokeWidth={3}
-                    name="CPU Usage"
-                    dot={{
-                      fill: "hsl(var(--chart-cpu-line))",
-                      strokeWidth: 2,
-                      r: 4,
-                    }}
-                    activeDot={{
-                      r: 6,
-                      stroke: "hsl(var(--chart-cpu-line))",
-                      strokeWidth: 2,
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="ramUsage"
-                    stroke="hsl(var(--chart-ram))"
-                    strokeWidth={3}
-                    name="RAM Usage"
-                    dot={{
-                      fill: "hsl(var(--chart-ram))",
-                      strokeWidth: 2,
-                      r: 4,
-                    }}
-                    activeDot={{
-                      r: 6,
-                      stroke: "hsl(var(--chart-ram))",
-                      strokeWidth: 2,
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="efficiency"
-                    stroke="hsl(var(--chart-storage))"
-                    strokeWidth={3}
-                    name="Efficiency"
-                    dot={{
-                      fill: "hsl(var(--chart-storage))",
-                      strokeWidth: 2,
-                      r: 4,
-                    }}
-                    activeDot={{
-                      r: 6,
-                      stroke: "hsl(var(--chart-storage))",
-                      strokeWidth: 2,
-                    }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+                  <thead>
+                    <tr
+                      className="border-b"
+                      style={{ color: "hsl(var(--primary))" }}
+                    >
+                      <th className="text-left p-4 font-medium">Node</th>
+                      <th className="text-left p-4 font-medium">
+                        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeStatus}>
+                          Status
+                        </TooltipWrapper>
+                      </th>
+                      <th className="text-left p-4 font-medium">
+                        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCpu}>
+                          CPU
+                        </TooltipWrapper>
+                      </th>
+                      <th className="text-left p-4 font-medium">
+                        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeMemory}>
+                          Memory
+                        </TooltipWrapper>
+                      </th>
+                      <th className="text-left p-4 font-medium">
+                        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCost}>
+                          Cost
+                        </TooltipWrapper>
+                      </th>
+                      <th className="text-left p-4 font-medium">
+                        <TooltipWrapper
+                          tooltip={NODE_METRIC_TOOLTIPS.nodeEfficiencyUsage}
+                        >
+                          Efficiency
+                        </TooltipWrapper>
+                      </th>
+                      <th className="text-left p-4 font-medium">
+                        <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeUptime}>
+                          Uptime
+                        </TooltipWrapper>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentNodes.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="p-16 text-center">
+                          <div className="flex flex-col items-center gap-3 text-gray-500">
+                            <Server className="w-12 h-12 text-gray-300" />
+                            <div>
+                              <h3 className="font-medium text-gray-900 mb-1">No node details found</h3>
+                              <p className="text-sm text-gray-500">No data available</p>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      currentNodes.map((node, index) => (
+                        <tr
+                          key={startIndex + index}
+                          className="border-b transition-colors"
+                        >
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="p-2 rounded-lg"
+                                style={{ background: "hsl(var(--primary) / 0.1)" }}
+                              >
+                                <Server
+                                  className="w-4 h-4"
+                                  style={{ color: "hsl(var(--primary))" }}
+                                />
+                              </div>
+                              <span className="font-medium">{node.name}</span>
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <StatusBadge status={node.status} />
+                          </td>
+                          <td className="p-4">{node.cpuUsage}%</td>
+                          <td className="p-4">{node.ramUtilization}%</td>
+                          <td className="p-4">${node.totalCost}</td>
+                          <td className="p-4">{node.efficiency}%</td>
+                          <td className="p-4">{node.uptime}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-        {/* Node Details Table */}
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-base sm:text-lg">
-                <div className="p-1.5 rounded bg-purple-100 dark:bg-purple-900/30">
-                  <Server className="w-4 h-4 text-purple-600" />
-                </div>
-                Node Details
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {totalItems} nodes total
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="hidden lg:block overflow-x-auto">
-              <table
-                className={`w-full ${serverStatus === "down" ? "opacity-75" : ""
-                  }`}
-              >
-                <thead>
-                  <tr
-                    className="border-b"
-                    style={{ color: "hsl(var(--primary))" }}
-                  >
-                    <th className="text-left p-4 font-medium">Node</th>
-                    <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeStatus}>
-                        Status
-                      </TooltipWrapper>
-                    </th>
-                    <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCpu}>
-                        CPU
-                      </TooltipWrapper>
-                    </th>
-                    <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeMemory}>
-                        Memory
-                      </TooltipWrapper>
-                    </th>
-                    <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeCost}>
-                        Cost
-                      </TooltipWrapper>
-                    </th>
-                    <th className="text-left p-4 font-medium">
-                      <TooltipWrapper
-                        tooltip={NODE_METRIC_TOOLTIPS.nodeEfficiencyUsage}
-                      >
-                        Efficiency
-                      </TooltipWrapper>
-                    </th>
-                    <th className="text-left p-4 font-medium">
-                      <TooltipWrapper tooltip={NODE_METRIC_TOOLTIPS.nodeUptime}>
-                        Uptime
-                      </TooltipWrapper>
-                    </th>
-                  </tr>
-                </thead>
-<tbody>
-  {currentNodes.length === 0 ? (
-    <tr>
-      <td colSpan={7} className="p-16 text-center">
-        <div className="flex flex-col items-center gap-3 text-gray-500">
-          <Server className="w-12 h-12 text-gray-300" />
-          <div>
-            <h3 className="font-medium text-gray-900 mb-1">No node details found</h3>
-            <p className="text-sm text-gray-500">No data available</p>
-          </div>
+
+              <Pagination />
+            </CardContent>
+          </Card>
         </div>
-      </td>
-    </tr>
-  ) : (
-    currentNodes.map((node, index) => (
-      <tr
-        key={startIndex + index}
-        className="border-b transition-colors"
-      >
-        <td className="p-4">
-          <div className="flex items-center gap-3">
-            <div
-              className="p-2 rounded-lg"
-              style={{ background: "hsl(var(--primary) / 0.1)" }}
-            >
-              <Server
-                className="w-4 h-4"
-                style={{ color: "hsl(var(--primary))" }}
-              />
-            </div>
-            <span className="font-medium">{node.name}</span>
-          </div>
-        </td>
-        <td className="p-4">
-          <StatusBadge status={node.status} />
-        </td>
-        <td className="p-4">{node.cpuUsage}%</td>
-        <td className="p-4">{node.ramUtilization}%</td>
-        <td className="p-4">${node.totalCost}</td>
-        <td className="p-4">{node.efficiency}%</td>
-        <td className="p-4">{node.uptime}</td>
-      </tr>
-    ))
-  )}
-</tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <Pagination />
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
