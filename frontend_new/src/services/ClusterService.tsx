@@ -3,6 +3,7 @@ import axios, { AxiosInstance, AxiosResponse } from "axios";
 
 // Use the correct env var and avoid throwing to keep UI rendering even if backend is missing
 const baseURL = (import.meta as any).env?.VITE_API_BASE_URL || "";
+const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL || '';
 if (!baseURL) {
   // Log a warning instead of throwing to allow app to load header/sidebar
   // Backend-related calls will fail gracefully and be handled by callers
@@ -456,9 +457,9 @@ class ClusterService {
    */
   async getJobLogsSince(jobId: string, sinceSeconds: number = 10): Promise<any> {
     try {
-      console.log('Fetching recent job logs for deployment:', `${this.api.defaults.baseURL}/kubernetes/jobs/${jobId}/logs/since?since_seconds=${sinceSeconds}`);
+      console.log('Fetching recent job logs for deployment:', `${API_BASE_URL}/kubernetes/jobs/${jobId}/logs/since?since_seconds=${sinceSeconds}`);
 
-      const response = await this.api.get(`/kubernetes/jobs/${jobId}/logs/since`, {
+      const response = await this.api.get(`${API_BASE_URL}/kubernetes/jobs/${jobId}/logs/since`, {
         params: { since_seconds: sinceSeconds },
         headers: {
           "Content-Type": "application/json",
@@ -484,9 +485,9 @@ class ClusterService {
    */
   async getJobLogs(jobId: string): Promise<any> {
     try {
-      console.log('Fetching job logs for deployment:', `${this.api.defaults.baseURL}/kubernetes/jobs/${jobId}/logs`);
+      console.log('Fetching job logs for deployment:', `${API_BASE_URL}/kubernetes/jobs/${jobId}/logs`);
 
-      const response = await this.api.get(`/kubernetes/jobs/${jobId}/logs`);
+      const response = await this.api.get(`${API_BASE_URL}/kubernetes/jobs/${jobId}/logs`);
 
       if (response.status !== 200) {
         console.error('Job Logs API Error:', response.data);

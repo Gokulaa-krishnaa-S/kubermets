@@ -1126,7 +1126,7 @@ export default function ClusterMetrics() {
                           <Terminal className="w-4 h-4" />
                           View Logs
                         </button>
-                        <button
+                        {/* <button
                           onClick={() => {
                             setSelectedCluster(cluster.name);
                             setShowClusterModal(true);
@@ -1135,7 +1135,7 @@ export default function ClusterMetrics() {
                         >
                           <Eye className="w-4 h-4" />
                           Details
-                        </button>
+                        </button> */}
                       </div>
                     </div>
                   ) : (
@@ -1287,7 +1287,7 @@ export default function ClusterMetrics() {
                               <Terminal className="w-4 h-4" />
                               View Logs
                             </button>
-                            <button
+                            {/* <button
                               onClick={() => {
                                 setSelectedCluster(cluster.name);
                                 setShowClusterModal(true);
@@ -1296,7 +1296,7 @@ export default function ClusterMetrics() {
                             >
                               <Eye className="w-4 h-4" />
                               Details
-                            </button>
+                            </button> */}
                           </div>
                         </div>
                       </div>
