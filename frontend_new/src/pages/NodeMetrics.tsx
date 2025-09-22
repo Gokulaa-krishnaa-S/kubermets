@@ -573,10 +573,20 @@ const NodeMetricsDashboard = () => {
   }, []);
 
 
-  useEffect(() => {
+useEffect(() => {
+  if (isSticky && (searchTerm || Object.values(filters).some(f => f.length > 0))) {
+    // Scroll to the sticky filter bar instead of the very top
+    filterBarRef.current?.scrollIntoView({ 
+      behavior: 'smooth', 
+      block: 'start' 
+    });
+  } else if (!isSticky) {
+    // Only scroll to top when not sticky
     window.scrollTo(0, 0);
-    setCurrentPage(1);
-  }, [searchTerm, filters, location.pathname]);
+  }
+  
+  setCurrentPage(1);
+}, [searchTerm, filters, location.pathname, isSticky]);
 
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
