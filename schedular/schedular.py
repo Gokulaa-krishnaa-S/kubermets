@@ -67,6 +67,7 @@ USER_ID = (os.getenv("USER_ID", "1"))
 USERNAME = (os.getenv("USERNAME", "admin"))
 PASSWORD = (os.getenv("PASSWORD", "Admin@12#$"))                  
 KUBECOST_API_URL = (os.getenv("KUBECOST_API_URL", "")) 
+MAX_BACKFILL_WINDOWS_END = int(os.getenv("MAX_BACKFILL_WINDOWS_END", "7"))
 # API_PORT = int(os.getenv("API_PORT", "8080"))
 # API_HOST = os.getenv("API_HOST", "0.0.0.0")                 
 
@@ -128,6 +129,7 @@ def fetch_multi_aggregation_data(
         "costUnit": "cumulative",
         "external": "false",
         "filter": f'(cluster:"{cluster_name}")+controllerKind:"deployment"',
+        # "filter": f'cluster:"{cluster_name}"',  # Remove deployment restriction to get all resources
         "idle": "true",
         "idleByNode": "false",
         "includeSharedCostBreakdown": "true",
@@ -159,7 +161,11 @@ def fetch_multi_aggregation_data(
         r.raise_for_status()
         return r.json()
     except Exception as e:
-        log.error("Multi-aggregation fetch failed: %s", e)
+        log.error("Multi-aggregation fetch failed for cluster %s: %s", cluster_name, e)
+        log.debug("Request parameters: %s", params)
+        if r := locals().get('r'):
+            log.debug("Response status: %s", r.status_code)
+            log.debug("Response content: %s", r.text[:500] if hasattr(r, 'text') else 'No response text')
         return {}
 
 def build_mapping_tables(
@@ -174,6 +180,9 @@ def build_mapping_tables(
     """
     node_mapping = {}
     pod_mapping = {}
+    
+    log.debug("Building mapping tables from data: %s", 
+              str(multi_agg_data.get("data", {}))[:500] if multi_agg_data else "No data")
 
     try:
         for allocation_set in multi_agg_data.get("data", {}).get("sets", []):
@@ -188,6 +197,9 @@ def build_mapping_tables(
                 cluster, node, pod, namespace, controller = helper.parse_allocation_key(
                     allocation_key
                 )
+                
+                log.debug("Parsed allocation: cluster=%s node=%s pod=%s ns=%s controller=%s",
+                         cluster, node, pod, namespace, controller)
 
                 if node and node not in node_mapping:
                     node_mapping[node] = {
@@ -195,6 +207,7 @@ def build_mapping_tables(
                         "deployment": controller,
                         "cluster": cluster,
                     }
+                    log.debug("Added node mapping for %s: %s", node, node_mapping[node])
 
                 if pod and pod not in pod_mapping:
                     pod_mapping[pod] = {
@@ -310,25 +323,33 @@ def get_missing_hourly_windows(cluster_id: int, after_timestamp: datetime) -> Li
     start_from = after_timestamp
     log.info("Starting from timestamp: %s", start_from.isoformat())
     
-    if latest_hourly:
-        if latest_hourly > after_timestamp:
-            log.info("Using more recent hourly timestamp: %s instead of %s", 
-                    latest_hourly.isoformat(), after_timestamp.isoformat())
-            start_from = latest_hourly
-        
-        # Calculate time difference to current hour
-        time_diff = current_hour - latest_hourly
-        hours_behind = time_diff.total_seconds() / 3600
-        log.info("Hours behind current time: %.2f", hours_behind)
-    
     # Ensure timezone-aware comparison
     if start_from.tzinfo is None:
         start_from = start_from.replace(tzinfo=timezone.utc)
     
-    # Start from the next hour after the start timestamp
-    current_start = start_from.replace(minute=0, second=0, microsecond=0)
-    # if current_start <= start_from:  # If we're at the start of an hour, move to next hour
-    #     current_start += timedelta(hours=1)
+    if latest_hourly:
+        # Calculate gaps from both timestamps
+        time_diff_latest = current_hour - latest_hourly
+        time_diff_start = current_hour - start_from
+        hours_behind_latest = time_diff_latest.total_seconds() / 3600
+        hours_behind_start = time_diff_start.total_seconds() / 3600
+        
+        log.info("Hours behind from latest hourly: %.2f", hours_behind_latest)
+        log.info("Hours behind from start: %.2f", hours_behind_start)
+        
+        # Use the earlier timestamp to ensure we don't miss any data
+        if start_from < latest_hourly:
+            log.info("Using earlier timestamp: %s", start_from.isoformat())
+        else:
+            log.info("Using latest hourly timestamp: %s", latest_hourly.isoformat())
+            start_from = latest_hourly
+    
+    # Round down the start timestamp to the nearest hour
+    current_start = latest_hourly.replace(minute=0, second=0, microsecond=0) if latest_hourly else start_from.replace(minute=0, second=0, microsecond=0)
+    
+    # If the rounded time is after our start time, go back one hour to ensure we don't miss any data
+    if current_start > start_from:
+        current_start = current_start - timedelta(hours=1)
     
     log.info("Starting hourly window collection from: %s to %s", 
              current_start.isoformat(), current_hour.isoformat())
@@ -368,7 +389,9 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
     if latest_timestamp is None:
         # First run - collect up to MAX_BACKFILL_WINDOWS windows (default = 7)
         log.info("No previous data - collecting initial daily windows")
-        end_time = now
+        end_time = now - timedelta(days=MAX_BACKFILL_WINDOWS_END)
+        log.info("End time", end_time)
+
         for i in range(MAX_BACKFILL_WINDOWS, 0, -1):
             start_time = end_time - timedelta(hours=COLLECTION_WINDOW_HOURS)
             windows.append((start_time, end_time))
@@ -381,7 +404,7 @@ def get_missing_windows(cluster_id: int) -> List[tuple[datetime, datetime]]:
             latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
 
         current_start = latest_timestamp
-        while current_start < now:
+        while current_start < now - timedelta(days=MAX_BACKFILL_WINDOWS_END):
             current_end = current_start + timedelta(hours=COLLECTION_WINDOW_HOURS)
             if current_end > now:
                 break
@@ -895,20 +918,25 @@ def collect_cluster_data(cluster_cfg: Dict) -> None:
         # or from the latest timestamp if no daily windows were needed
         log.info("\n=== Starting Hourly Window Collection ===")
         
-        # Get the most recent timestamp between:
-        # 1. Last successful daily window end time
-        # 2. Latest hourly timestamp from DB
-        # 3. Latest general timestamp if others aren't available
-        latest_ts = latest_successful_time
-        if not latest_ts:
-            latest_hourly = get_latest_hourly_timestamp(cluster_id)
-            latest_ts = latest_hourly or get_latest_hourly_timestamp(cluster_id)
+        # Calculate where hourly windows should start
+        # This should be where daily windows ended (now - MAX_BACKFILL_WINDOWS_END days)
+        now = datetime.now(timezone.utc)
+        hourly_start = now - timedelta(days=MAX_BACKFILL_WINDOWS_END)
+        
+        # If we have more recent data (from successful daily collection or existing hourly data),
+        # use that instead to avoid gaps
+        if latest_successful_time and latest_successful_time > hourly_start:
+            hourly_start = latest_successful_time
+            
+        latest_hourly = get_latest_hourly_timestamp(cluster_id)
+        if latest_hourly and latest_hourly > hourly_start:
+            hourly_start = latest_hourly
         
         log.info("Starting hourly collection from timestamp: %s", 
-                latest_ts.isoformat() if latest_ts else "None")
+                hourly_start.isoformat())
         
-        if latest_ts:
-            hourly_windows = get_missing_hourly_windows(cluster_id, latest_ts)
+        if hourly_start:
+            hourly_windows = get_missing_hourly_windows(cluster_id, hourly_start)
             
             if hourly_windows:
                 log.info(
