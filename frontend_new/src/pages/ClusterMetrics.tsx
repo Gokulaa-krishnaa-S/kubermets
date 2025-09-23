@@ -75,7 +75,6 @@ const METRIC_TOOLTIPS = {
   clusterHealth:
     "Proportion of healthy (Running) clusters compared to total clusters",
 
-
   cpuEfficiency: "CPU efficiency for this cluster (actual usage vs requested)",
   memoryEfficiency: "Memory efficiency for this cluster (actual usage vs requested)",
   overallEfficiency: "Overall resource efficiency for this cluster",
@@ -129,7 +128,6 @@ export default function ClusterMetrics() {
   console.log(user_id, "user_id------------------");
   const [clusterStats, setClusterStats] = useState([]);
 
-
   const [cluster, setCluster] = useState(null);
 
   const [chartData, setChartData] = useState({
@@ -148,7 +146,6 @@ export default function ClusterMetrics() {
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "disconnected"
@@ -157,12 +154,9 @@ export default function ClusterMetrics() {
   const [maxRetries, setMaxRetries] = useState(3);
   const [error, setError] = useState<string | null>(null);
 
-
   const [isLoadingData, setIsLoadingData] = useState(false);
 
-
   const bytesToGB = (bytes) => (bytes / 1024 ** 3).toFixed(2);
-
 
   const isConnectionError = (error) => {
     if (!error) return false;
@@ -201,7 +195,6 @@ export default function ClusterMetrics() {
     }
   };
 
-
   type ClusterAllocation = {
     cpuCoreUsageAverage: number;
     cpuCoreRequestAverage: number;
@@ -216,7 +209,6 @@ export default function ClusterMetrics() {
     pvCost?: number;
     [key: string]: any;
   };
-
 
   const handleCallClusterData = useCallback(
     async (queryParams, isRetry = false) => {
@@ -241,14 +233,12 @@ export default function ClusterMetrics() {
         const allocations = res?.data || [];
         console.log(allocations, "------");
 
-
         const idleEntry =
           allocations.find((a) => a.cluster_name === "__idle__") || {};
         const activeClusters = allocations.filter(
           (a) =>
             a.cluster_name !== "__idle__" && a.cluster_name !== "cluster-total"
         );
-
 
         const totalEntry = activeClusters.concat(idleEntry).reduce(
           (acc, cur) => {
@@ -268,9 +258,7 @@ export default function ClusterMetrics() {
           }
         );
 
-
         const activeCluster = activeClusters[0];
-
 
         if (activeCluster) {
           const clusterData = {
@@ -295,7 +283,6 @@ export default function ClusterMetrics() {
             rawData: activeCluster,
           };
 
-
           setCluster(clusterData);
         } else {
           setCluster(null);
@@ -304,7 +291,6 @@ export default function ClusterMetrics() {
         const totalCost = activeClusters.reduce((sum, cluster) => {
           return sum + (cluster.total_cost || 0);
         }, 0);
-
 
         setClusterStats([
           {
@@ -400,14 +386,12 @@ export default function ClusterMetrics() {
         console.log(res, "2------------------");
         console.log(res.data, "condition 1------------------");
 
-
         if (res?.data?.api_failed === true) {
           console.log("came to condition 1");
           setServerStatus("down");
           setConnectionStatus("disconnected");
           setIsAutoRefreshPaused(true);
           console.warn("API reported failure:", res.data);
-
 
           if (res?.data?.data?.sets?.[0]?.allocations) {
 
@@ -424,7 +408,6 @@ export default function ClusterMetrics() {
 
         const allocations = res?.data?.data?.sets?.[0]?.allocations || {};
 
-
         const cpuChartData = Object.entries(allocations)
           .filter(([name]) => name !== "__idle__")
           .map(([name, cluster]) => ({
@@ -440,7 +423,6 @@ export default function ClusterMetrics() {
             ),
           }));
 
-
         const memoryChartData = Object.entries(allocations)
           .filter(([name]) => name !== "__idle__")
           .map(([name, cluster]) => {
@@ -451,7 +433,6 @@ export default function ClusterMetrics() {
               requested: parseFloat(bytesToGB(c.ramByteRequestAverage || 0)),
             };
           });
-
 
         const totalClusterCost: any = Object.values(allocations).reduce(
           (sum: number, item: unknown) =>
@@ -512,7 +493,6 @@ export default function ClusterMetrics() {
     [retryAttempts, maxRetries]
   );
 
-
   const fetchAllData = useCallback(
     async (
       window: string,
@@ -559,13 +539,11 @@ export default function ClusterMetrics() {
     ]
   );
 
-
   const handleRetry = () => {
     setRetryAttempts(0);
     setError(null);
     refreshAllData(false);
   };
-
 
   const handleTimeRangeChange = useCallback(
     (range: string) => {
@@ -577,14 +555,45 @@ export default function ClusterMetrics() {
     [cluster_id, fetchAllData, setSearchParams]
   );
 
+const refreshAllData = async (showToast = true) => {
+  setIsRefreshing(true);
+  try {
+    // Call your existing data fetch
+    await fetchAllData(timeRange, cluster_id, showToast ?? true, true);
+    setLastUpdated(new Date());
 
-  const refreshAllData = useCallback(
-    (showToast?: boolean) => {
-      console.log("Manual refresh triggered");
-      return fetchAllData(timeRange, cluster_id, showToast ?? true, true);
-    },
-    [fetchAllData, timeRange, cluster_id]
-  );
+    // Check server status for auto-refresh
+    if (serverStatus === "live") {
+      setIsAutoRefreshPaused(false);
+      console.log("Server is back online - resuming auto-refresh");
+    }
+
+    // Success toast only if allowed and server is live
+    if (showToast && serverStatus === "live") {
+      toast({
+        title: "Data Refreshed",
+        description: "Cluster metrics have been updated successfully.",
+        variant: "default",
+      });
+    }
+  } catch (error) {
+    console.error("Error refreshing data:", error);
+
+    if (showToast) {
+      toast({
+        title: "Refresh Failed",
+        description:
+          "Failed to update cluster metrics. Auto-refresh paused until manual retry.",
+        variant: "destructive",
+      });
+    }
+
+    // Pause auto-refresh on failure
+    setIsAutoRefreshPaused(true);
+  } finally {
+    setIsRefreshing(false);
+  }
+};
 
   const handleRefreshIntervalChange = useCallback((interval: number) => {
     setRefreshInterval(interval);
@@ -593,7 +602,6 @@ export default function ClusterMetrics() {
   const handleFilterClick = useCallback(() => {
     console.log("Filter button clicked");
   }, []);
-
 
   const callInsertClusterAPI = useCallback(async (clusterId) => {
     try {
@@ -772,7 +780,6 @@ export default function ClusterMetrics() {
     }
   }, []);
 
-
   const checkClusterExists = useCallback(async (clusterId) => {
     try {
       const backendApiBaseUrl =
@@ -802,37 +809,56 @@ export default function ClusterMetrics() {
     }
   }, []);
 
+  // FIXED: Optimized scroll handler with throttling and proper cleanup
+  // useEffect(() => {
+  //   let ticking = false;
+  //   let lastStickyState = isSticky;
 
-  useEffect(() => {
-    const handleScroll = () => {
-      if (filterBarRef.current && stickyPlaceholderRef.current) {
-        const rect = stickyPlaceholderRef.current.getBoundingClientRect();
-        const shouldBeSticky = rect.top <= 0;
-        setIsSticky(shouldBeSticky);
-      }
-    };
+  //   const handleScroll = () => {
+  //     if (!ticking) {
+  //       requestAnimationFrame(() => {
+  //         if (filterBarRef.current && stickyPlaceholderRef.current) {
+  //           const rect = stickyPlaceholderRef.current.getBoundingClientRect();
+  //           const shouldBeSticky = rect.top <= 0;
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  //           // Only update state if it actually changed and avoid rapid state changes
+  //           if (shouldBeSticky !== lastStickyState) {
+  //             lastStickyState = shouldBeSticky;
+  //             setIsSticky(shouldBeSticky);
+  //           }
+  //         }
+  //         ticking = false;
+  //       });
+  //       ticking = true;
+  //     }
+  //   };
+
+  //   // Add event listener only once
+  //   window.addEventListener('scroll', handleScroll, { passive: true });
+
+  //   // Initial check after a brief delay to ensure DOM is ready
+  //   setTimeout(handleScroll, 0);
+
+  //   // Cleanup function
+  //   return () => {
+  //     window.removeEventListener('scroll', handleScroll);
+  //   };
+  // }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     console.log("Initial useEffect - loading data on component mount");
     if (!userId) return;
 
-
     const rangeFromUrl = searchParams.get("window") || "24h";
     const creationType = searchParams.get("creation_type");
     const clusterIdFromUrl = searchParams.get("cluster_id");
-
 
     const effectiveClusterId = clusterIdFromUrl || cluster_id;
 
     if (rangeFromUrl !== timeRange) {
       setTimeRange(rangeFromUrl);
     }
-
 
     if (creationType === "new" && effectiveClusterId) {
       console.log(
@@ -843,9 +869,6 @@ export default function ClusterMetrics() {
         if (result) {
           console.log("Cluster successfully added to monitoring system");
           fetchAllData(rangeFromUrl, effectiveClusterId);
-        } else {
-          console.error("Failed to add cluster to monitoring system");
-          fetchAllData(rangeFromUrl, effectiveClusterId);
         }
       });
     } else {
@@ -855,7 +878,6 @@ export default function ClusterMetrics() {
       }
     }
   }, [userId, location.pathname]);
-
 
   useEffect(() => {
     if (refreshInterval > 0 && !isAutoRefreshPaused) {
@@ -887,7 +909,6 @@ export default function ClusterMetrics() {
     isAutoRefreshPaused,
   ]);
 
-
   useEffect(() => {
     return () => {
       if (intervalRef.current) {
@@ -901,7 +922,6 @@ export default function ClusterMetrics() {
       refreshAllData(false);
     }
   }, [cluster_id]);
-
 
   const getResourceMetrics = () => {
     if (!cluster) return [];
@@ -941,22 +961,18 @@ export default function ClusterMetrics() {
     ];
   };
 
-
   const getEfficiencyBreakdown = () => {
     if (!cluster || !cluster.rawData) return { cpu: 0, memory: 0, overall: 0 };
 
     const rawData = cluster.rawData;
 
-
     const cpuEfficiency = rawData.cpu_core_request_average > 0
       ? Math.round((rawData.cpu_core_usage_average / rawData.cpu_core_request_average) * 100)
       : 0;
 
-
     const memoryEfficiency = rawData.ram_byte_request_average > 0
       ? Math.round((rawData.ram_byte_usage_average / rawData.ram_byte_request_average) * 100)
       : 0;
-
 
     const overallEfficiency = rawData.efficiency_percent
       ? Math.round(rawData.efficiency_percent)
@@ -967,9 +983,7 @@ export default function ClusterMetrics() {
       memory: memoryEfficiency,
       overall: overallEfficiency
     };
-  };  
-  
-
+  };
 
   const ProgressBar = ({ label, value, max, color, unit, tooltip }) => (
     <TooltipWrapper tooltip={tooltip} className="group">
@@ -1006,7 +1020,6 @@ export default function ClusterMetrics() {
       </div>
     </TooltipWrapper>
   );
-
 
   if (
     error &&
@@ -1057,14 +1070,13 @@ export default function ClusterMetrics() {
         className={`transition-all duration-300 ${isSticky ? 'h-20' : 'h-0'}`}
       />
 
-
       <div
         ref={filterBarRef}
         className={`
       transition-all duration-300 ease-in-out z-50 mb-6
       ${isSticky
-            ? `fixed top-0 left-64 right-0 mx-0 px-4 md:px-6 py-4
-           bg-white/80 backdrop-blur-lg border-b border-white/20
+            ? `fixed top-0 left-0 right-0 mx-0 px-4 md:px-6 py-4
+           bg-white/95 backdrop-blur-md border-b border-gray-200/50
            shadow-lg shadow-black/5`
             : 'relative bg-white rounded-xl shadow-sm'
           }
@@ -1101,7 +1113,6 @@ export default function ClusterMetrics() {
         </div>
       </div>
 
-
       {isLoadingData && <LoadingBanner message="Loading cluster data..." />}
 
       <div className="space-y-6">
@@ -1118,7 +1129,6 @@ export default function ClusterMetrics() {
             </TooltipWrapper>
           ))}
         </div>
-
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -1189,7 +1199,6 @@ export default function ClusterMetrics() {
                           </div>
                         </div>
 
-
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                           <TooltipWrapper tooltip={METRIC_TOOLTIPS.clusterCost}>
                             <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
@@ -1232,7 +1241,6 @@ export default function ClusterMetrics() {
                             </div>
                           </TooltipWrapper>
                         </div>
-
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <TooltipWrapper tooltip={METRIC_TOOLTIPS.cpuUsage}>
@@ -1296,7 +1304,6 @@ export default function ClusterMetrics() {
                 </div>
               </CardContent>
             </Card>
-
 
             {resourceMetrics.length > 0 && (
               <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
@@ -1382,7 +1389,6 @@ export default function ClusterMetrics() {
               </CardContent>
             </Card>
 
-
             {chartData.costBreakdown.length > 0 && (
               <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>
@@ -1439,7 +1445,6 @@ export default function ClusterMetrics() {
               </Card>
             )}
 
-
             {chartData.costBreakdown.length > 0 && (
               <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>
@@ -1468,7 +1473,6 @@ export default function ClusterMetrics() {
           </div>
         </div>
       </div>
-
 
       {showClusterModal && selectedCluster && (
         <>
