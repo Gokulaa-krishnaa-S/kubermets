@@ -555,13 +555,45 @@ export default function ClusterMetrics() {
     [cluster_id, fetchAllData, setSearchParams]
   );
 
-  const refreshAllData = useCallback(
-    (showToast?: boolean) => {
-      console.log("Manual refresh triggered");
-      return fetchAllData(timeRange, cluster_id, showToast ?? true, true);
-    },
-    [fetchAllData, timeRange, cluster_id]
-  );
+const refreshAllData = async (showToast = true) => {
+  setIsRefreshing(true);
+  try {
+    // Call your existing data fetch
+    await fetchAllData(timeRange, cluster_id, showToast ?? true, true);
+    setLastUpdated(new Date());
+
+    // Check server status for auto-refresh
+    if (serverStatus === "live") {
+      setIsAutoRefreshPaused(false);
+      console.log("Server is back online - resuming auto-refresh");
+    }
+
+    // Success toast only if allowed and server is live
+    if (showToast && serverStatus === "live") {
+      toast({
+        title: "Data Refreshed",
+        description: "Cluster metrics have been updated successfully.",
+        variant: "default",
+      });
+    }
+  } catch (error) {
+    console.error("Error refreshing data:", error);
+
+    if (showToast) {
+      toast({
+        title: "Refresh Failed",
+        description:
+          "Failed to update cluster metrics. Auto-refresh paused until manual retry.",
+        variant: "destructive",
+      });
+    }
+
+    // Pause auto-refresh on failure
+    setIsAutoRefreshPaused(true);
+  } finally {
+    setIsRefreshing(false);
+  }
+};
 
   const handleRefreshIntervalChange = useCallback((interval: number) => {
     setRefreshInterval(interval);
@@ -788,7 +820,7 @@ export default function ClusterMetrics() {
   //         if (filterBarRef.current && stickyPlaceholderRef.current) {
   //           const rect = stickyPlaceholderRef.current.getBoundingClientRect();
   //           const shouldBeSticky = rect.top <= 0;
-            
+
   //           // Only update state if it actually changed and avoid rapid state changes
   //           if (shouldBeSticky !== lastStickyState) {
   //             lastStickyState = shouldBeSticky;
@@ -803,7 +835,7 @@ export default function ClusterMetrics() {
 
   //   // Add event listener only once
   //   window.addEventListener('scroll', handleScroll, { passive: true });
-    
+
   //   // Initial check after a brief delay to ensure DOM is ready
   //   setTimeout(handleScroll, 0);
 
@@ -951,7 +983,7 @@ export default function ClusterMetrics() {
       memory: memoryEfficiency,
       overall: overallEfficiency
     };
-  };  
+  };
 
   const ProgressBar = ({ label, value, max, color, unit, tooltip }) => (
     <TooltipWrapper tooltip={tooltip} className="group">
