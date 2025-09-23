@@ -102,7 +102,21 @@ const Calendar = ({
 
   const days = getDaysInMonth(currentMonth);
 
+  // Helper function to check if a date is in the future
+  const isFutureDate = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    return checkDate > today;
+  };
+
   const handleDateClick = (date) => {
+    // Block future dates
+    if (isFutureDate(date)) {
+      return;
+    }
+
     if (!startDate || (startDate && endDate)) {
       setStartDate(date);
       setEndDate(null);
@@ -222,18 +236,21 @@ const Calendar = ({
             const isInRange = isDateInRange(dayObj.date);
             const isToday =
               new Date().toDateString() === dayObj.date.toDateString();
+            const isFuture = isFutureDate(dayObj.date);
 
             return (
               <button
                 key={index}
                 onClick={() =>
-                  dayObj.isCurrentMonth && handleDateClick(dayObj.date)
+                  dayObj.isCurrentMonth && !isFuture && handleDateClick(dayObj.date)
                 }
                 className={`
                   w-8 h-8 text-sm rounded flex items-center justify-center
                   ${
-                    dayObj.isCurrentMonth
-                      ? "hover:bg-gray-100"
+                    dayObj.isCurrentMonth && !isFuture
+                      ? "hover:bg-gray-100 cursor-pointer"
+                      : dayObj.isCurrentMonth && isFuture
+                      ? "text-gray-300 cursor-not-allowed"
                       : "text-gray-300"
                   }
                   ${
@@ -247,8 +264,10 @@ const Calendar = ({
                       : ""
                   }
                   ${isToday && !isSelected ? "ring-1 ring-green-500" : ""}
+                  ${isFuture && dayObj.isCurrentMonth ? "opacity-40" : ""}
                 `}
-                disabled={!dayObj.isCurrentMonth}
+                disabled={!dayObj.isCurrentMonth || isFuture}
+                title={isFuture ? "Future dates are not selectable" : ""}
               >
                 {dayObj.day}
               </button>
