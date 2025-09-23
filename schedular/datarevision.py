@@ -39,7 +39,8 @@ log = logging.getLogger("kubecost-data-revision")
 
 def revise_cluster_data(cluster_cfg: Dict) -> None:
     """
-    Revise and resend the last 24 hours of data for a cluster with clear flag.
+    Revise and resend data from 3 days ago to 2 days ago with clear flag.
+    Example: If today is 24th, collect data from 21st 00:00 to 22nd 00:00
     """
     log.info("\n" + "="*80)
     log.info("DATA REVISION PROCESS STARTED".center(80))
@@ -49,50 +50,33 @@ def revise_cluster_data(cluster_cfg: Dict) -> None:
     cluster_name = cluster_cfg.get("cluster_name", f"id-{cluster_id}")
     
     try:
-        # Calculate the time window (last 24 hours)
-        end_time = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        start_time = end_time - timedelta(hours=24)
+        # Calculate the time window (3 days ago to 2 days ago)
+        now = datetime.now(timezone.utc)
+        # Start with beginning of current day
+        current_day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Go back 3 days to get start time
+        start_time = current_day_start - timedelta(days=3)
+        # End time is 2 days ago (1 day after start)
+        end_time = start_time + timedelta(days=1)
         
         log.info("\nREVISION DETAILS:")
         log.info("-"*50)
         log.info("Cluster: %s (ID: %d)", cluster_name, cluster_id)
-        log.info("Start Time: %s", start_time.isoformat())
-        log.info("End Time: %s", end_time.isoformat())
+        log.info("Current Time: %s", now.isoformat())
+        log.info("Revising 3 days ago data:")
+        log.info("Start Time: %s (3 days ago)", start_time.isoformat())
+        log.info("End Time: %s (2 days ago)", end_time.isoformat())
+        log.info("Window Duration: 24 hours")
         log.info("-"*50)
         
         log.info("\nFETCHING DATA")
         log.info("-"*50)
-        # Fetch data from Kubecost
-        # data, node_mapping, pod_mapping = fetch_kubecost_window(
-        #     cluster_cfg["kubecost_api_url"],
-        #     start_time,
-        #     end_time,
-        # )
         
-        # if not data.get("data", {}).get("sets", []):
-        #     log.warning("No data found for the revision window")
-        #     return
-        
-        collect_window(cluster_cfg,start_time,end_time)
+        collect_window(cluster_cfg, start_time, end_time)
         log.info("Data successfully fetched")
-        # log.info("Node mappings found: %d", len(node_mapping))
-        # log.info("Pod mappings found: %d", len(pod_mapping))
         
         log.info("\nSENDING REVISION DATA")
         log.info("-"*50)
-        # Send to backend with clear flag set to True
-        # send_snapshots_to_backend(
-        #     cluster_cfg["user_id"],
-        #     cluster_id,
-        #     data,
-        #     start_time,
-        #     end_time,
-        #     node_mapping,
-        #     pod_mapping,
-        #     clear=True  # Set clear flag for data revision
-        # )
         
         log.info("Data revision completed successfully")
         log.info("="*80)
@@ -103,7 +87,6 @@ def revise_cluster_data(cluster_cfg: Dict) -> None:
             cluster_name,
             str(e)
         )
-
 def run_revision_for_all_clusters():
     """
     Run data revision for all active clusters.

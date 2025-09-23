@@ -41,6 +41,7 @@ from apscheduler.jobstores.memory import MemoryJobStore
 from dotenv import load_dotenv
 from helpers.hepler import HelperClass
 from helpers.formatting import dataFormatter
+from datarevision import run_revision_for_all_clusters
 
 
 # Import revision scheduler functions conditionally to avoid circular imports
@@ -1215,6 +1216,8 @@ def main():
     # Import and start revision scheduler
     start_revision_scheduler, _ = import_revision_scheduler()
     revision_scheduler = start_revision_scheduler(scheduler)
+
+    # run_revision_for_all_clusters()
 
     # graceful shutdown
     def shutdown(signum, frame):

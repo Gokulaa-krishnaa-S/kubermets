@@ -33,13 +33,21 @@ RETRY_DELAY_SEC = int(os.getenv("RETRY_DELAY_SEC", "15"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 MAX_BACKFILL_WINDOWS = int(os.getenv("MAX_BACKFILL_WINDOWS", "7"))
 MIN_SCHEDULE_INTERVAL_MIN = int(os.getenv("MIN_SCHEDULE_INTERVAL_MIN", "30"))
-CLUSTER_ID = int(os.getenv("CLUSTER_ID", "1"))
-CLUSTER_NAME = (os.getenv("CLUSTER_NAME", "cluster_one"))
-USER_ID = (os.getenv("USER_ID", "1"))
-USERNAME = (os.getenv("USERNAME", "admin"))
-PASSWORD = (os.getenv("PASSWORD", "Admin@12#$"))                  
-KUBECOST_API_URL = (os.getenv("KUBECOST_API_URL", "")) 
+CLUSTER_ID = int(os.getenv("CLUSTER_ID", "89"))
+CLUSTER_NAME =os.getenv("CLUSTER_NAME", "cluster_one")
+USER_ID = os.getenv("USER_ID", "ba39e517-8cda-4e30-8cf7-bb159f0d9c98")
+USERNAME =os.getenv("USERNAME", "admin")
+PASSWORD =os.getenv("PASSWORD", "Admin@12#$")                
+KUBECOST_API_URL = (os.getenv("KUBECOST_API_URL", "http://172.16.20.110/kubecost")) 
 
+# Debug environment variables
+log.info("Environment Variables:")
+log.info(f"BACKEND_API_URL: {BACKEND_API_URL}")
+log.info(f"KUBECOST_API_URL: {KUBECOST_API_URL}")
+log.info(f"CLUSTER_ID: {CLUSTER_ID}")
+log.info(f"CLUSTER_NAME: {CLUSTER_NAME}")
+log.info(f"USER_ID: {USER_ID}")
+log.info(f"USERNAME: {USERNAME}")
 
 
 def get_active_clusters() -> List[Dict]:

@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, Response, request
 import requests
 from models.model import ClusterMetrics, NodeMetrics, PodMetrics
 from models.model import db_manager
-from sqlalchemy import desc, asc, func
+from sqlalchemy import desc, asc, func,and_
 from routes.node import get_node_data
 from datetime import datetime, timedelta, timezone
 import os
@@ -513,6 +513,115 @@ def dashboard_summary():
 # ================================
 # Bulk Metrics Ingestion Endpoint
 # ================================
+def delete_metrics_window(session, cluster_id, window_start, window_end, user_id=None, window_duration='1h'):
+    """
+    Delete data for a specific time window respecting foreign key dependencies.
+    Deletes in order: PodMetrics -> NodeMetrics -> ClusterMetrics
+    
+    Args:
+        session: SQLAlchemy session
+        cluster_id: ID of the cluster
+        window_start: Start of the time window
+        window_end: End of the time window
+        user_id: Optional user ID for additional filtering
+        window_duration: Duration of the window (default: '1h')
+    """
+    print("\n=== Starting delete_metrics_window ===")
+    print(f"Parameters received:")
+    print(f"- cluster_id: {cluster_id}")
+    print(f"- window_start: {window_start}")
+    print(f"- window_end: {window_end}")
+    print(f"- user_id: {user_id}")
+    print(f"- window_duration: {window_duration}")
+    
+    try:
+        print("\n1. Setting up Pod Metrics deletion...")
+        # 1. First delete pod metrics (they reference nodes)
+        pod_filter = [
+            PodMetrics.cluster_id == cluster_id,
+            PodMetrics.start_time >= window_start,
+            PodMetrics.end_time <= window_end,
+            PodMetrics.window == window_duration
+        ]
+        if user_id:
+            print("Adding user_id filter for pods")
+            pod_filter.append(PodMetrics.user_id == user_id)
+            
+        pod_delete = session.query(PodMetrics).filter(and_(*pod_filter))
+        print(f"Pod filter conditions: {[str(f) for f in pod_filter]}")
+
+        print("\n2. Setting up Node Metrics deletion...")
+        # 2. Then delete node metrics (they reference clusters)
+        node_filter = [
+            NodeMetrics.cluster_id == cluster_id,
+            NodeMetrics.window_start >= window_start,
+            NodeMetrics.window_end <= window_end,
+            NodeMetrics.window_duration == window_duration
+        ]
+        if user_id:
+            print("Adding user_id filter for nodes")
+            node_filter.append(NodeMetrics.user_id == user_id)
+            
+        node_delete = session.query(NodeMetrics).filter(and_(*node_filter))
+        print(f"Node filter conditions: {[str(f) for f in node_filter]}")
+
+        print("\n3. Setting up Cluster Metrics deletion...")
+        # 3. Finally delete cluster metrics
+        cluster_filter = [
+            ClusterMetrics.cluster_id == cluster_id,
+            ClusterMetrics.window_start >= window_start,
+            ClusterMetrics.window_end <= window_end,
+            ClusterMetrics.window_duration == window_duration
+        ]
+        if user_id:
+            print("Adding user_id filter for clusters")
+            cluster_filter.append(ClusterMetrics.user_id == user_id)
+            
+        cluster_delete = session.query(ClusterMetrics).filter(and_(*cluster_filter))
+        print(f"Cluster filter conditions: {[str(f) for f in cluster_filter]}")
+        
+        # Count records before deletion
+        pod_count = pod_delete.count()
+        node_count = node_delete.count()
+        cluster_count = cluster_delete.count()
+        
+        print("\n=== Records to be deleted ===")
+        print(f"Pod metrics to delete: {pod_count}")
+        print(f"Node metrics to delete: {node_count}")
+        print(f"Cluster metrics to delete: {cluster_count}")
+        
+        # Execute deletions
+        if pod_count > 0:
+            print("\nDeleting pod metrics...")
+            pod_delete.delete(synchronize_session=False)
+            
+        if node_count > 0:
+            print("Deleting node metrics...")
+            node_delete.delete(synchronize_session=False)
+            
+        if cluster_count > 0:
+            print("Deleting cluster metrics...")
+            cluster_delete.delete(synchronize_session=False)
+        
+        # Commit the transaction
+        print("\nCommitting transaction...")
+        session.commit()
+        print("\n=== Deletion Summary ===")
+        print(f"Successfully deleted:")
+        print(f"- {pod_count} pod metrics records")
+        print(f"- {node_count} node metrics records")
+        print(f"- {cluster_count} cluster metrics records")
+        print(f"Time window: {window_start} to {window_end}")
+        print("=== Delete operation completed successfully ===\n")
+        
+    except Exception as e:
+        print("\n!!! Error occurred during deletion !!!")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        session.rollback()
+        print("Session rolled back due to error")
+        raise e
+    
 @clusters_bp.route("/fetchMetrics", methods=["POST"])
 def fetch_metrics():
     """
@@ -942,36 +1051,15 @@ def fetch_metrics():
 
         session.commit()
         if clear:
-            # Delete matching entries from all three tables
             try:
-                # Delete from PodMetrics
-                session.query(PodMetrics).filter(
-                    PodMetrics.user_id == user_id,
-                    PodMetrics.cluster_id == cluster_id,
-                    PodMetrics.start_time >=  window_start,
-                    PodMetrics.end_time <= window_end,
-                    PodMetrics.window == '1h'
-                ).delete(synchronize_session=False)
-
-                # Delete from NodeMetrics
-                session.query(NodeMetrics).filter(
-                    NodeMetrics.user_id == user_id,
-                    NodeMetrics.cluster_id == cluster_id,
-                    NodeMetrics.window_start >= window_start,
-                    NodeMetrics.window_end <= window_end,
-                    NodeMetrics.window_duration == '1h'
-                ).delete(synchronize_session=False)
-
-                # Delete from ClusterMetrics
-                session.query(ClusterMetrics).filter(
-                    ClusterMetrics.user_id == user_id,
-                    ClusterMetrics.cluster_id == cluster_id,
-                    ClusterMetrics.window_start >= window_start,
-                    ClusterMetrics.window_end <= window_end,
-                    ClusterMetrics.window_duration == '1h'
-                ).delete(synchronize_session=False)
-
-                session.commit()
+                delete_metrics_window(
+                    session=session,
+                    cluster_id=cluster_id,
+                    window_start=window_start,
+                    window_end=window_end,
+                    user_id=user_id,
+                    window_duration='1h'
+                )
                 print(f"Successfully deleted overlapping records for cluster {cluster_id}")
             except Exception as e:
                 session.rollback()
