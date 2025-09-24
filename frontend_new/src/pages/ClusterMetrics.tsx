@@ -12,6 +12,7 @@ import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
 import { useLocation } from 'react-router-dom';
+import ClusterLogs from "@/components/logs/ClusterLogs";
 
 import {
   ConnectionStatusBanner,
@@ -39,6 +40,8 @@ import {
   Coins,
   WifiOff,
   Info,
+  Terminal,
+  Eye,
 } from "lucide-react";
 
 const METRIC_TOOLTIPS = {
@@ -75,6 +78,7 @@ const METRIC_TOOLTIPS = {
   clusterHealth:
     "Proportion of healthy (Running) clusters compared to total clusters",
 
+  // Updated for single cluster efficiency
   cpuEfficiency: "CPU efficiency for this cluster (actual usage vs requested)",
   memoryEfficiency: "Memory efficiency for this cluster (actual usage vs requested)",
   overallEfficiency: "Overall resource efficiency for this cluster",
@@ -118,9 +122,6 @@ const TooltipWrapper = ({ children, tooltip, className = "" }) => {
 
 export default function ClusterMetrics() {
   const { selectedInstance, userId }: any = useCluster();
-  const [isSticky, setIsSticky] = useState(false);
-  const filterBarRef = useRef(null);
-  const stickyPlaceholderRef = useRef(null);
   const location = useLocation();
   console.log(selectedInstance?.id, "iddd2-------------");
   let cluster_id = selectedInstance?.id;
@@ -128,6 +129,7 @@ export default function ClusterMetrics() {
   console.log(user_id, "user_id------------------");
   const [clusterStats, setClusterStats] = useState([]);
 
+  // Changed to single cluster object instead of array
   const [cluster, setCluster] = useState(null);
 
   const [chartData, setChartData] = useState({
@@ -146,6 +148,12 @@ export default function ClusterMetrics() {
   const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
+  // Logs state
+  const [showLogs, setShowLogs] = useState(false);
+  const [isLogsMaximized, setIsLogsMaximized] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+
+  // Standardized connection status states
   const [serverStatus, setServerStatus] = useState<"live" | "down">("live");
   const [connectionStatus, setConnectionStatus] = useState<
     "connected" | "disconnected"
@@ -154,10 +162,13 @@ export default function ClusterMetrics() {
   const [maxRetries, setMaxRetries] = useState(3);
   const [error, setError] = useState<string | null>(null);
 
+  // Add loading state to prevent multiple simultaneous calls
   const [isLoadingData, setIsLoadingData] = useState(false);
 
+  // Helper function to convert bytes to GB
   const bytesToGB = (bytes) => (bytes / 1024 ** 3).toFixed(2);
 
+  // Connection error detection function
   const isConnectionError = (error) => {
     if (!error) return false;
 
@@ -195,6 +206,7 @@ export default function ClusterMetrics() {
     }
   };
 
+  // Define the expected type for cluster allocation
   type ClusterAllocation = {
     cpuCoreUsageAverage: number;
     cpuCoreRequestAverage: number;
@@ -210,6 +222,7 @@ export default function ClusterMetrics() {
     [key: string]: any;
   };
 
+  // Enhanced cluster data API call with retry logic
   const handleCallClusterData = useCallback(
     async (queryParams, isRetry = false) => {
       try {
@@ -233,6 +246,7 @@ export default function ClusterMetrics() {
         const allocations = res?.data || [];
         console.log(allocations, "------");
 
+        // Separate idle and active clusters
         const idleEntry =
           allocations.find((a) => a.cluster_name === "__idle__") || {};
         const activeClusters = allocations.filter(
@@ -240,6 +254,7 @@ export default function ClusterMetrics() {
             a.cluster_name !== "__idle__" && a.cluster_name !== "cluster-total"
         );
 
+        // Calculate "cluster-total" by summing idle + all active
         const totalEntry = activeClusters.concat(idleEntry).reduce(
           (acc, cur) => {
             acc.cpu_cost += cur.cpu_cost || 0;
@@ -258,6 +273,7 @@ export default function ClusterMetrics() {
           }
         );
 
+        // Get the first active cluster (since this is single cluster view)
         const activeCluster = activeClusters[0];
 
         if (activeCluster) {
@@ -279,7 +295,7 @@ export default function ClusterMetrics() {
             nodes: activeCluster.node_count || 0,
             pods: activeCluster.pod_count || 0,
             status: activeCluster.cluster_status ?? "running",
-
+            // Add raw data for efficiency calculations
             rawData: activeCluster,
           };
 
@@ -292,6 +308,7 @@ export default function ClusterMetrics() {
           return sum + (cluster.total_cost || 0);
         }, 0);
 
+        // Set cluster stats using computed totalEntry (active + idle) with tooltips
         setClusterStats([
           {
             title: "Total Cost",
@@ -386,6 +403,7 @@ export default function ClusterMetrics() {
         console.log(res, "2------------------");
         console.log(res.data, "condition 1------------------");
 
+        // Check API failure flag
         if (res?.data?.api_failed === true) {
           console.log("came to condition 1");
           setServerStatus("down");
@@ -393,8 +411,9 @@ export default function ClusterMetrics() {
           setIsAutoRefreshPaused(true);
           console.warn("API reported failure:", res.data);
 
+          // Still process data if available despite API failure
           if (res?.data?.data?.sets?.[0]?.allocations) {
-
+            // Process cached data...
           } else {
             throw new Error("No data available and API failed");
           }
@@ -408,6 +427,7 @@ export default function ClusterMetrics() {
 
         const allocations = res?.data?.data?.sets?.[0]?.allocations || {};
 
+        // CPU usage data
         const cpuChartData = Object.entries(allocations)
           .filter(([name]) => name !== "__idle__")
           .map(([name, cluster]) => ({
@@ -423,6 +443,7 @@ export default function ClusterMetrics() {
             ),
           }));
 
+        // Memory usage data
         const memoryChartData = Object.entries(allocations)
           .filter(([name]) => name !== "__idle__")
           .map(([name, cluster]) => {
@@ -434,6 +455,7 @@ export default function ClusterMetrics() {
             };
           });
 
+        // Cost breakdown
         const totalClusterCost: any = Object.values(allocations).reduce(
           (sum: number, item: unknown) =>
             sum + ((item as ClusterAllocation).totalCost || 0),
@@ -493,6 +515,7 @@ export default function ClusterMetrics() {
     [retryAttempts, maxRetries]
   );
 
+  // Consolidated data fetching function that accepts explicit parameters
   const fetchAllData = useCallback(
     async (
       window: string,
@@ -539,61 +562,33 @@ export default function ClusterMetrics() {
     ]
   );
 
+  // Handle retry function
   const handleRetry = () => {
     setRetryAttempts(0);
     setError(null);
     refreshAllData(false);
   };
 
+  // Handle time range changes - immediately fetch data with new time range
   const handleTimeRangeChange = useCallback(
     (range: string) => {
       console.log("Time range changed to:", range);
       setTimeRange(range);
       setSearchParams({ window: range });
+      // Immediately fetch data with the new time range
       fetchAllData(range, cluster_id, false);
     },
     [cluster_id, fetchAllData, setSearchParams]
   );
 
-const refreshAllData = async (showToast = true) => {
-  setIsRefreshing(true);
-  try {
-    // Call your existing data fetch
-    await fetchAllData(timeRange, cluster_id, showToast ?? true, true);
-    setLastUpdated(new Date());
-
-    // Check server status for auto-refresh
-    if (serverStatus === "live") {
-      setIsAutoRefreshPaused(false);
-      console.log("Server is back online - resuming auto-refresh");
-    }
-
-    // Success toast only if allowed and server is live
-    if (showToast && serverStatus === "live") {
-      toast({
-        title: "Data Refreshed",
-        description: "Cluster metrics have been updated successfully.",
-        variant: "default",
-      });
-    }
-  } catch (error) {
-    console.error("Error refreshing data:", error);
-
-    if (showToast) {
-      toast({
-        title: "Refresh Failed",
-        description:
-          "Failed to update cluster metrics. Auto-refresh paused until manual retry.",
-        variant: "destructive",
-      });
-    }
-
-    // Pause auto-refresh on failure
-    setIsAutoRefreshPaused(true);
-  } finally {
-    setIsRefreshing(false);
-  }
-};
+  // Manual refresh function - uses current state values
+  const refreshAllData = useCallback(
+    (showToast?: boolean) => {
+      console.log("Manual refresh triggered");
+      return fetchAllData(timeRange, cluster_id, showToast ?? true, true); // Pass isManualRefresh = true
+    },
+    [fetchAllData, timeRange, cluster_id]
+  );
 
   const handleRefreshIntervalChange = useCallback((interval: number) => {
     setRefreshInterval(interval);
@@ -603,6 +598,7 @@ const refreshAllData = async (showToast = true) => {
     console.log("Filter button clicked");
   }, []);
 
+  // Function to call insertCluster API
   const callInsertClusterAPI = useCallback(async (clusterId) => {
     try {
       const apiBaseUrl =
@@ -780,6 +776,7 @@ const refreshAllData = async (showToast = true) => {
     }
   }, []);
 
+  // Function to check if cluster exists and get cluster name
   const checkClusterExists = useCallback(async (clusterId) => {
     try {
       const backendApiBaseUrl =
@@ -809,57 +806,25 @@ const refreshAllData = async (showToast = true) => {
     }
   }, []);
 
-  // FIXED: Optimized scroll handler with throttling and proper cleanup
-  // useEffect(() => {
-  //   let ticking = false;
-  //   let lastStickyState = isSticky;
-
-  //   const handleScroll = () => {
-  //     if (!ticking) {
-  //       requestAnimationFrame(() => {
-  //         if (filterBarRef.current && stickyPlaceholderRef.current) {
-  //           const rect = stickyPlaceholderRef.current.getBoundingClientRect();
-  //           const shouldBeSticky = rect.top <= 0;
-
-  //           // Only update state if it actually changed and avoid rapid state changes
-  //           if (shouldBeSticky !== lastStickyState) {
-  //             lastStickyState = shouldBeSticky;
-  //             setIsSticky(shouldBeSticky);
-  //           }
-  //         }
-  //         ticking = false;
-  //       });
-  //       ticking = true;
-  //     }
-  //   };
-
-  //   // Add event listener only once
-  //   window.addEventListener('scroll', handleScroll, { passive: true });
-
-  //   // Initial check after a brief delay to ensure DOM is ready
-  //   setTimeout(handleScroll, 0);
-
-  //   // Cleanup function
-  //   return () => {
-  //     window.removeEventListener('scroll', handleScroll);
-  //   };
-  // }, []);
-
   useEffect(() => {
     window.scrollTo(0, 0);
     console.log("Initial useEffect - loading data on component mount");
     if (!userId) return;
 
+    // Get initial time range from URL
     const rangeFromUrl = searchParams.get("window") || "24h";
     const creationType = searchParams.get("creation_type");
     const clusterIdFromUrl = searchParams.get("cluster_id");
 
+    // Fallback: use existing cluster_id if URL doesn't have one
     const effectiveClusterId = clusterIdFromUrl || cluster_id;
 
+    // Set initial time range if different
     if (rangeFromUrl !== timeRange) {
       setTimeRange(rangeFromUrl);
     }
 
+    // Handle new cluster creation
     if (creationType === "new" && effectiveClusterId) {
       console.log(
         "New cluster creation detected, checking cluster existence..."
@@ -869,24 +834,29 @@ const refreshAllData = async (showToast = true) => {
         if (result) {
           console.log("Cluster successfully added to monitoring system");
           fetchAllData(rangeFromUrl, effectiveClusterId);
+        } else {
+          console.error("Failed to add cluster to monitoring system");
+          fetchAllData(rangeFromUrl, effectiveClusterId);
         }
       });
     } else {
-
+      // Load initial data for existing clusters
       if (effectiveClusterId) {
         fetchAllData(rangeFromUrl, effectiveClusterId);
       }
     }
-  }, [userId, location.pathname]);
+  }, [userId, location.pathname]); // Initial load only
 
+  // Auto-refresh interval effect
   useEffect(() => {
     if (refreshInterval > 0 && !isAutoRefreshPaused) {
       console.log(`Setting up auto-refresh every ${refreshInterval}ms`);
 
       intervalRef.current = setInterval(() => {
+        // Double-check the pause state before auto-refreshing
         if (!isAutoRefreshPaused) {
           console.log("Auto-refresh triggered");
-          fetchAllData(timeRange, cluster_id, false, false);
+          fetchAllData(timeRange, cluster_id, false, false); // isManualRefresh = false
         } else {
           console.log("Auto-refresh skipped - paused due to server issues");
         }
@@ -909,6 +879,7 @@ const refreshAllData = async (showToast = true) => {
     isAutoRefreshPaused,
   ]);
 
+  // Cleanup interval on unmount
   useEffect(() => {
     return () => {
       if (intervalRef.current) {
@@ -919,16 +890,16 @@ const refreshAllData = async (showToast = true) => {
 
   useEffect(() => {
     if (cluster_id) {
-      refreshAllData(false);
+      refreshAllData(false); // No toast, force refresh
     }
   }, [cluster_id]);
 
+  // Calculate resource metrics for single cluster
   const getResourceMetrics = () => {
     if (!cluster) return [];
 
     const cpuUsage = parseFloat(cluster.cpu.replace("%", "")) || 0;
     const memoryUsage = parseFloat(cluster.memory.replace("%", "")) || 0;
-
     const efficiency = cluster.efficiency !== "N/A"
       ? parseFloat(cluster.efficiency.replace("%", "")) || 0
       : 0;
@@ -961,19 +932,23 @@ const refreshAllData = async (showToast = true) => {
     ];
   };
 
+  // Get efficiency breakdown for single cluster
   const getEfficiencyBreakdown = () => {
     if (!cluster || !cluster.rawData) return { cpu: 0, memory: 0, overall: 0 };
 
     const rawData = cluster.rawData;
 
+    // Calculate CPU efficiency
     const cpuEfficiency = rawData.cpu_core_request_average > 0
       ? Math.round((rawData.cpu_core_usage_average / rawData.cpu_core_request_average) * 100)
       : 0;
 
+    // Calculate Memory efficiency
     const memoryEfficiency = rawData.ram_byte_request_average > 0
       ? Math.round((rawData.ram_byte_usage_average / rawData.ram_byte_request_average) * 100)
       : 0;
 
+    // Overall efficiency
     const overallEfficiency = rawData.efficiency_percent
       ? Math.round(rawData.efficiency_percent)
       : 0;
@@ -985,6 +960,7 @@ const refreshAllData = async (showToast = true) => {
     };
   };
 
+  // Enhanced Progress Bar Component with Tooltip
   const ProgressBar = ({ label, value, max, color, unit, tooltip }) => (
     <TooltipWrapper tooltip={tooltip} className="group">
       <div className="space-y-3">
@@ -1021,6 +997,7 @@ const refreshAllData = async (showToast = true) => {
     </TooltipWrapper>
   );
 
+  // Error Display Component - similar to NodeMetrics
   if (
     error &&
     !isInitialLoading &&
@@ -1064,55 +1041,32 @@ const refreshAllData = async (showToast = true) => {
 
   return (
     <div className="p-4 lg:p-6">
-
-      <div
-        ref={stickyPlaceholderRef}
-        className={`transition-all duration-300 ${isSticky ? 'h-20' : 'h-0'}`}
-      />
-
-      <div
-        ref={filterBarRef}
-        className={`
-      transition-all duration-300 ease-in-out z-50 mb-6
-      ${isSticky
-            ? `fixed top-0 left-0 right-0 mx-0 px-4 md:px-6 py-4
-           bg-white/95 backdrop-blur-md border-b border-gray-200/50
-           shadow-lg shadow-black/5`
-            : 'relative bg-white rounded-xl shadow-sm'
-          }
-    `}
-      >
-        <div className={`
-      mx-auto w-full
-      ${isSticky ? 'max-w-none' : 'p-4 md:p-6 max-w-full'}
-    `}>
-          <div className="flex items-center justify-between">
-            <FilterBar
-              selectedTimeRange={timeRange}
-              onTimeRangeChange={handleTimeRangeChange}
-              timeRangeVariant="select"
-              timeRangeOptions={["24h", "7d", "30d"]}
-              onFilterClick={handleFilterClick}
-              showFilter={false}
-              onRefresh={refreshAllData}
-              refreshInterval={refreshInterval}
-              onRefreshIntervalChange={handleRefreshIntervalChange}
-              isRefreshing={isRefreshing}
-              lastUpdated={lastUpdated}
-              showRefresh
-              className={`flex-1 ${isSticky
-                ? '[&>div]:bg-white/90 [&>div]:backdrop-blur-sm [&>div]:border-white/30'
-                : ''
-                }`}
-              type="cluster"
-            />
-            <div className="ml-4">
-
-            </div>
+      {/* Filter Bar with Network Status Indicator */}
+      <div className="mb-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <FilterBar
+            selectedTimeRange={timeRange}
+            onTimeRangeChange={handleTimeRangeChange}
+            timeRangeVariant="select"
+            timeRangeOptions={["24h", "7d", "30d"]}
+            onFilterClick={handleFilterClick}
+            showFilter={false}
+            onRefresh={refreshAllData}
+            refreshInterval={refreshInterval}
+            onRefreshIntervalChange={handleRefreshIntervalChange}
+            isRefreshing={isRefreshing}
+            lastUpdated={lastUpdated}
+            showRefresh
+            className="flex-1"
+            type="cluster"
+          />
+          <div className="ml-4">
+            {/* <NetworkStatusIndicator serverStatus={serverStatus} /> */}
           </div>
         </div>
       </div>
 
+      {/* Loading Banner */}
       {isLoadingData && <LoadingBanner message="Loading cluster data..." />}
 
       <div className="space-y-6">
@@ -1130,10 +1084,11 @@ const refreshAllData = async (showToast = true) => {
           ))}
         </div>
 
+        {/* Three Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
+          {/* Left Column - Single Cluster Overview */}
           <div className="lg:col-span-2 space-y-6">
-
+            {/* Single Cluster Card */}
             <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
@@ -1160,6 +1115,28 @@ const refreshAllData = async (showToast = true) => {
                       <p className="text-sm text-gray-400">
                         Please check your cluster configuration and try refreshing
                       </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedJobId(cluster_id);
+                            setShowLogs(true);
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                        >
+                          <Terminal className="w-4 h-4" />
+                          View Logs
+                        </button>
+                        {/* <button
+                          onClick={() => {
+                            setSelectedCluster(cluster.name);
+                            setShowClusterModal(true);
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200"
+                        >
+                          <Eye className="w-4 h-4" />
+                          Details
+                        </button> */}
+                      </div>
                     </div>
                   ) : (
                     <TooltipWrapper
@@ -1199,6 +1176,7 @@ const refreshAllData = async (showToast = true) => {
                           </div>
                         </div>
 
+                        {/* Enhanced Metrics Row with Tooltips */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                           <TooltipWrapper tooltip={METRIC_TOOLTIPS.clusterCost}>
                             <div className="text-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg group-hover:from-blue-50 group-hover:to-blue-100 transition-all duration-300">
@@ -1242,6 +1220,7 @@ const refreshAllData = async (showToast = true) => {
                           </TooltipWrapper>
                         </div>
 
+                        {/* Enhanced Resource Usage Bars with Tooltips */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <TooltipWrapper tooltip={METRIC_TOOLTIPS.cpuUsage}>
                             <div className="space-y-2">
@@ -1297,6 +1276,28 @@ const refreshAllData = async (showToast = true) => {
                                 : "just now"}
                             </span>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setSelectedJobId(cluster_id);
+                                setShowLogs(true);
+                              }}
+                              className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                            >
+                              <Terminal className="w-4 h-4" />
+                              View Logs
+                            </button>
+                            {/* <button
+                              onClick={() => {
+                                setSelectedCluster(cluster.name);
+                                setShowClusterModal(true);
+                              }}
+                              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors duration-200"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Details
+                            </button> */}
+                          </div>
                         </div>
                       </div>
                     </TooltipWrapper>
@@ -1305,6 +1306,7 @@ const refreshAllData = async (showToast = true) => {
               </CardContent>
             </Card>
 
+            {/* Enhanced Resource Utilization Chart for Single Cluster */}
             {resourceMetrics.length > 0 && (
               <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>
@@ -1331,8 +1333,9 @@ const refreshAllData = async (showToast = true) => {
             )}
           </div>
 
+          {/* Right Column - Single Cluster Efficiency Sidebar */}
           <div className="space-y-6">
-
+            {/* Cluster Efficiency Breakdown for Single Cluster */}
             <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
               <CardHeader>
                 <TooltipWrapper tooltip="Detailed efficiency breakdown for this cluster showing CPU, memory, and overall resource utilization">
@@ -1389,6 +1392,7 @@ const refreshAllData = async (showToast = true) => {
               </CardContent>
             </Card>
 
+            {/* Cost Breakdown with Tooltips */}
             {chartData.costBreakdown.length > 0 && (
               <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>
@@ -1445,6 +1449,7 @@ const refreshAllData = async (showToast = true) => {
               </Card>
             )}
 
+            {/* Cost Distribution Analysis with Tooltip */}
             {chartData.costBreakdown.length > 0 && (
               <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader>
@@ -1474,9 +1479,10 @@ const refreshAllData = async (showToast = true) => {
         </div>
       </div>
 
+      {/* Enhanced Modal */}
       {showClusterModal && selectedCluster && (
         <>
-
+          {/* Overlay */}
           <div
             className="fixed inset-0 z-40 backdrop-blur-sm transition-opacity"
             style={{ pointerEvents: "auto" }}
@@ -1485,7 +1491,7 @@ const refreshAllData = async (showToast = true) => {
               setSelectedCluster(null);
             }}
           />
-
+          {/* Centered Modal */}
           <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 mt-2"
             style={{ pointerEvents: "none" }}
@@ -1511,6 +1517,21 @@ const refreshAllData = async (showToast = true) => {
             </div>
           </div>
         </>
+      )}
+
+      {/* Cluster Logs Modal */}
+      {showLogs && (
+        <ClusterLogs
+          clusterId={cluster_id}
+          jobId={selectedJobId}
+          isOpen={showLogs}
+          onClose={() => {
+            setShowLogs(false);
+            setSelectedJobId(null);
+          }}
+          onMaximize={() => setIsLogsMaximized(!isLogsMaximized)}
+          isMaximized={isLogsMaximized}
+        />
       )}
     </div>
   );
