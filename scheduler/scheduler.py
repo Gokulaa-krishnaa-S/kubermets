@@ -55,7 +55,7 @@ load_dotenv()
 
 BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:5000")
 COLLECTION_WINDOW_HOURS = float(os.getenv("COLLECTION_WINDOW_HOURS", "24"))
-COLLECTION_WINDOW_HOURS_FOR_BACKFILL= float(os.getenv("COLLECTION_WINDOW_HOURS_FOR_BACKFILL", "24"))
+HOURLY_COLLECTION_WINDOW= float(os.getenv("HOURLY_COLLECTION_WINDOW", "1"))
 REQUEST_TIMEOUT_SEC = int(os.getenv("REQUEST_TIMEOUT_SEC", "30"))
 RETRY_ATTEMPTS = int(os.getenv("RETRY_ATTEMPTS", "3"))
 RETRY_DELAY_SEC = int(os.getenv("RETRY_DELAY_SEC", "15"))
@@ -449,11 +449,11 @@ def calculate_next_run_time(cluster_id: int) -> Optional[datetime]:
         latest_timestamp = latest_timestamp.replace(tzinfo=timezone.utc)
 
     # Next collection should happen at latest_timestamp + window_hours
-    next_expected_window = latest_timestamp + timedelta(hours=COLLECTION_WINDOW_HOURS_FOR_BACKFILL)
+    next_expected_window = latest_timestamp + timedelta(hours=HOURLY_COLLECTION_WINDOW)
     log.info("\nSchedule Calculation:")
     log.info("-"*50)
     log.info("Next expected window: %s", next_expected_window.isoformat())
-    log.info("Window hours: %d", COLLECTION_WINDOW_HOURS_FOR_BACKFILL)
+    log.info("Window hours: %d", HOURLY_COLLECTION_WINDOW)
 
     # If that time has already passed, schedule immediately to catch up
     if next_expected_window <= now:
@@ -463,7 +463,7 @@ def calculate_next_run_time(cluster_id: int) -> Optional[datetime]:
         return immediate_run
 
     # Don't schedule too far into the future (safety check)
-    max_future = now + timedelta(hours=COLLECTION_WINDOW_HOURS_FOR_BACKFILL * 2)
+    max_future = now + timedelta(hours=HOURLY_COLLECTION_WINDOW * 2)
     log.info("Maximum allowed future time: %s", max_future.isoformat())
     
     if next_expected_window > max_future:

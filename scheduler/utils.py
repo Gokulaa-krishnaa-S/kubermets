@@ -12,10 +12,14 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any, Tuple
 from helpers.formatting import dataFormatter
 from helpers.hepler import HelperClass
+from dotenv import load_dotenv
+
 
 helper = HelperClass()
 
 formatter = dataFormatter()
+load_dotenv()
+
 # -------------------- Config --------------------
 BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:5000")
 REQUEST_TIMEOUT_SEC = int(os.getenv("REQUEST_TIMEOUT_SEC", "30"))
@@ -26,7 +30,7 @@ RETRY_ATTEMPTS = int(os.getenv("RETRY_ATTEMPTS", "3"))
 RETRY_DELAY_SEC = int(os.getenv("RETRY_DELAY_SEC", "15"))
 BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:5000")
 COLLECTION_WINDOW_HOURS = float(os.getenv("COLLECTION_WINDOW_HOURS", "24"))
-COLLECTION_WINDOW_HOURS_FOR_BACKFILL= float(os.getenv("COLLECTION_WINDOW_HOURS_FOR_BACKFILL", "24"))
+HOURLY_COLLECTION_WINDOW= float(os.getenv("HOURLY_COLLECTION_WINDOW", "1"))
 REQUEST_TIMEOUT_SEC = int(os.getenv("REQUEST_TIMEOUT_SEC", "30"))
 RETRY_ATTEMPTS = int(os.getenv("RETRY_ATTEMPTS", "3"))
 RETRY_DELAY_SEC = int(os.getenv("RETRY_DELAY_SEC", "15"))
