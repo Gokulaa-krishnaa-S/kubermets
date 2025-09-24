@@ -128,7 +128,9 @@ export default function ClusterMetrics() {
   let user_id = userId;
   console.log(user_id, "user_id------------------");
   const [clusterStats, setClusterStats] = useState([]);
-
+  const [isSticky, setIsSticky] = useState(false);
+  const filterBarRef = useRef(null);
+  const stickyPlaceholderRef = useRef(null);
   // Changed to single cluster object instead of array
   const [cluster, setCluster] = useState(null);
 
@@ -805,6 +807,30 @@ export default function ClusterMetrics() {
       return null;
     }
   }, []);
+    useEffect(() => {
+      let ticking = false;
+  
+      const handleScroll = () => {
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            if (filterBarRef.current && stickyPlaceholderRef.current) {
+              const rect = stickyPlaceholderRef.current.getBoundingClientRect();
+              const shouldBeSticky = rect.top <= 0;
+  
+              if (shouldBeSticky !== isSticky) {
+                setIsSticky(shouldBeSticky);
+              }
+            }
+            ticking = false;
+          });
+          ticking = true;
+        }
+      };
+  
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      return () => window.removeEventListener('scroll', handleScroll);
+    }, [isSticky]);
+  
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1042,7 +1068,20 @@ export default function ClusterMetrics() {
   return (
     <div className="p-4 lg:p-6">
       {/* Filter Bar with Network Status Indicator */}
-      <div className="mb-6 space-y-4">
+          <div
+      ref={stickyPlaceholderRef}
+      className={` ${isSticky ? "h-20" : "h-0"}`}
+    />
+
+    {/* Sticky Filter Bar */}
+    <div
+      ref={filterBarRef}
+      className={`z-40  ${
+        isSticky
+          ? "fixed top-0 left-64 right-0 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-lg px-6 py-3"
+          : "relative bg-white rounded-xl shadow-sm p-4"
+      }`}
+    >
         <div className="flex items-center justify-between">
           <FilterBar
             selectedTimeRange={timeRange}

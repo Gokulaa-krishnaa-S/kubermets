@@ -560,33 +560,32 @@ const NodeMetricsDashboard = () => {
   };
 
   useEffect(() => {
+    let ticking = false;
+
     const handleScroll = () => {
-      if (filterBarRef.current && stickyPlaceholderRef.current) {
-        const rect = stickyPlaceholderRef.current.getBoundingClientRect();
-        const shouldBeSticky = rect.top <= 0;
-        setIsSticky(shouldBeSticky);
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          if (filterBarRef.current && stickyPlaceholderRef.current) {
+            const rect = stickyPlaceholderRef.current.getBoundingClientRect();
+            const shouldBeSticky = rect.top <= 0;
+
+            if (shouldBeSticky !== isSticky) {
+              setIsSticky(shouldBeSticky);
+            }
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isSticky]);
 
-
-useEffect(() => {
-  if (isSticky && (searchTerm || Object.values(filters).some(f => f.length > 0))) {
-    // Scroll to the sticky filter bar instead of the very top
-    filterBarRef.current?.scrollIntoView({ 
-      behavior: 'smooth', 
-      block: 'start' 
-    });
-  } else if (!isSticky) {
-    // Only scroll to top when not sticky
-    window.scrollTo(0, 0);
-  }
-  
-  setCurrentPage(1);
-}, [searchTerm, filters, location.pathname, isSticky]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filters, location.pathname]);
 
   useEffect(() => {
     const rangeFromUrl = searchParams.get("window") || "24h";
@@ -1018,21 +1017,21 @@ useEffect(() => {
 
         <div
           ref={stickyPlaceholderRef}
-          className={`transition-all duration-300 ${isSticky ? 'h-20' : 'h-0'}`}
+          className={` ${isSticky ? 'h-20' : 'h-0'}`}
         />
 
 
         <div
           ref={filterBarRef}
           className={`
-          transition-all duration-300 ease-in-out z-50 mb-6
-          ${isSticky
+    z-50 mb-6
+    ${isSticky
               ? `fixed top-0 left-64 right-0 mx-0 px-4 md:px-6 py-4
-               bg-white/80 backdrop-blur-lg border-b border-white/20
-               shadow-lg shadow-black/5`
+           bg-white/80 backdrop-blur-lg border-b border-white/20
+           shadow-lg shadow-black/5`
               : 'relative bg-white rounded-xl shadow-sm'
             }
-        `}
+  `}
         >
           <div className={`
           mx-auto w-full
