@@ -12,7 +12,7 @@ import { GroupedBarChart } from "@/components/chart/GroupedBarChart";
 import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
 import { useLocation } from 'react-router-dom';
-import ClusterLogs from "@/components/logs/ClusterLogs";
+import ClusterLogs from "@/components/clusterlogs/ClusterLogs";
 
 import {
   ConnectionStatusBanner,
