@@ -1,0 +1,355 @@
+{
+  "title": "GCP Cluster Form",
+  "fields": [
+    {
+      "name": "gcpRegion",
+      "type": "select",
+      "label": "GCP Region",
+      "required": true,
+      "helpText": "Choose the region for your GKE cluster.",
+      "options": [
+        { "value": "us-central1", "label": "US Central (Iowa)" },
+        { "value": "us-east1", "label": "US East (South Carolina)" },
+        { "value": "europe-west1", "label": "Europe West (Belgium)" },
+        { "value": "asia-east1", "label": "Asia East (Taiwan)" }
+      ]
+    },
+    {
+      "name": "credentials",
+      "type": "group",
+      "label": "Credential Configuration",
+      "fields": [
+        {
+          "name": "credential_name",
+          "type": "text",
+          "label": "Credential Name",
+          "helpText": "A friendly name to identify this credential.",
+          "required": true,
+          "placeholder": "e.g., gcp-account"
+        },
+        {
+          "name": "service_account_json",
+          "type": "file",
+          "label": "Upload Service Account JSON",
+          "helpText": "Upload the GCP service account key JSON.",
+          "required": true
+        }
+      ]
+    },
+    {
+      "name": "gcpProjectId",
+      "type": "text",
+      "label": "GCP Project ID",
+      "helpText": "Your Google Cloud project ID (not display name).",
+      "required": true,
+      "placeholder": "e.g., my-project-123",
+      "validation": {
+        "type": "gcpProjectId"
+      }
+    },
+    {
+      "name": "clusterName",
+      "type": "text",
+      "label": "Cluster Name",
+      "helpText": "Name for the cluster; must be unique within the selected region.",
+      "required": true,
+      "placeholder": "e.g., my-cluster-01",
+      "validation": {
+        "type": "clusterName"
+      }
+    },
+    {
+      "name": "kubernetesVersion",
+      "type": "select",
+      "label": "Kubernetes Version",
+      "helpText": "The version of Kubernetes to use for the cluster",
+      "required": true,
+      "options": [
+        { "value": "1.31", "label": "1.31" },
+        { "value": "1.30", "label": "1.30" },
+        { "value": "1.29", "label": "1.29" }
+      ]
+    },
+    {
+      "name": "ipv4CidrBlock",
+      "type": "text",
+      "label": "IPv4 CIDR block for GKE master nodes",
+      "required": true,
+      "placeholder": "e.g., 172.16.0.0/28",
+      "helpText": "CIDR block for GKE master nodes (e.g., 172.16.0.0/28)",
+      "validation": {
+        "type": "cidrBlock"
+      }
+    },
+    {
+      "name": "availabilityZones",
+      "type": "checkbox-group",
+      "label": "Availability Zones in the selected region",
+      "options": [
+        { "value": "us-central1-c", "label": "us-central1-c" },
+        { "value": "us-central1-a", "label": "us-central1-a" },
+        { "value": "us-central1-f", "label": "us-central1-f" },
+        { "value": "us-central1-b", "label": "us-central1-b" }
+      ]
+    },
+    {
+      "name": "networkConfig",
+      "type": "tab-group",
+      "label": "Network Configuration",
+      "required": true,
+      "options": [
+        { "value": "create-new", "label": "Create New Network" },
+        { "value": "use-existing", "label": "Use Existing Network" }
+      ]
+    },
+    {
+      "name": "ipv4CidrPrivateSubnet",
+      "type": "text",
+      "label": "IPv4 CIDR block for private subnet",
+      "required": true,
+      "placeholder": "e.g., 10.0.1.0/24",
+      "helpText": "CIDR block for private subnet (e.g., 10.0.1.0/24)",
+      "validation": { "type": "cidrBlock" },
+      "showIf": { "networkConfig": "create-new" }
+    },
+    {
+      "name": "ipv4CidrPods",
+      "type": "text",
+      "label": "IPv4 CIDR block for Pods",
+      "helpText": "IP address range for Pods (pod_cidr)",
+      "required": true,
+      "placeholder": "e.g., 10.1.0.0/16",
+      "validation": { "type": "cidrBlock" },
+      "showIf": { "networkConfig": "create-new" }
+    },
+    {
+      "name": "ipv4CidrServices",
+      "type": "text",
+      "label": "IPv4 CIDR block for services",
+      "required": true,
+      "placeholder": "e.g., 10.2.0.0/16",
+      "helpText": "CIDR block for services (e.g., 10.2.0.0/16)",
+      "validation": { "type": "cidrBlock" },
+      "showIf": { "networkConfig": "create-new" }
+    },
+    {
+      "name": "podRangeName",
+      "type": "text",
+      "label": "Pod Range Name",
+      "helpText": "Range name for pod_cidr. GKE uses pod range name to assign address for pods",
+      "required": true,
+      "showIf": { "networkConfig": "create-new" }
+    },
+    {
+      "name": "serviceRangeName",
+      "type": "text",
+      "label": "Service Range Name",
+      "helpText": "Range name for service_cidr. GKE uses service range name to assign address for services",
+      "required": true,
+      "showIf": { "networkConfig": "create-new" }
+    },
+    {
+      "name": "networkTags",
+      "type": "array",
+      "label": "Network Tags",
+      "itemType": "text",
+      "showIf": { "networkConfig": "create-new" }
+    },
+    {
+      "name": "networkId",
+      "type": "text",
+      "label": "Network ID",
+      "helpText": "Existing VPC network ID",
+      "placeholder": "Enter Network ID",
+      "showIf": { "networkConfig": "use-existing" }
+    },
+    {
+      "name": "subnetId",
+      "type": "text",
+      "label": "Subnet ID",
+      "helpText": "Existing Subnet ID",
+      "placeholder": "Enter Subnet ID",
+      "showIf": { "networkConfig": "use-existing" }
+    },
+    {
+      "name": "cpuPools",
+      "type": "dynamic-pool-group",
+      "label": "CPU Pools",
+      "poolType": "cpu",
+      "fields": [
+        {
+          "name": "cpu_np_name",
+          "type": "text",
+          "label": "Node Pool Name",
+          "required": true,
+          "placeholder": "e.g., cpu2x"
+        },
+        {
+          "name": "cpu_np_capacity_type",
+          "type": "select",
+          "label": "Enable On-Demand or spot nodes",
+          "required": true,
+          "options": [
+            { "value": "on-demand", "label": "On Demand" },
+            { "value": "spot", "label": "Spot" }
+          ]
+        },
+        {
+          "name": "cpu_np_instance_type",
+          "type": "text",
+          "label": "Instance Type",
+          "required": true,
+          "placeholder": "e.g., Standard_D8ds_v5"
+        },
+        {
+          "name": "cpu_np_min_node_count",
+          "type": "text",
+          "label": "Minimum Node Count",
+          "required": true,
+          "placeholder": "0"
+        },
+        {
+          "name": "cpu_np_max_node_count",
+          "type": "text",
+          "label": "Maximum Node Count",
+          "required": true,
+          "placeholder": "2"
+        }
+      ]
+    },
+    {
+      "name": "gpuPools",
+      "type": "dynamic-pool-group",
+      "label": "GPU Pools",
+      "poolType": "gpu",
+      "fields": [
+        {
+          "name": "gpu_np_name",
+          "type": "text",
+          "label": "Node Pool Name",
+          "required": false,
+          "placeholder": "e.g., gpu2x"
+        },
+        {
+          "name": "gpu_np_capacity_type",
+          "type": "select",
+          "label": "Enable On-Demand or spot nodes",
+          "required": false,
+          "options": [
+            { "value": "on-demand", "label": "On Demand" },
+            { "value": "spot", "label": "Spot" }
+          ]
+        },
+        {
+          "name": "gpu_np_gpu_type",
+          "type": "select",
+          "label": "GPU Type",
+          "required": false,
+          "options": [
+            { "value": "nvidia-l4", "label": "NVIDIA L4" },
+            { "value": "nvidia-tesla-a100", "label": "NVIDIA Tesla A100" },
+            { "value": "nvidia-a100-80gb", "label": "NVIDIA A100 80GB" },
+            { "value": "nvidia-h100", "label": "NVIDIA H100" }
+
+          ]
+        },
+        {
+          "name": "gpu_np_machine_type",
+          "type": "select",
+          "label": "Machine Type",
+          "required": false,
+          "dependsOn": "gpu_np_gpu_type",
+          "options": [
+            { "when": "nvidia-l4", "options": [
+              { "value": "g2-standard-4", "label": "g2-standard-4" },
+              { "value": "g2-standard-8", "label": "g2-standard-8" },
+              { "value": "g2-standard-12", "label": "g2-standard-12" },
+              { "value": "g2-standard-16", "label": "g2-standard-16" },
+              { "value": "g2-standard-24", "label": "g2-standard-24" },
+              { "value": "g2-standard-32", "label": "g2-standard-32" },
+              { "value": "g2-standard-48", "label": "g2-standard-48" },
+              { "value": "g2-standard-96", "label": "g2-standard-96" }
+            ]},
+            { "when": "nvidia-a100-80gb", "options": [
+              { "value": "a2-ultragpu-1g", "label": "a2-ultragpu-1g" },
+              { "value": "a2-ultragpu-2g", "label": "a2-ultragpu-2g" },
+              { "value": "a2-ultragpu-4g", "label": "a2-ultragpu-4g" },
+              { "value": "a2-ultragpu-8g", "label": "a2-ultragpu-8g" }
+            ]},
+            { "when": "nvidia-tesla-a100", "options": [
+              { "value": "a2-highgpu-1g", "label": "a2-highgpu-1g" },
+              { "value": "a2-highgpu-2g", "label": "a2-highgpu-2g" },
+              { "value": "a2-highgpu-4g", "label": "a2-highgpu-4g" },
+              { "value": "a2-highgpu-8g", "label": "a2-highgpu-8g" },
+              { "value": "a2-highgpu-16g", "label": "a2-highgpu-16g" }
+            ]},
+            { "when": "nvidia-h100", "options": [
+              { "value": "a3-highgpu-1g", "label": "a3-highgpu-1g" },
+              { "value": "a3-highgpu-2g", "label": "a3-highgpu-2g" },
+              { "value": "a3-highgpu-4g", "label": "a3-highgpu-4g" },
+              { "value": "a3-highgpu-8g", "label": "a3-highgpu-8g" }
+            ]},
+            { "when": "", "options": [
+              { "value": "_placeholder_", "label": "Select a GPU Type first" }
+            ]}
+          ]
+        },
+        {
+          "name": "gpu_np_min_node_count",
+          "type": "text",
+          "label": "Minimum Node Count",
+          "required": false,
+          "placeholder": "0"
+        },
+        {
+          "name": "gpu_np_max_node_count",
+          "type": "text",
+          "label": "Maximum Node Count",
+          "required": false,
+          "placeholder": "2"
+        }
+      ]
+    },
+    {
+      "name": "bucketConfig",
+      "type": "group",
+      "label": "Bucket configuration for Terraform state",
+      "fields": [
+        { "name": "gcsBucketName", "type": "text", "label": "GCS Bucket Name for Terraform state", "helpText": "Name of the GCS bucket where Terraform state will be stored", "required": true },
+        { "name": "prefixPath", "type": "text", "label": "Prefix (path) where Terraform state will be stored in the bucket", "helpText": "Path where Terraform state will be stored in the bucket", "required": true }
+      ]
+    },
+    {
+      "name": "platformFeatures",
+      "type": "checkbox-group",
+      "label": "Platform Features",
+      "options": [
+        { "value": "blobStorage", "label": "Blob Storage" },
+        { "value": "clusterIntegration", "label": "Cluster Integration" },
+        { "value": "registry", "label": "Registry" },
+        { "value": "secrets", "label": "Secrets" }
+      ]
+    },
+    {
+      "name": "namespaceEnabled",
+      "type": "checkbox",
+      "label": "Create Namespace",
+      "helpText": "Toggle to create a namespace after cluster provisioning"
+    },
+    {
+      "name": "namespace",
+      "type": "group",
+      "label": "Namespace Configuration",
+      "showIf": { "namespaceEnabled": true },
+      "fields": [
+        { "name": "name", "type": "text", "label": "Namespace Name", "required": true, "placeholder": "Enter Namespace Name" },
+        { "name": "collaborators", "type": "collaborators", "label": "Collaborators", "optional": true },
+        { "name": "repository", "type": "permissions", "label": "Repository", "description": "ML Repos are used to store models and artifacts like git repos. MLRepos are backed by S3 / GCS / Azure bucket and you can have different ml repos with different set of permissions." },
+        { "name": "labels", "type": "labels", "label": "Labels", "optional": true },
+        { "name": "annotations", "type": "annotations", "label": "Annotations", "optional": true }
+      ]
+    }
+  ]
+}
+
+
