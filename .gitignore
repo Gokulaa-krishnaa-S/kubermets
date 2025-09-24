@@ -43,14 +43,13 @@ backend_inProgress/migrations
 
 #python venv
 backend/venv/
-schedular/schedularvenv/
-schedular/venv/
+scheduler/schedularvenv/
+scheduler/venv/
 backend_inProgress/venv/
 
-frontend
 
-schedular/fastapi.py
+scheduler/fastapi.py
 .ven
 *.zip
 
-frontend
+

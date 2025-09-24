@@ -1,0 +1,47 @@
+{
+  "title": "Azure Cluster Form",
+  "fields": [
+    { "name": "location", "type": "select", "label": "Location", "required": true, "options": [
+      { "value": "eastus", "label": "East US" },
+      { "value": "westus2", "label": "West US 2" },
+      { "value": "westeurope", "label": "West Europe" },
+      { "value": "southeastasia", "label": "Southeast Asia" }
+    ]},
+    { "name": "resourceGroup", "type": "radio-group", "label": "Resource Group", "required": true, "options": [
+      { "value": "create-new", "label": "Create New Resource Group" },
+      { "value": "use-existing", "label": "Use Existing Resource Group" }
+    ]},
+    { "name": "clusterName", "type": "text", "label": "Cluster Name", "required": true },
+    { "name": "kubernetesVersion", "type": "select", "label": "Kubernetes Version", "required": true, "options": [
+      { "value": "1.31", "label": "1.31" },
+      { "value": "1.30", "label": "1.30" },
+      { "value": "1.29", "label": "1.29" }
+    ]},
+    { "name": "nodePools", "type": "array-group", "label": "Node Pools", "itemFields": [
+      { "name": "name", "type": "text", "label": "Pool Name", "required": true },
+      { "name": "instanceType", "type": "select", "label": "Instance Type", "required": true, "options": [
+        { "value": "Standard_DS2_v2", "label": "Standard_DS2_v2" },
+        { "value": "Standard_DS3_v2", "label": "Standard_DS3_v2" },
+    { "value": "Standard_DS4_v2", "label": "Standard_DS4_v2" }
+      ]},
+      { "name": "minNodeCount", "type": "number", "label": "Min Node Count", "required": true },
+      { "name": "maxNodeCount", "type": "number", "label": "Max Node Count", "required": true }
+    ]},
+    { "name": "networkConfig", "type": "radio-group", "label": "Network Configuration", "required": true, "options": [
+      { "value": "create-new", "label": "Create New VNet" },
+      { "value": "use-existing", "label": "Use Existing VNet" }
+    ]},
+    { "name": "platformFeatures", "type": "checkbox-group", "label": "Platform Features", "options": [
+      { "value": "clusterIntegration", "label": "Cluster Integration" },
+      { "value": "fullWorkflowStorage", "label": "Full Workflow Storage" },
+      { "value": "enableClusterRegistry", "label": "Enable Cluster Registry" },
+      { "value": "enableSecretsManager", "label": "Enable Secrets Manager" }
+    ]},
+    { "name": "storageAccount", "type": "group", "label": "Storage Account Configuration for Terraform State", "fields": [
+      { "name": "resourceGroup", "type": "text", "label": "Resource Group", "required": true },
+      { "name": "storageAccountName", "type": "text", "label": "Storage Account Name", "required": true }
+    ]}
+  ]
+}
+
+
