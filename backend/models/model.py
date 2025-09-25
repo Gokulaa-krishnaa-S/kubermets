@@ -299,6 +299,20 @@ class PodMetrics(Base):
         Index("idx_pod_idle", "is_idle"),
     )
 
+# ================================
+# Melts Table
+# ================================
+class Melts(Base):
+    __tablename__ = "Melts"
+
+    id = Column(Integer, primary_key=True)
+    cluster_id = Column(Integer, nullable=True)
+    user_id = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    payload = Column(JSON, nullable=True)
+
+
 
 # Database connection setup
 class DatabaseManager:
