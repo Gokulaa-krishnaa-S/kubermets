@@ -778,7 +778,7 @@ export default function ClusterMetrics() {
     }
   }, []);
 
-  // Function to check if cluster exists and get cluster name
+
   const checkClusterExists = useCallback(async (clusterId) => {
     try {
       const backendApiBaseUrl =
@@ -1317,7 +1317,8 @@ export default function ClusterMetrics() {
                           </div>
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedJobId(cluster_id);
                                 setShowLogs(true);
                               }}
