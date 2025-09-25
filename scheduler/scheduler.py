@@ -1218,25 +1218,9 @@ def schedulerMain():
 
     # run_revision_for_all_clusters()
 
-    # graceful shutdown
-    def shutdown(signum, frame):
-        log.info("\n" + "="*70)
-        log.info("SHUTTING DOWN SCHEDULERS".center(70))
-        log.info("="*70)
-        
-        log.info("Shutting down main scheduler...")
-        scheduler.shutdown(wait=True)
-        
-        # Import and shutdown data revision scheduler
-        _, shutdown_revision_scheduler = import_revision_scheduler()
-        shutdown_revision_scheduler()
-        
-        log.info("All schedulers shut down successfully")
-        sys.exit(0)
 
-    signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
 
+        # graceful shutdown (removed signal handling for background thread)
     # initial bootstrapping (includes both historical and hourly data)
     initial_collect_all(scheduler)
     
@@ -1261,8 +1245,8 @@ def schedulerMain():
         shutdown("KeyboardInterrupt", None)
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 # -------------------- FastAPI Endpoints --------------------
 
