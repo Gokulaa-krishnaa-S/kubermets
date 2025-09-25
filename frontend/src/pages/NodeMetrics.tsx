@@ -853,7 +853,7 @@ const NodeMetricsDashboard = () => {
         ? "hsl(var(--chart-storage))"
         : status === "warning"
           ? "hsl(var(--warning))"
-          : "hsl(var(--chart-cpu))",
+          : "hsla(0, 78%, 53%, 0.75)",
   }));
 
 
@@ -1385,7 +1385,7 @@ const NodeMetricsDashboard = () => {
                       <Bar
                         dataKey="cpu"
                         stackId="cost"
-                        fill="hsl(var(--chart-cpu))"
+                        fill="hsla(0, 78%, 53%, 0.75)"
                         name="CPU"
                         radius={[0, 0, 0, 0]}
                       />
