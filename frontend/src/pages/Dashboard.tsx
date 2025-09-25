@@ -98,7 +98,7 @@ export default function Dashboard() {
   return (
     <Layout
       title="Dashboard"
-      subtitle="Sify InfinitAI Platform"
+      subtitle="InfinitAI Platform"
       showAddButton
       addButtonText="Add Cluster"
       onAddClick={handleAddCluster}

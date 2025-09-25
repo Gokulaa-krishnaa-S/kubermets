@@ -1315,9 +1315,9 @@ def get_cluster_data(cluster_id: int = 1) -> dict:
         dict: Parsed JSON response (or error details).
     """
     base_url = os.getenv(
-        "SIFY_INFNITE_API_URL", "https://infinitai.sifymdp.digital/environment-api/api"
+        "ENVIRONMENT_API_URL", "https://infinitai.sifymdp.digital/environment-api"
     )
-    url = f"{base_url}/clusters/{cluster_id}"
+    url = f"{base_url}/api/clusters/{cluster_id}"
 
     try:
         response = requests.get(url, timeout=10)
