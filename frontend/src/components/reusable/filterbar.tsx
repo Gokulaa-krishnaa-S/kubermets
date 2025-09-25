@@ -324,7 +324,6 @@ export const Days: React.FC<DaysProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const getSelectedLabel = () => {
-    // If custom range, show as 'YYYY-MM-DD to YYYY-MM-DD (Xd)'
     if (selectedTimeRange && selectedTimeRange.includes(":")) {
       const [start, end] = selectedTimeRange.split(":");
       const days = getDaysFromCustomRange(selectedTimeRange);
@@ -339,12 +338,12 @@ export const Days: React.FC<DaysProps> = ({
       return date.toISOString().split("T")[0];
     };
     const customRange = `${formatDate(startDate)}:${formatDate(endDate)}`;
-    // Calculate days and send as 'Xd' for query param
+  
     const days = getDaysFromCustomRange(customRange);
     if (days) {
-      onTimeRangeChange(`${days}d`); // send as 'Xd' for backend
+      onTimeRangeChange(`${days}d`); 
     } else {
-      onTimeRangeChange(customRange); // fallback to raw range
+      onTimeRangeChange(customRange); 
     }
     setShowCustomCalendar(false);
     setIsDropdownOpen(false);
@@ -385,8 +384,6 @@ export const Days: React.FC<DaysProps> = ({
             <div className="text-sm font-medium text-gray-900 mb-3">
               Date Range
             </div>
-
-            {/* Two Column Layout */}
             <div className="grid grid-cols-2 gap-1">
               {predefinedOptions.map((option, index) => (
                 <DropdownMenuItem
