@@ -130,7 +130,6 @@ def fetch_multi_aggregation_data(
         "costUnit": "cumulative",
         "external": "false",
         "filter": f'(cluster:"{cluster_name}")+controllerKind:"deployment"',
-        # "filter": f'cluster:"{cluster_name}"',  # Remove deployment restriction to get all resources
         "idle": "true",
         "idleByNode": "false",
         "includeSharedCostBreakdown": "true",

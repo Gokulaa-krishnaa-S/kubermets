@@ -544,8 +544,16 @@ export default function ClusterMetrics() {
         ]);
 
         setLastUpdated(new Date());
-        if (isManualRefresh && serverStatus === "live")
+        if (isManualRefresh && showToast && serverStatus === "live") {
+          toast({
+            title: "Data Refreshed",
+            description: "Cluster metrics have been updated successfully.",
+            variant: "default",
+          });
+        }
+        if (isManualRefresh && serverStatus === "live") {
           setIsAutoRefreshPaused(false);
+        }
       } catch (error) {
         setIsAutoRefreshPaused(true);
       } finally {
@@ -778,7 +786,7 @@ export default function ClusterMetrics() {
     }
   }, []);
 
-  // Function to check if cluster exists and get cluster name
+
   const checkClusterExists = useCallback(async (clusterId) => {
     try {
       const backendApiBaseUrl =
@@ -1317,7 +1325,8 @@ export default function ClusterMetrics() {
                           </div>
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedJobId(cluster_id);
                                 setShowLogs(true);
                               }}

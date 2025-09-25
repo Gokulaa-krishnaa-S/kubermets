@@ -62,8 +62,9 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
 
   const verifyToken = async (token: string): Promise<string | null> => {
     try {
+      const verify_url = import.meta.env.VITE_API_VERIFY_URL;
       const response = await fetch(
-        "https://infinitai.sifymdp.digital/shell-api/api/verify",
+        `${verify_url}/api/verify`,
         {
           method: "POST",
           headers: {
