@@ -31,6 +31,18 @@ const predefinedOptions = [
   { label: "Last 12 months", value: "365d" },
 ];
 
+// Utility to get days from custom range string
+function getDaysFromCustomRange(range) {
+  if (!range || !range.includes(":")) return null;
+  const [start, end] = range.split(":");
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
+  const diff = Math.abs(endDate.getTime() - startDate.getTime());
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
+  return days;
+}
+
 // Calendar Component
 const Calendar = ({
   selectedStart,
@@ -312,8 +324,14 @@ export const Days: React.FC<DaysProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const getSelectedLabel = () => {
+    // If custom range, show as 'YYYY-MM-DD to YYYY-MM-DD (Xd)'
+    if (selectedTimeRange && selectedTimeRange.includes(":")) {
+      const [start, end] = selectedTimeRange.split(":");
+      const days = getDaysFromCustomRange(selectedTimeRange);
+      return `${start} to ${end} (${days}d)`;
+    }
     const option = predefinedOptions.find((o) => o.value === selectedTimeRange);
-    return option ? option.label : "Last 7 days";
+    return option ? option.label : "Custom Range";
   };
 
   const handleCustomRangeApply = (startDate, endDate) => {
@@ -321,7 +339,13 @@ export const Days: React.FC<DaysProps> = ({
       return date.toISOString().split("T")[0];
     };
     const customRange = `${formatDate(startDate)}:${formatDate(endDate)}`;
-    onTimeRangeChange(customRange);
+    // Calculate days and send as 'Xd' for query param
+    const days = getDaysFromCustomRange(customRange);
+    if (days) {
+      onTimeRangeChange(`${days}d`); // send as 'Xd' for backend
+    } else {
+      onTimeRangeChange(customRange); // fallback to raw range
+    }
     setShowCustomCalendar(false);
     setIsDropdownOpen(false);
   };

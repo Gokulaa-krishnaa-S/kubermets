@@ -544,8 +544,16 @@ export default function ClusterMetrics() {
         ]);
 
         setLastUpdated(new Date());
-        if (isManualRefresh && serverStatus === "live")
+        if (isManualRefresh && showToast && serverStatus === "live") {
+          toast({
+            title: "Data Refreshed",
+            description: "Cluster metrics have been updated successfully.",
+            variant: "default",
+          });
+        }
+        if (isManualRefresh && serverStatus === "live") {
           setIsAutoRefreshPaused(false);
+        }
       } catch (error) {
         setIsAutoRefreshPaused(true);
       } finally {
