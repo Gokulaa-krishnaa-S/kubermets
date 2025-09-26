@@ -1121,44 +1121,35 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
         )
 
 
-def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: List[Dict]):
+def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: list, job_prefix: str):
     """
-    Schedule jobs based on the next expected data window for each cluster.
-    Instead of interval triggers, each job is scheduled once at the exact
-    `next_run_time` and then re-schedules itself inside `collect_and_reschedule`.
+    Schedule cluster jobs safely:
+    - Only one job per cluster is active.
+    - Respects MIN_SCHEDULE_INTERVAL_MIN.
+    - Avoids running missed jobs immediately on scheduler start.
     """
-    log.info("\n" + "#"*80)
-    log.info("CLUSTER JOB SCHEDULING".center(80))
-    log.info("#"*80)
-    
-    log.info("\nINITIAL SETUP:")
-    log.info("-"*50)
-    log.info("Total clusters to schedule: %d", len(clusters))
-    log.info("Scheduling type: One-time with auto-reschedule")
-    log.info("-"*50)
-    
+
+    # Remove all old jobs to prevent accidental immediate execution
+    scheduler.remove_all_jobs()
+
     for cfg in clusters:
-        log.info("\nProcessing Cluster:")
-        log.info("-"*40)
-        log.info("Cluster Name: %s", cfg.get("cluster_name", f"id-{cfg['cluster_id']}"))
-        log.info("Cluster ID: %d", cfg["cluster_id"])
-        
-        # figure out when this cluster should next run
-        next_run_time = calculate_next_run_time(cfg["cluster_id"])
+        cluster_id = cfg["cluster_id"]
+        cluster_name = cfg.get("cluster_name", f"id-{cluster_id}")
+        job_id = f"{job_prefix}{cluster_id}"
+
+        # Calculate next run
+        next_run_time = calculate_next_run_time(cluster_id)
         if not next_run_time:
-            log.warning(
-                "No next run time calculated for cluster_id=%s", cfg["cluster_id"]
-            )
             continue
 
-        job_id = f"{JOB_PREFIX}{cfg['cluster_id']}"
-        
-        log.info("\nScheduling Details:")
-        log.info("-"*40)
-        log.info("Job ID: %s", job_id)
-        log.info("Scheduled Run Time: %s", next_run_time.isoformat())
-        log.info("Time until execution: %s", next_run_time - datetime.now(timezone.utc))
-        
+        now = datetime.now(timezone.utc)
+        min_allowed_time = now + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
+
+        # Ensure we do not schedule before minimum interval
+        if next_run_time < min_allowed_time:
+            next_run_time = min_allowed_time
+
+        # Add job with replace_existing to ensure only one per cluster
         scheduler.add_job(
             func=collect_and_reschedule,
             id=job_id,
@@ -1166,13 +1157,17 @@ def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: List[Dict]):
             trigger="date",
             run_date=next_run_time,
             replace_existing=True,
+            misfire_grace_time=60  # seconds; missed jobs older than 1 min will not run
         )
+
+        log.info(
+            "Scheduled cluster job | cluster=%s next_run=%s",
+            cluster_name,
+            next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
+        )
+
         
-        log.info("Job successfully scheduled")
-        log.info("-"*40)
-
-
-def initial_collect_all(scheduler: BackgroundScheduler):
+def initial_collect_all(scheduler: BackgroundScheduler, job_prefix: str = "collect_job_"):
     """
     Run an initial collection on startup for all clusters to catch up on any missing data.
     Also collects hourly data for today for each cluster after its initial collection.
@@ -1184,13 +1179,12 @@ def initial_collect_all(scheduler: BackgroundScheduler):
         try:
             # First do the historical data collection
             collect_cluster_data(cfg)
-            
-          
+
             log.info(
                 "Starting hourly collection after initial data | cluster=%s",
                 cfg.get("cluster_name", f"id-{cfg['cluster_id']}")
             )
-            
+
         except Exception as e:
             log.error(
                 "Collection failed | cluster_id=%s err=%s",
@@ -1198,9 +1192,8 @@ def initial_collect_all(scheduler: BackgroundScheduler):
                 e,
             )
 
-    # Schedule ongoing jobs
-    schedule_cluster_jobs(scheduler, clusters)
-
+    # Schedule ongoing jobs with the provided prefix
+    schedule_cluster_jobs(scheduler, clusters, job_prefix=job_prefix)
 
 # -------------------- Main --------------------
 def schedulerMain():
