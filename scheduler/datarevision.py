@@ -54,7 +54,7 @@ def revise_cluster_data(cluster_cfg: Dict) -> None:
         # Start with beginning of current day
         current_day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         # Go back 3 days to get start time
-        start_time = current_day_start - timedelta(days=4)
+        start_time = current_day_start - timedelta(days=3)
         # End time is 2 days ago (1 day after start)
         end_time = start_time + timedelta(days=1)
         
