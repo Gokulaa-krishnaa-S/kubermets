@@ -1209,7 +1209,7 @@ def schedulerMain():
     start_revision_scheduler, _ = import_revision_scheduler()
     revision_scheduler = start_revision_scheduler(scheduler)
 
-    # run_revision_for_all_clusters()
+    run_revision_for_all_clusters()
 
 
 

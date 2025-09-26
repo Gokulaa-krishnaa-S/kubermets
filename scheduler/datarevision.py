@@ -56,7 +56,7 @@ def revise_cluster_data(cluster_cfg: Dict) -> None:
         # Go back 3 days to get start time
         start_time = current_day_start - timedelta(days=4)
         # End time is 2 days ago (1 day after start)
-        end_time = start_time + timedelta(days=2)
+        end_time = start_time + timedelta(days=1)
         
         log.info("\nREVISION DETAILS:")
         log.info("-"*50)
