@@ -306,20 +306,17 @@ class Melts(Base):
     __tablename__ = "melts"  # lowercase for consistency
 
     id = Column(Integer, primary_key=True)
-    cluster_id = Column(Integer, ForeignKey("cluster_metrics.id"), nullable=False)  # Make required and add foreign key
+    cluster_id = Column(Integer, nullable=False)  # Make required and add foreign key
     user_id = Column(String, nullable=False)  # Make required
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     payload = Column(JSON, nullable=True)
 
-    # Add relationship to cluster
-    cluster = relationship("ClusterMetrics", backref="melts")
-
     __table_args__ = (
         Index("idx_melts_cluster", "cluster_id"),  # Index for foreign key
         Index("idx_melts_user", "user_id"),        # Index for user queries
         Index("idx_melts_created", "created_at"),  # Index for time-based queries
-    )
+    )   
 
 
 
