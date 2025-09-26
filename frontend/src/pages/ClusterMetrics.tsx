@@ -13,6 +13,7 @@ import { ClusterLayoutLoader } from "@/components/loader/clusterloader";
 import { useCluster } from "../../src/components/context/ClusterContext";
 import { useLocation } from 'react-router-dom';
 import ClusterLogs from "@/components/clusterlogs/ClusterLogs";
+import { getRuntimeConfig } from "../lib/runtimeConfig";
 
 import {
   ConnectionStatusBanner,
@@ -611,8 +612,9 @@ export default function ClusterMetrics() {
   // Function to call insertCluster API
   const callInsertClusterAPI = useCallback(async (clusterId) => {
     try {
+      const runtimeConfig = getRuntimeConfig();
       const apiBaseUrl =
-        import.meta.env.VITE_API_BASE_URL || "http://172.16.10.4:5007/v1";
+        runtimeConfig.VITE_API_BASE_URL;
       const response = await fetch(`${apiBaseUrl}/saveNewCluster`, {
         method: "POST",
         headers: {
@@ -789,8 +791,9 @@ export default function ClusterMetrics() {
 
   const checkClusterExists = useCallback(async (clusterId) => {
     try {
+      const runtimeConfig = getRuntimeConfig();
       const backendApiBaseUrl =
-        import.meta.env.VITE_BACKEND_API_BASE_URL ||
+        runtimeConfig.VITE_BACKEND_API_BASE_URL ||
         "";
       const response = await fetch(
         `${backendApiBaseUrl}/clusters/${clusterId}`,
