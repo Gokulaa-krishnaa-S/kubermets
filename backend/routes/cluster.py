@@ -1280,13 +1280,11 @@ def update_global_aggregated(agg, cluster, node, pod, idle_cost):
     agg["avgCpuUsage"] += cluster.get("cpuUsage", 0)
     agg["avgMemoryUsage"] += cluster.get("memoryUsage", 0)
     agg["clusterCount"] += 1
-
     agg["totalNodes"] += node.get("totalNodes", 0)
     agg["healthyNodes"] += node.get("healthyNodes", 0)
     agg["warningNodes"] += node.get("warningNodes", 0)
     agg["nodeAvgEfficiency"] += node.get("avgEfficiency", 0)
     agg["nodeAvgCpuUsage"] += node.get("avgCpuUsage", 0)
-
     agg["totalPods"] += pod.get("totalPods", 0)
     agg["runningPods"] += pod.get("runningPods", 0)
     agg["idlePods"] += pod.get("idlePods", 0)
@@ -1310,13 +1308,13 @@ def get_cluster_data(cluster_id: int = 1) -> dict:
 
     Args:
         cluster_id (int): ID of the cluster to fetch. Default = 1.
-
     Returns:
         dict: Parsed JSON response (or error details).
     """
     base_url = os.getenv(
-        "ENVIRONMENT_API_URL", "https://infinitai.sifymdp.digital/environment-api"
+        "ENVIRONMENT_API_URL"
     )
+    print("Environment API URL:", base_url)
     url = f"{base_url}/api/clusters/{cluster_id}"
 
     try:
