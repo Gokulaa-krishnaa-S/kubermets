@@ -1116,8 +1116,8 @@ export default function ClusterMetrics() {
       {/* Loading Banner */}
       {isLoadingData && <LoadingBanner message="Loading cluster data..." />}
 
-      <div className="space-y-6 mt-6">  
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 p-4"> 
+      <div className="space-y-6 mt-6">  {/* Added mt-6 for top margin */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 p-4">  {/* Added p-4 for padding and increased gap-6 */}
           {clusterStats.map((stat, index) => (
             <TooltipWrapper
               key={index}
