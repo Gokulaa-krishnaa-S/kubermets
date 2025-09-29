@@ -19,7 +19,7 @@ const DomainDropdown: React.FC<DomainDropdownProps> = ({ onSelect }) => {
   const [instances, setInstances] = useState<Instance[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string>("");
-    const { selectedInstance,userId}: any = useCluster();
+  const { selectedInstance, userId }: any = useCluster();
 
 
   useEffect(() => {
@@ -54,7 +54,7 @@ const DomainDropdown: React.FC<DomainDropdownProps> = ({ onSelect }) => {
     <select
       value={selected}
       onChange={handleChange}
-      className="border rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="border rounded-lg z-40 px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
     >
       {instances.map((instance) => (
         <option key={instance.id} value={instance.unique_hash}>

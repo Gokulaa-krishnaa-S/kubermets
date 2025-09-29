@@ -119,10 +119,9 @@ def api_info():
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
     debug = os.getenv("FLASK_DEBUG", "False").lower() == "true"
 
     # logger.info(f"Starting Kubecost Monitoring API on port {port}")
-    logger.info("Starting Kubecost Monitoring API on port {}".format(port))
+    logger.info("Starting Kubecost Monitoring API on port {}".format(5000))
 
-    app.run(host="0.0.0.0", port=port, debug=debug)
+    app.run(host="0.0.0.0", port=5000, debug=debug)

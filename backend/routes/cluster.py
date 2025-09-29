@@ -35,7 +35,7 @@ def get_cluster_metrics():
     print("=== Fetching cluster metrics ===")
     session = db_manager.get_session()
     try:
-        API_URL = os.getenv("BACKEND_API_URL")
+        API_URL = os.getenv("ENVIRONMENT_API_URL")
         # 1️ Get cluster_id from request
         cluster_id = request.args.get("cluster_id")
         user_id = request.args.get("user_id", "dev-user")
