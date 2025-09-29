@@ -144,8 +144,7 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
                 {getSelectedProviderIcon()}
                 <span className="truncate">
                   {selectedInstance?.clusterName}
-                   {/* {"_"} */}
-                  {/* {selectedInstance?.id} */}
+                  
                 </span>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -189,8 +188,6 @@ const DomainTypeAhead: React.FC<DomainTypeAheadProps> = ({ onSelect }) => {
                     <div className="flex-1 min-w-0">
                       <span className="font-medium text-gray-900">
                         {instance?.clusterName}
-                        {"_"}
-                        {instance?.id}
                       </span>
                     </div>
                   </div>

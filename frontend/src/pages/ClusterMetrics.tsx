@@ -1084,7 +1084,7 @@ export default function ClusterMetrics() {
     {/* Sticky Filter Bar */}
     <div
       ref={filterBarRef}
-      className={`z-40  ${
+      className={`z-20  ${
         isSticky
           ? "fixed top-0 left-64 right-0 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-lg px-6 py-3"
           : "relative bg-white rounded-xl shadow-sm p-4"
@@ -1532,7 +1532,7 @@ export default function ClusterMetrics() {
         <>
           {/* Overlay */}
           <div
-            className="fixed inset-0 z-40 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 z-20 backdrop-blur-sm transition-opacity"
             style={{ pointerEvents: "auto" }}
             onClick={() => {
               setShowClusterModal(false);

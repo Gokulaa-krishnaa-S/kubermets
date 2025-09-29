@@ -61,7 +61,7 @@ export function CreateClusterModal({ isOpen, onClose }: CreateClusterModalProps)
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 transition-opacity duration-300"
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm z-20 transition-opacity duration-300"
         onClick={handleClose}
       />
 

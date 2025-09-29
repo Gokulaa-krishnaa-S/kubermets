@@ -887,7 +887,7 @@ const KubecostDashboard = () => {
             <div
               ref={filterBarRef}
               className={`
-                 z-50 mb-6
+                 z-20 mb-6
                 ${isSticky
                   ? `fixed top-0 left-64 right-0 mx-0 px-4 md:px-6 py-4
                      bg-white/80 backdrop-blur-lg border-b border-white/20

@@ -69,9 +69,6 @@ USERNAME = (os.getenv("USERNAME", "admin"))
 PASSWORD = (os.getenv("PASSWORD", "Admin@12#$"))                  
 KUBECOST_API_URL = (os.getenv("KUBECOST_API_URL", "")) 
 MAX_BACKFILL_WINDOWS_END = int(os.getenv("MAX_BACKFILL_WINDOWS_END", "7"))
-# API_PORT = int(os.getenv("API_PORT", "8080"))
-# API_HOST = os.getenv("API_HOST", "0.0.0.0")                 
-
 
 # -------------------- Logging --------------------
 logging.basicConfig(
@@ -80,35 +77,6 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 log = logging.getLogger("kubecost-scheduler")
-
-
-# # -------------------- FastAPI Models --------------------
-# class TriggerRequest(BaseModel):
-#     cluster_id: Optional[int] = None
-
-# class TriggerResponse(BaseModel):
-#     status: str
-#     message: str
-#     clusters: List[Dict]
-
-# class HealthResponse(BaseModel):
-#     status: str
-#     service: str
-#     timestamp: str
-
-# class ClusterStatus(BaseModel):
-#     cluster_id: int
-#     cluster_name: str
-#     status: str
-#     error: Optional[str] = None
-
-# # -------------------- FastAPI App --------------------
-# app = FastAPI(
-#     title="Kubecost Scheduler API",
-#     description="API to trigger Kubecost data collection manually",
-#     version="1.0.0"
-# )
-
 
 def fetch_multi_aggregation_data(
     kubecost_url: str,
@@ -1209,13 +1177,15 @@ def schedulerMain():
     start_revision_scheduler, _ = import_revision_scheduler()
     revision_scheduler = start_revision_scheduler(scheduler)
 
-    run_revision_for_all_clusters()
 
 
 
         # graceful shutdown (removed signal handling for background thread)
     # initial bootstrapping (includes both historical and hourly data)
     initial_collect_all(scheduler)
+
+    run_revision_for_all_clusters()
+
     
     # Initialize data revision scheduler
     log.info("\nInitializing data revision scheduler...")
