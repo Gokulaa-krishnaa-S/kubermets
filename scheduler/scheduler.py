@@ -69,9 +69,6 @@ USERNAME = (os.getenv("USERNAME", "admin"))
 PASSWORD = (os.getenv("PASSWORD", "Admin@12#$"))                  
 KUBECOST_API_URL = (os.getenv("KUBECOST_API_URL", "")) 
 MAX_BACKFILL_WINDOWS_END = int(os.getenv("MAX_BACKFILL_WINDOWS_END", "7"))
-# API_PORT = int(os.getenv("API_PORT", "8080"))
-# API_HOST = os.getenv("API_HOST", "0.0.0.0")                 
-
 
 # -------------------- Logging --------------------
 logging.basicConfig(
@@ -80,35 +77,6 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 log = logging.getLogger("kubecost-scheduler")
-
-
-# # -------------------- FastAPI Models --------------------
-# class TriggerRequest(BaseModel):
-#     cluster_id: Optional[int] = None
-
-# class TriggerResponse(BaseModel):
-#     status: str
-#     message: str
-#     clusters: List[Dict]
-
-# class HealthResponse(BaseModel):
-#     status: str
-#     service: str
-#     timestamp: str
-
-# class ClusterStatus(BaseModel):
-#     cluster_id: int
-#     cluster_name: str
-#     status: str
-#     error: Optional[str] = None
-
-# # -------------------- FastAPI App --------------------
-# app = FastAPI(
-#     title="Kubecost Scheduler API",
-#     description="API to trigger Kubecost data collection manually",
-#     version="1.0.0"
-# )
-
 
 def fetch_multi_aggregation_data(
     kubecost_url: str,
@@ -1121,44 +1089,35 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
         )
 
 
-def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: List[Dict]):
+def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: list, job_prefix: str):
     """
-    Schedule jobs based on the next expected data window for each cluster.
-    Instead of interval triggers, each job is scheduled once at the exact
-    `next_run_time` and then re-schedules itself inside `collect_and_reschedule`.
+    Schedule cluster jobs safely:
+    - Only one job per cluster is active.
+    - Respects MIN_SCHEDULE_INTERVAL_MIN.
+    - Avoids running missed jobs immediately on scheduler start.
     """
-    log.info("\n" + "#"*80)
-    log.info("CLUSTER JOB SCHEDULING".center(80))
-    log.info("#"*80)
-    
-    log.info("\nINITIAL SETUP:")
-    log.info("-"*50)
-    log.info("Total clusters to schedule: %d", len(clusters))
-    log.info("Scheduling type: One-time with auto-reschedule")
-    log.info("-"*50)
-    
+
+    # Remove all old jobs to prevent accidental immediate execution
+    scheduler.remove_all_jobs()
+
     for cfg in clusters:
-        log.info("\nProcessing Cluster:")
-        log.info("-"*40)
-        log.info("Cluster Name: %s", cfg.get("cluster_name", f"id-{cfg['cluster_id']}"))
-        log.info("Cluster ID: %d", cfg["cluster_id"])
-        
-        # figure out when this cluster should next run
-        next_run_time = calculate_next_run_time(cfg["cluster_id"])
+        cluster_id = cfg["cluster_id"]
+        cluster_name = cfg.get("cluster_name", f"id-{cluster_id}")
+        job_id = f"{job_prefix}{cluster_id}"
+
+        # Calculate next run
+        next_run_time = calculate_next_run_time(cluster_id)
         if not next_run_time:
-            log.warning(
-                "No next run time calculated for cluster_id=%s", cfg["cluster_id"]
-            )
             continue
 
-        job_id = f"{JOB_PREFIX}{cfg['cluster_id']}"
-        
-        log.info("\nScheduling Details:")
-        log.info("-"*40)
-        log.info("Job ID: %s", job_id)
-        log.info("Scheduled Run Time: %s", next_run_time.isoformat())
-        log.info("Time until execution: %s", next_run_time - datetime.now(timezone.utc))
-        
+        now = datetime.now(timezone.utc)
+        min_allowed_time = now + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
+
+        # Ensure we do not schedule before minimum interval
+        if next_run_time < min_allowed_time:
+            next_run_time = min_allowed_time
+
+        # Add job with replace_existing to ensure only one per cluster
         scheduler.add_job(
             func=collect_and_reschedule,
             id=job_id,
@@ -1166,13 +1125,17 @@ def schedule_cluster_jobs(scheduler: BackgroundScheduler, clusters: List[Dict]):
             trigger="date",
             run_date=next_run_time,
             replace_existing=True,
+            misfire_grace_time=60  # seconds; missed jobs older than 1 min will not run
         )
+
+        log.info(
+            "Scheduled cluster job | cluster=%s next_run=%s",
+            cluster_name,
+            next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
+        )
+
         
-        log.info("Job successfully scheduled")
-        log.info("-"*40)
-
-
-def initial_collect_all(scheduler: BackgroundScheduler):
+def initial_collect_all(scheduler: BackgroundScheduler, job_prefix: str = "collect_job_"):
     """
     Run an initial collection on startup for all clusters to catch up on any missing data.
     Also collects hourly data for today for each cluster after its initial collection.
@@ -1184,13 +1147,12 @@ def initial_collect_all(scheduler: BackgroundScheduler):
         try:
             # First do the historical data collection
             collect_cluster_data(cfg)
-            
-          
+
             log.info(
                 "Starting hourly collection after initial data | cluster=%s",
                 cfg.get("cluster_name", f"id-{cfg['cluster_id']}")
             )
-            
+
         except Exception as e:
             log.error(
                 "Collection failed | cluster_id=%s err=%s",
@@ -1198,12 +1160,11 @@ def initial_collect_all(scheduler: BackgroundScheduler):
                 e,
             )
 
-    # Schedule ongoing jobs
-    schedule_cluster_jobs(scheduler, clusters)
-
+    # Schedule ongoing jobs with the provided prefix
+    schedule_cluster_jobs(scheduler, clusters, job_prefix=job_prefix)
 
 # -------------------- Main --------------------
-def main():
+def schedulerMain():
     jobstores = {"default": MemoryJobStore()}
     executors = {"default": ThreadPoolExecutor(max_workers=10)}
     job_defaults = {"coalesce": True, "max_instances": 1}
@@ -1216,29 +1177,15 @@ def main():
     start_revision_scheduler, _ = import_revision_scheduler()
     revision_scheduler = start_revision_scheduler(scheduler)
 
-    # run_revision_for_all_clusters()
 
-    # graceful shutdown
-    def shutdown(signum, frame):
-        log.info("\n" + "="*70)
-        log.info("SHUTTING DOWN SCHEDULERS".center(70))
-        log.info("="*70)
-        
-        log.info("Shutting down main scheduler...")
-        scheduler.shutdown(wait=True)
-        
-        # Import and shutdown data revision scheduler
-        _, shutdown_revision_scheduler = import_revision_scheduler()
-        shutdown_revision_scheduler()
-        
-        log.info("All schedulers shut down successfully")
-        sys.exit(0)
 
-    signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
 
+        # graceful shutdown (removed signal handling for background thread)
     # initial bootstrapping (includes both historical and hourly data)
     initial_collect_all(scheduler)
+
+    run_revision_for_all_clusters()
+
     
     # Initialize data revision scheduler
     log.info("\nInitializing data revision scheduler...")
@@ -1261,8 +1208,8 @@ def main():
         shutdown("KeyboardInterrupt", None)
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 # -------------------- FastAPI Endpoints --------------------
 
@@ -1275,198 +1222,3 @@ if __name__ == "__main__":
 #         timestamp=datetime.now(timezone.utc).isoformat()
 #     )
 
-# @app.post("/api/trigger-collection", response_model=TriggerResponse)
-# async def trigger_collection(request: TriggerRequest, background_tasks: BackgroundTasks):
-#     """
-#     Trigger collect_cluster_data function for specified cluster(s)
-    
-#     - cluster_id: Optional cluster ID. If not provided, runs for all clusters
-#     """
-#     try:
-#         # Get cluster configurations
-#         clusters = get_active_clusters()
-#         if not clusters:
-#             raise HTTPException(
-#                 status_code=404, 
-#                 detail="No active clusters found"
-#             )
-        
-#         # Filter by cluster_id if provided
-#         if request.cluster_id:
-#             clusters = [c for c in clusters if c['cluster_id'] == request.cluster_id]
-#             if not clusters:
-#                 raise HTTPException(
-#                     status_code=404,
-#                     detail=f"Cluster ID {request.cluster_id} not found"
-#                 )
-        
-#         # Add collection task to background
-#         background_tasks.add_task(run_collection_task, clusters)
-        
-#         return TriggerResponse(
-#             status="success",
-#             message="Collection triggered successfully",
-#             clusters=[
-#                 {
-#                     "cluster_id": c['cluster_id'],
-#                     "cluster_name": c.get('cluster_name', f"id-{c['cluster_id']}")
-#                 } for c in clusters
-#             ]
-#         )
-        
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         log.error(f"API trigger failed: {e}")
-#         raise HTTPException(
-#             status_code=500,
-#             detail=f"Failed to trigger collection: {str(e)}"
-#         )
-
-# @app.get("/api/clusters")
-# async def get_clusters():
-#     """Get list of active clusters"""
-#     try:
-#         clusters = get_active_clusters()
-#         return {
-#             "status": "success",
-#             "clusters": [
-#                 {
-#                     "cluster_id": c['cluster_id'],
-#                     "cluster_name": c.get('cluster_name', f"id-{c['cluster_id']}"),
-#                     "kubecost_api_url": c.get('kubecost_api_url', '')
-#                 } for c in clusters
-#             ]
-#         }
-#     except Exception as e:
-#         log.error(f"Failed to get clusters: {e}")
-#         raise HTTPException(
-#             status_code=500,
-#             detail=f"Failed to get clusters: {str(e)}"
-#         )
-
-# # -------------------- Background Tasks --------------------
-
-# async def run_collection_task(clusters: List[Dict]):
-#     """
-#     Background task to run collection for specified clusters
-#     """
-#     results = []
-    
-#     for cluster_cfg in clusters:
-#         try:
-#             cluster_name = cluster_cfg.get('cluster_name', f"id-{cluster_cfg['cluster_id']}")
-#             log.info(f"API triggered collection for cluster: {cluster_name}")
-            
-#             # Run the collection function in a thread to avoid blocking
-#             def run_collection():
-#                 collect_cluster_data(cluster_cfg)
-            
-#             # Run in thread pool to avoid blocking the async event loop
-#             loop = asyncio.get_event_loop()
-#             await loop.run_in_executor(None, run_collection)
-            
-#             log.info(f"API collection completed for cluster: {cluster_name}")
-#             results.append({
-#                 "cluster_id": cluster_cfg['cluster_id'],
-#                 "cluster_name": cluster_name,
-#                 "status": "success"
-#             })
-            
-#         except Exception as e:
-#             log.error(f"API collection failed for cluster {cluster_cfg['cluster_id']}: {e}")
-#             results.append({
-#                 "cluster_id": cluster_cfg['cluster_id'],
-#                 "cluster_name": cluster_cfg.get('cluster_name', f"id-{cluster_cfg['cluster_id']}"),
-#                 "status": "error",
-#                 "error": str(e)
-#             })
-    
-#     log.info(f"Background collection task completed. Results: {results}")
-#     return results
-
-
-# # -------------------- Server Management --------------------
-
-# class UvicornServer:
-#     """Manage Uvicorn server in a separate thread"""
-#     def __init__(self, config: uvicorn.Config):
-#         self.server = uvicorn.Server(config)
-#         self.config = config
-
-#     def run_in_thread(self):
-#         """Run server in background thread"""
-#         self.server.run()
-
-#     def start(self):
-#         """Start server in background thread"""
-#         self.thread = threading.Thread(target=self.run_in_thread, daemon=True)
-#         self.thread.start()
-#         log.info(f"FastAPI server started on {self.config.host}:{self.config.port}")
-
-#     def stop(self):
-#         """Stop the server"""
-#         if hasattr(self, 'server'):
-#             self.server.should_exit = True
-
-
-# # -------------------- Main --------------------
-# def main():
-#     jobstores = {"default": MemoryJobStore()}
-#     executors = {"default": ThreadPoolExecutor(max_workers=10)}
-#     job_defaults = {"coalesce": True, "max_instances": 1}
-#     scheduler = BackgroundScheduler(
-#         jobstores=jobstores, executors=executors, job_defaults=job_defaults
-#     )
-#     scheduler.start()
-
-
- # start the FastAPI server in a separate thread
-
-#     # Start FastAPI server
-#     config = uvicorn.Config(
-#         app,
-#         host=API_HOST,
-#         port=API_PORT,
-#         log_level="info",
-#         access_log=False
-#     )
-#     server = UvicornServer(config)
-#     server.start()
-
-
-#     FastAPI Ends
-
-#     # graceful shutdown
-#     def shutdown(signum, frame):
-#         log.info("Shutting down scheduler and API server (signal=%s)...", signum)
-#         server.stop()
-#         scheduler.shutdown(wait=True)
-#         sys.exit(0)
-
-#     signal.signal(signal.SIGINT, shutdown)
-#     signal.signal(signal.SIGTERM, shutdown)
-
-#     # initial bootstrapping
-#     initial_collect_all(scheduler)
-
-#     log.info(
-#         "Enhanced scheduler with API started | Backend=%s window=%d hours max_backfill=%d min_interval=%d min | API=%s:%d",
-#         BACKEND_API_URL,
-#         COLLECTION_WINDOW_HOURS,
-#         MAX_BACKFILL_WINDOWS,
-#         MIN_SCHEDULE_INTERVAL_MIN,
-#         API_HOST,
-#         API_PORT,
-#     )
-
-#     # keep main thread alive
-#     try:
-#         while True:
-#             time.sleep(1)
-#     except KeyboardInterrupt:
-#         shutdown("KeyboardInterrupt", None)
-
-
-# if __name__ == "__main__":
-#     main()

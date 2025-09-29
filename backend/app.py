@@ -17,6 +17,7 @@ from routes.cluster import clusters_bp
 from routes.node import nodes_bp
 from routes.pod import pods_bp   
 from routes.helpers import helper_bp
+from routes.melts import melts_bp
 
 from models.model import db_manager
 
@@ -43,6 +44,7 @@ def create_app():
     app.register_blueprint(nodes_bp)  
     app.register_blueprint(pods_bp) 
     app.register_blueprint(helper_bp)
+    app.register_blueprint(melts_bp)
 
     # Setup Swagger documentation
     swagger = Swagger(app, template_file="./docs/swagger.yaml")
