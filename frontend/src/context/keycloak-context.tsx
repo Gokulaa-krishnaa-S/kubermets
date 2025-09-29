@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useEffect, useContext } from "react";
 import keycloakInstance from "@/lib/keycloak";
+import { getRuntimeConfig } from "@/lib/runtimeConfig";
 
 type KeycloakContextType = {
   authenticated: boolean;
@@ -49,7 +50,8 @@ export const KeycloakProvider = ({ children }: { children: React.ReactNode }) =>
   };
 
   useEffect(() => {
-    if (import.meta.env.VITE_PUBLIC_KEYCLOAK_ENABLED === "true") {
+    const runtimeConfig = getRuntimeConfig();
+    if (runtimeConfig.VITE_PUBLIC_KEYCLOAK_ENABLED === "true") {
       initializeKeycloak();
     } else {
       setLoading(false);

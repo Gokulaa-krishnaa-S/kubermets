@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { useSearchParams } from "react-router-dom";
 import ClusterService from "@/services/ClusterService";
+import { getRuntimeConfig } from "@/lib/runtimeConfig";
 
 interface Instance {
   cluster_id: unknown;
@@ -62,7 +63,8 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
 
   const verifyToken = async (token: string): Promise<string | null> => {
     try {
-      const verify_url = import.meta.env.VITE_API_VERIFY_URL;
+      const runtimeConfig = getRuntimeConfig();
+      const verify_url = runtimeConfig.VITE_API_VERIFY_URL;
       const response = await fetch(
         `${verify_url}/api/verify`,
         {

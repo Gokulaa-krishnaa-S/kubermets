@@ -1,10 +1,12 @@
 // API service for cluster creation operations
 // Adapted from env_react_base for monitoring frontend integration
 
+import { getRuntimeConfig } from "../lib/runtimeConfig";
+
 // Get configuration from environment or default values
-const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL || '';
-const CLUSTER_METHOD = import.meta.env.VITE_CLUSTER_CREATION_METHOD || 1;
-const INFRA_BASE_URL = import.meta.env.VITE_INFRA_BASE_URL;
+const runtimeConfig = getRuntimeConfig();
+const API_BASE_URL = runtimeConfig.VITE_BACKEND_API_BASE_URL || '';
+const CLUSTER_METHOD = runtimeConfig.VITE_PUBLIC_CLUSTER_CREATION_METHOD || 1;
 
 // Helper to read a cookie value in the browser
 const getCookieValue = (name: string): string | null => {
@@ -86,9 +88,9 @@ class ClusterCreationApiService {
     const method = clusterData.id ? 'PUT' : 'POST';
     // Attach creation method and infra base for backend routing
     const payload: any = { ...clusterData, __creation_method: CLUSTER_METHOD };
-    if (CLUSTER_METHOD === 2 && INFRA_BASE_URL) {
-      payload.__infra_base = INFRA_BASE_URL;
-    }
+    // if (CLUSTER_METHOD === 2 && INFRA_BASE_URL) {
+    //   payload.__infra_base = INFRA_BASE_URL;
+    // }
     return this.makeRequest<ClusterData>('/clusters', {
       method,
       body: JSON.stringify(payload),
@@ -348,7 +350,7 @@ export const fetchClusterDetails = async (
       ? location.split('-').slice(0, 2).join('-')
       : location;
     // Prefer infra base when available
-    const detailsBase = INFRA_BASE_URL || API_BASE_URL;
+    const detailsBase = API_BASE_URL;
     const response = await fetch(`${detailsBase}/clusters/details`, {
       method: 'POST',
       headers: {

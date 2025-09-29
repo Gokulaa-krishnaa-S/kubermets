@@ -1,7 +1,9 @@
 // services/ClusterService.ts
 import axios, { AxiosInstance, AxiosResponse } from "axios";
+import { getRuntimeConfig } from "../lib/runtimeConfig";
 
-const baseURL = (import.meta as any).env?.VITE_API_BASE_URL || "";
+const runtimeConfig = getRuntimeConfig();
+const baseURL = runtimeConfig.VITE_API_BASE_URL || "";
 if (!baseURL) {
   console.warn(
     "VITE_API_BASE_URL is not defined; backend requests may fail (NodeService)."

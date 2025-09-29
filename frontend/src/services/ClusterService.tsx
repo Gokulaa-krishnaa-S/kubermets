@@ -1,9 +1,11 @@
 // services/ClusterService.ts
 import axios, { AxiosInstance, AxiosResponse } from "axios";
+import { getRuntimeConfig } from "../lib/runtimeConfig";
 
 // Use the correct env var and avoid throwing to keep UI rendering even if backend is missing
-const baseURL = (import.meta as any).env?.VITE_API_BASE_URL || "";
-const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL || '';
+const runtimeConfig = getRuntimeConfig();
+const baseURL = runtimeConfig.VITE_API_BASE_URL || "";
+const API_BASE_URL = runtimeConfig.VITE_BACKEND_API_BASE_URL || '';
 if (!baseURL) {
   // Log a warning instead of throwing to allow app to load header/sidebar
   // Backend-related calls will fail gracefully and be handled by callers
@@ -166,7 +168,8 @@ class ClusterService {
 
   async getClusterList(queryParams: QueryParams): Promise<any> {
     try {
-      const apiBaseUrl = import.meta.env.VITE_BACKEND_API_BASE_URL; // pulled from env
+      const runtimeConfig = getRuntimeConfig();
+      const apiBaseUrl = runtimeConfig.VITE_BACKEND_API_BASE_URL; // pulled from env
       const response: AxiosResponse = await axios.get(
         `${apiBaseUrl}/clusters`,
         {
@@ -185,7 +188,8 @@ class ClusterService {
   }
   async getClusterDetails(queryParams: QueryParams): Promise<any> {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL; // pulled from env
+      const runtimeConfig = getRuntimeConfig();
+      const apiBaseUrl = runtimeConfig.VITE_API_BASE_URL; // pulled from env
       const response: AxiosResponse = await axios.get(
         `${apiBaseUrl}/clusters`,
         {
