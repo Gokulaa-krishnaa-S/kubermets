@@ -19,7 +19,7 @@ from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.triggers.cron import CronTrigger
 
 # Import shared utilities
-from utils import (
+from schedulerFiles.utils import (
     get_active_clusters,
     collect_window,
     BACKEND_API_URL,
@@ -71,7 +71,7 @@ def revise_cluster_data(cluster_cfg: Dict) -> None:
         log.info("\nFETCHING DATA")
         log.info("-"*50)
         
-        collect_window(cluster_cfg, start_time, end_time)
+        collect_window(cluster_cfg, start_time, end_time,True)
         log.info("Data successfully fetched")
         
         log.info("\nSENDING REVISION DATA")
@@ -107,7 +107,7 @@ def run_revision_for_all_clusters():
                 e
             )
     
-    log.info("\nDAILY REVISION COMPLETED")
+    log.info("\nDAILY REVISION COMPLE   TED")
     log.info("#"*80)
 
 def start_revision_scheduler(parent_scheduler: Optional[BackgroundScheduler] = None) -> BackgroundScheduler:
@@ -141,7 +141,7 @@ def start_revision_scheduler(parent_scheduler: Optional[BackgroundScheduler] = N
     now = datetime.now(timezone.utc)
     next_run = now.replace(hour=0, minute=0, second=0, microsecond=0)
     if next_run <= now:
-        next_run += timedelta(hours=0.07)
+        next_run += timedelta(days=1)  
     log.info("\nnext_run: %s", next_run)
 
     log.info("\nSCHEDULER CONFIGURATION:")

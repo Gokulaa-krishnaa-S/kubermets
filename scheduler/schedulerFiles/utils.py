@@ -467,7 +467,7 @@ def send_snapshots_to_backend(
         raise RuntimeError(f"Backend API failed: {e}")
 
 
-def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime) -> bool:
+def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime,clear:bool) -> bool:
     """
     Collect data for a specific time window with retry logic and enhanced mapping.
     Returns True if successful, False if all retries failed.
@@ -511,7 +511,7 @@ def collect_window(cluster_cfg: Dict, start_time: datetime, end_time: datetime) 
                 end_time,
                 node_mapping,
                 pod_mapping,
-                True
+                clear
             )
             log.info(
                 "Window collection success | cluster=%s window=%s-%s | mapped_nodes=%d | mapped_pods=%d",

@@ -28,7 +28,7 @@ def set_melts_data(session, cluster_id, user_id, payload):
     # Verify cluster exists
     try:
         cluster = session.query(ClusterMetrics).filter(
-            ClusterMetrics.id == cluster_id
+            ClusterMetrics.cluster_id == cluster_id
         ).first()
         if not cluster:
             raise ValueError(f"Cluster with id {cluster_id} does not exist")

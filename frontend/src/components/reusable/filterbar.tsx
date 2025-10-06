@@ -326,8 +326,11 @@ export const Days: React.FC<DaysProps> = ({
   const getSelectedLabel = () => {
     if (selectedTimeRange && selectedTimeRange.includes(":")) {
       const [start, end] = selectedTimeRange.split(":");
-      const days = getDaysFromCustomRange(selectedTimeRange);
-      return `${start} to ${end} (${days}d)`;
+      const formatDisplayDate = (dateStr) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+      };
+      return `${formatDisplayDate(start)} - ${formatDisplayDate(end)}`;
     }
     const option = predefinedOptions.find((o) => o.value === selectedTimeRange);
     return option ? option.label : "Custom Range";
@@ -338,13 +341,7 @@ export const Days: React.FC<DaysProps> = ({
       return date.toISOString().split("T")[0];
     };
     const customRange = `${formatDate(startDate)}:${formatDate(endDate)}`;
-  
-    const days = getDaysFromCustomRange(customRange);
-    if (days) {
-      onTimeRangeChange(`${days}d`); 
-    } else {
-      onTimeRangeChange(customRange); 
-    }
+    onTimeRangeChange(customRange);
     setShowCustomCalendar(false);
     setIsDropdownOpen(false);
   };
