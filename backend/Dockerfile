@@ -21,4 +21,5 @@ EXPOSE 5000
 
 # Wait for DB, run setup, then start app
 # CMD bash -c "until pg_isready -h db -p 5432 -U postgres; do echo 'Waiting for Postgres...'; sleep 1; done && python setup.py create && python app.py"
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app", "--workers=4", "--threads=2", "--timeout=120"]
+
+CMD ["python", "setup.py", "create", "&&", "gunicorn", "--bind", "0.0.0.0:5000", "app:app", "--workers=4", "--threads=2", "--timeout=120"]
