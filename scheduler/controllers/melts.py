@@ -1,47 +1,42 @@
-import requests
-from flask import Blueprint, jsonify, request
+# controller.py
 import os
-# import app
-
+import requests
 from dotenv import load_dotenv
-
-
-melts_bp = Blueprint("melts", __name__, url_prefix="/v1")
+from flask import request
 
 load_dotenv()
 
-# Configurable API base URL (pointing to the other Flask app we built earlier)
+# Configurable API base URL (pointing to the other Flask app)
 BACKEND_API_URL = os.getenv("BACKEND_API_URL", "http://localhost:5000")
 
-# @app.route("/setMeltsData", methods=["POST"])
-# @melts_bp.route("/setMeltsData", methods=["POST"])
-@melts_bp.route("/setMeltsData", methods=["POST"])
-def setMetls() -> dict:
+
+def setMelts():
     """
-    Send MELTS data to the external melts API we created earlier.
+    Controller: Send MELTS data to the external melts API we created earlier.
     """
     try:
-        # Extract fields (make sure input dict has required fields)
+        # Parse JSON request body
         bluePrintsMeltsData = request.get_json()
         cluster_id = bluePrintsMeltsData.get("cluster_id")
         user_id = bluePrintsMeltsData.get("user_id")
         payload = bluePrintsMeltsData.get("payload")
 
-
         if not cluster_id:
             raise ValueError("cluster_id is required")
 
-        # Build request body
+        # Prepare body for external API
         body = {
             "cluster_id": cluster_id,
             "user_id": user_id,
             "payload": payload
         }
 
-        # Call the external API
+        # Send POST request to external API
         response = requests.post(f"{BACKEND_API_URL}/v1/setMeltsData", json=body)
         response.raise_for_status()
+
         return response.json()
+
     except requests.exceptions.RequestException as e:
         return {"error": f"Failed to send melts data: {str(e)}"}
     except Exception as e:

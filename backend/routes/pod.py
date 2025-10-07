@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from models.model import PodMetrics, db_manager
 from sqlalchemy import func
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,timezone
 
 pods_bp = Blueprint("pods", __name__, url_prefix="/v1")
 
@@ -540,6 +540,21 @@ def parse_duration(duration: str, end_time: datetime):
     elif duration.endswith("m"):  # months → approx 30 days each
         months = int(duration[:-1])
         start_time = end_time - timedelta(days=months * 30)
+    elif ":" in duration and len(duration.split(":")) == 2:
+        start_str, end_str = duration.split(":")
+        
+        # Parse both dates in ISO format (YYYY-MM-DD)
+        start_time = datetime.strptime(start_str.strip(), "%Y-%m-%d")
+        end_time = datetime.strptime(end_str.strip(), "%Y-%m-%d")
+
+        # Normalize both to UTC (end_time should include full day)
+        start_time = datetime.combine(start_time, datetime.min.time())
+        end_time = datetime.combine(end_time, datetime.max.time())
+
+        # If needed, ensure tz-awareness (optional depending on DB config)
+        # start_time = start_time.replace(tzinfo=timezone.utc)
+        # end_time = end_time.replace(tzinfo=timezone.utc)
+
     else:
         raise ValueError("Invalid duration format")
     return start_time, end_time
