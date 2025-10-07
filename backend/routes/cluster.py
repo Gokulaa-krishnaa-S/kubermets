@@ -8,6 +8,9 @@ from datetime import datetime, timedelta, timezone
 import os
 from service.data_service import generate_uuid
 
+from datetime import datetime, timedelta
+from flask import jsonify
+
 
 
 UPLOAD_FOLDER = "uploads/providers"
@@ -59,6 +62,18 @@ def get_cluster_metrics():
         elif duration.endswith("m"):
             months = int(duration[:-1])
             start_time = end_time - timedelta(days=months * 30)
+        elif ":" in duration and len(duration.split(":")) == 2:
+            start_str, end_str = duration.split(":")
+            
+            # Parse both dates in ISO format (YYYY-MM-DD)
+            start_time = datetime.strptime(start_str.strip(), "%Y-%m-%d")
+            end_time = datetime.strptime(end_str.strip(), "%Y-%m-%d")
+
+            # Normalize both to UTC (end_time should include full day)
+            start_time = datetime.combine(start_time, datetime.min.time())
+            end_time = datetime.combine(end_time, datetime.max.time())
+
+            print(start_time, "---START TIME------", end_time)
         else:
             return jsonify({"error": "Invalid duration format"}), 400
 
@@ -76,6 +91,7 @@ def get_cluster_metrics():
             .all()
         )
 
+        print(f"Fetched {len(rows)} rows from database")
         if not rows:
             return (
                 jsonify(
@@ -90,6 +106,19 @@ def get_cluster_metrics():
                 200,
             )
 
+        # 🔍 Print each row’s time window info for debugging
+        print("=== Row Time Windows ===")
+        for idx, r in enumerate(rows, start=1):
+            try:
+                print(
+                    f"[{idx}] ClusterID={r.cluster_id}, "
+                    f"window_start={r.window_start}, window_end={r.window_end}"
+                )
+            except Exception as e:
+                print(f"[{idx}] Error printing row window: {e}")
+
+        print("=== End of Row Time Windows ===")
+        print(f"Found {len(rows)} valid rows to aggregate")
         print(f"Found {len(rows)} rows")
 
         # 4️ Aggregate by (cluster_id, cluster_name) - separate idle and active
@@ -191,6 +220,7 @@ def get_cluster_metrics():
             agg["memory_gb_requested"] = avg(agg.pop("_memory_gb_req_vals"))
             agg["efficiency_percent"] = avg(agg.pop("_efficiency_percent_vals"))
 
+        print(f"Aggregated into {len(aggregated)} groups {aggregated}")
         return (
             jsonify(
                 {
@@ -1201,9 +1231,6 @@ def get_instance():
         return jsonify({"error": str(e)}), 500
 
 
-from datetime import datetime, timedelta
-from flask import jsonify
-
 
 def empty_aggregated():
     return {
@@ -2048,3 +2075,4 @@ def save_new_cluster():
     finally:
         session.close()
         print("DEBUG: Session closed")
+
