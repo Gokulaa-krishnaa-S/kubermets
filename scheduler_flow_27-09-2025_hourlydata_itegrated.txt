@@ -1,0 +1,51 @@
+main()
+│
+├── initial_collect_all(scheduler)
+│   │
+│   ├── get_active_clusters()
+│   │
+│   └── collect_cluster_data(cfg)   # for each cluster
+│       │
+│       ├── get_missing_windows(cluster_id)            # daily windows
+│       │   └── get_latest_timestamp(cluster_id)
+│       │       (calls helper.round_down_time)
+│       │
+│       ├── get_missing_hourly_windows(cluster_id)     # hourly windows
+│       │   └── get_latest_hourly_timestamp(cluster_id)
+│       │       (calls helper.round_down_time)
+│       │
+│       └── collect_window(cluster_cfg, start_time, end_time)   # for each window (daily/hourly)
+│           │
+│           ├── fetch_kubecost_window(...)
+│           │   │
+│           │   ├── fetch_multi_aggregation_data(...)
+│           │   │   (calls formatter.format_kubecost_window)
+│           │   │
+│           │   ├── build_mapping_tables(...)
+│           │   │   (calls helper.parse_allocation_key)
+│           │   │
+│           │   └── fetchNodeData(...)
+│           │       └── fetchPodData(...)
+│           │           (calls formatter.format_kubecost_window)
+│           │
+│           └── send_snapshots_to_backend(...)
+│               (calls formatter.format_kubecost_response)
+│
+├── start_revision_scheduler()
+│   │
+│   └── run_revision_for_all_clusters()     # runs daily @ 00:00 UTC
+│       │
+│       └── revise_cluster_data(cfg)        # for each cluster
+│           │
+│           └── collect_window(cluster_cfg, start_time, end_time)
+│               (window = 3 days ago → 2 days ago, 24h duration, clear=true)
+│
+└── schedule_cluster_jobs(scheduler, clusters)
+    │
+    └── collect_and_reschedule(cluster_cfg, scheduler)   # scheduled for each cluster
+        │
+        ├── collect_cluster_data(cluster_cfg)
+        │   (same as above, includes hourly + daily)
+        │
+        └── calculate_next_run_time(cluster_id)
+            └── get_latest_hourly_timestamp(cluster_id)  # hourly-based scheduling

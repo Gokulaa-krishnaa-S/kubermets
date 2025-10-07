@@ -4,7 +4,6 @@ import {
   RefreshCw,
   ChevronDown,
   Clock,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -81,12 +80,17 @@ const Calendar = ({
     const days = [];
 
     // Previous month's days
-    const prevMonth = new Date(year, month - 1, 0);
-    for (let i = startingDayOfWeek - 1; i >= 0; i--) {
+    const prevMonthLastDate = new Date(year, month, 0); // Last day of previous month
+    const daysFromPrevMonth = startingDayOfWeek;
+    
+    for (let i = 0; i < daysFromPrevMonth; i++) {
+      const dayOfPrevMonth = prevMonthLastDate.getDate() - (daysFromPrevMonth - 1) + i;
+      const prevMonthDate = new Date(year, month - 1, dayOfPrevMonth);
       days.push({
-        day: prevMonth.getDate() - i,
+        day: dayOfPrevMonth,
         isCurrentMonth: false,
-        date: new Date(year, month - 1, prevMonth.getDate() - i),
+        date: prevMonthDate,
+        isPreviousMonth: true
       });
     }
 
@@ -100,12 +104,16 @@ const Calendar = ({
     }
 
     // Next month's days
-    const remainingSlots = 42 - days.length;
+    const totalDays = 42; // 6 weeks * 7 days
+    const remainingSlots = totalDays - days.length;
+    
     for (let day = 1; day <= remainingSlots; day++) {
+      const nextMonthDate = new Date(year, month + 1, day);
       days.push({
-        day,
+        day: day,
         isCurrentMonth: false,
-        date: new Date(year, month + 1, day),
+        date: nextMonthDate,
+        isNextMonth: true
       });
     }
 
@@ -129,28 +137,59 @@ const Calendar = ({
       return;
     }
 
+    // Create new date object for the clicked date, keeping only the date part
+    const clickedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
     if (!startDate || (startDate && endDate)) {
-      setStartDate(date);
+      // First click or resetting range
+      setStartDate(clickedDate);
       setEndDate(null);
     } else if (startDate && !endDate) {
-      if (date < startDate) {
-        setStartDate(date);
-        setEndDate(null);
+      const startDateTime = new Date(startDate).getTime();
+      const clickedDateTime = clickedDate.getTime();
+      
+      if (clickedDateTime < startDateTime) {
+        // If second click is before first, swap them
+        setEndDate(new Date(startDate));
+        setStartDate(clickedDate);
       } else {
-        setEndDate(date);
+        setEndDate(clickedDate);
       }
     }
   };
 
   const isDateInRange = (date) => {
     if (!startDate || !endDate) return false;
-    return date >= startDate && date <= endDate;
+    
+    // Create dates with only year, month, day components
+    const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const rangeStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const rangeEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    
+    // Check if the date is within the selected month
+    const isCurrentMonth = checkDate.getMonth() === currentMonth.getMonth() &&
+                          checkDate.getFullYear() === currentMonth.getFullYear();
+    
+    // Only highlight if it's in the current month and within the range
+    return isCurrentMonth &&
+           checkDate.getTime() >= rangeStart.getTime() &&
+           checkDate.getTime() <= rangeEnd.getTime();
   };
 
   const isDateSelected = (date) => {
+    if (!date) return false;
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    const start = startDate ? new Date(startDate) : null;
+    if (start) start.setHours(0, 0, 0, 0);
+    
+    const end = endDate ? new Date(endDate) : null;
+    if (end) end.setHours(0, 0, 0, 0);
+    
     return (
-      (startDate && date.getTime() === startDate.getTime()) ||
-      (endDate && date.getTime() === endDate.getTime())
+      (start && checkDate.getTime() === start.getTime()) ||
+      (end && checkDate.getTime() === end.getTime())
     );
   };
 
@@ -261,18 +300,21 @@ const Calendar = ({
                   ${
                     dayObj.isCurrentMonth && !isFuture
                       ? "hover:bg-gray-100 cursor-pointer"
-                      : dayObj.isCurrentMonth && isFuture
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-300"
+                      : "text-gray-400 cursor-default opacity-50"
                   }
                   ${
-                    isSelected
+                    isSelected && dayObj.isCurrentMonth
                       ? "bg-green-500 text-white hover:bg-green-600"
                       : ""
                   }
                   ${
-                    isInRange && !isSelected
+                    isInRange && !isSelected && dayObj.isCurrentMonth
                       ? "bg-green-100 text-green-800"
+                      : ""
+                  }
+                  ${
+                    (dayObj.isPreviousMonth || dayObj.isNextMonth)
+                      ? "text-gray-400 opacity-50"
                       : ""
                   }
                   ${isToday && !isSelected ? "ring-1 ring-green-500" : ""}
@@ -326,8 +368,13 @@ export const Days: React.FC<DaysProps> = ({
   const getSelectedLabel = () => {
     if (selectedTimeRange && selectedTimeRange.includes(":")) {
       const [start, end] = selectedTimeRange.split(":");
-      const days = getDaysFromCustomRange(selectedTimeRange);
-      return `${start} to ${end} (${days}d)`;
+      const formatDisplayDate = (dateStr) => {
+        // Create date without timezone conversion
+        const [year, month, day] = dateStr.split('-');
+        const date = new Date(Number(year), Number(month) - 1, Number(day));
+        return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+      };
+      return `${formatDisplayDate(start)} - ${formatDisplayDate(end)}`;
     }
     const option = predefinedOptions.find((o) => o.value === selectedTimeRange);
     return option ? option.label : "Custom Range";
@@ -335,16 +382,15 @@ export const Days: React.FC<DaysProps> = ({
 
   const handleCustomRangeApply = (startDate, endDate) => {
     const formatDate = (date) => {
-      return date.toISOString().split("T")[0];
+      // Format date as YYYY-MM-DD without any timezone conversion
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     };
     const customRange = `${formatDate(startDate)}:${formatDate(endDate)}`;
-  
-    const days = getDaysFromCustomRange(customRange);
-    if (days) {
-      onTimeRangeChange(`${days}d`); 
-    } else {
-      onTimeRangeChange(customRange); 
-    }
+    onTimeRangeChange(customRange);
     setShowCustomCalendar(false);
     setIsDropdownOpen(false);
   };
