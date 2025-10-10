@@ -417,7 +417,10 @@ JOB_PREFIX = "cluster-"
 
 
 def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) -> None:
-    """Collect data and schedule the next run based on the new timestamp."""
+    """Collect data and schedule the next run with dynamic logic:
+       - If current time has passed expected window → run again in 15 minutes.
+       - Otherwise → schedule next run in 1 hour.
+    """
     log.info("\n" + "*"*80)
     log.info("COLLECTION AND RESCHEDULING PROCESS STARTED".center(80))
     log.info("*"*80)
@@ -432,53 +435,73 @@ def collect_and_reschedule(cluster_cfg: Dict, scheduler: BackgroundScheduler) ->
     log.info("-"*50)
 
     try:
+        # === Phase 1: Data Collection ===
         log.info("\nPHASE 1: DATA COLLECTION")
         log.info("-"*50)
         collect_cluster_data(cluster_cfg)
         log.info("Data collection completed successfully")
 
+        # === Phase 2: Scheduling Logic ===
         log.info("\nPHASE 2: SCHEDULING NEXT RUN")
         log.info("-"*50)
-        next_run_time = calculate_next_run_time(cluster_id)
-        
-        if next_run_time:
-            now = datetime.now(timezone.utc)
-            min_interval = now + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
-            
-            log.info("Scheduling Analysis:")
-            log.info("  Current time (UTC): %s", now.isoformat())
-            log.info("  Minimum allowed interval: %s", min_interval.isoformat())
 
-            if next_run_time < min_interval:
-                next_run_time = min_interval
-                log.info(
-                    "Adjusted next run time to respect minimum interval | cluster=%s next_run=%s",
-                    cluster_name,
-                    next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
-                )
+        now = datetime.now(timezone.utc)
+        expected_next_run = calculate_next_run_time(cluster_id)
 
-            job_id = f"{JOB_PREFIX}{cluster_id}"
-            scheduler.add_job(
-                func=collect_and_reschedule,
-                id=job_id,
-                args=[cluster_cfg, scheduler],
-                trigger="date",
-                run_date=next_run_time,
-                replace_existing=True,
+        # Fallback: if calculation fails, default to now
+        if not expected_next_run:
+            expected_next_run = now
+
+        log.info("Current time (UTC): %s", now.isoformat())
+        log.info("Expected next run (UTC): %s", expected_next_run.isoformat())
+
+        # Case 1: Current time has already passed expected run window
+        if expected_next_run <= now:
+            next_run_time = now + timedelta(minutes=15)
+            log.warning(
+                "Next run time already passed — scheduling quick retry in 15 minutes | new_run=%s",
+                next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
             )
+        else:
+            # Case 2: Normal cycle — schedule next run in 1 hour
+            next_run_time = now + timedelta(hours=1)
             log.info(
-                "Rescheduled next collection | cluster=%s next_run=%s",
+                "Scheduling normal hourly run | next_run=%s",
+                next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
+            )
+
+        # Ensure respect for the minimum interval
+        min_interval = now + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
+        if next_run_time < min_interval:
+            next_run_time = min_interval
+            log.info(
+                "Adjusted next run time to respect minimum interval | cluster=%s next_run=%s",
                 cluster_name,
                 next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
             )
+
+        # Schedule the next job
+        job_id = f"{JOB_PREFIX}{cluster_id}"
+        scheduler.add_job(
+            func=collect_and_reschedule,
+            id=job_id,
+            args=[cluster_cfg, scheduler],
+            trigger="date",
+            run_date=next_run_time,
+            replace_existing=True,
+        )
+
+        log.info(
+            "Rescheduled next collection | cluster=%s next_run=%s",
+            cluster_name,
+            next_run_time.strftime("%Y-%m-%d %H:%M:%S"),
+        )
 
     except Exception as e:
         log.error(
             "Collection and reschedule failed | cluster=%s err=%s", cluster_name, e
         )
-        retry_time = datetime.now(timezone.utc) + timedelta(
-            minutes=MIN_SCHEDULE_INTERVAL_MIN
-        )
+        retry_time = datetime.now(timezone.utc) + timedelta(minutes=MIN_SCHEDULE_INTERVAL_MIN)
         job_id = f"{JOB_PREFIX}{cluster_id}"
         scheduler.add_job(
             func=collect_and_reschedule,
