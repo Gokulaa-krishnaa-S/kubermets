@@ -40,7 +40,7 @@ def get_cluster_metrics():
     print("=== Fetching cluster metrics ===")
     session = db_manager.get_session()
     try:
-        API_URL = os.getenv("BACKEND_API_URL")
+        API_URL = os.getenv("ENVIRONMENT_API_URL")
         # 1️ Get cluster_id from request
         cluster_id = request.args.get("cluster_id")
         user_id = request.args.get("user_id", "dev-user")
@@ -545,6 +545,42 @@ def dashboard_summary():
 # ================================
 # Bulk Metrics Ingestion Endpoint
 # ================================
+def check_existing_metrics(session, cluster_id, window_start, window_end, window_duration, user_id=None, is_idle_allocation=None):
+    """
+    Check if metrics already exist for the given time window and compare the data.
+    Returns True if exact data exists, False if data needs to be updated.
+
+    Args:
+        session: SQLAlchemy session
+        cluster_id: ID of the cluster
+        window_start: Start of the time window
+        window_end: End of the time window
+        window_duration: Duration of the window
+        user_id: Optional user ID for filtering
+        is_idle_allocation: Boolean to match idle allocation status
+    """
+    try:
+        filters = [
+            ClusterMetrics.cluster_id == cluster_id,
+            ClusterMetrics.window_start == window_start,
+            ClusterMetrics.window_end == window_end,
+            ClusterMetrics.window_duration == window_duration,
+        ]
+        if user_id is not None:
+            filters.append(ClusterMetrics.user_id == user_id)
+        if is_idle_allocation is not None:
+            filters.append(ClusterMetrics.is_idle_allocation == is_idle_allocation)
+
+        existing_metrics = session.query(ClusterMetrics).filter(
+            and_(*filters)
+        ).first()
+
+        return existing_metrics is not None
+
+    except Exception as e:
+        print(f"Error checking existing metrics: {str(e)}")
+        return False
+
 def delete_metrics_window(session, cluster_id, window_start, window_end, user_id=None, window_duration='1h'):
     """
     Delete data for a specific time window respecting foreign key dependencies.
@@ -702,6 +738,21 @@ def fetch_metrics():
                 cluster_obj = None
 
                 try:
+                    # Check if metrics already exist for this time window
+                    metrics_exist = check_existing_metrics(
+                        session=session,
+                        cluster_id=cluster_id,
+                        window_start=allocation_data.get("window_start"),
+                        window_end=allocation_data.get("window_end"),
+                        window_duration=allocation_data.get("window_duration"),
+                        user_id=user_id,
+                        is_idle_allocation=allocation_data.get("is_idle_allocation")
+                    )
+
+                    if metrics_exist:
+                        print(f"Metrics already exist for window {allocation_data.get('window_start')} to {allocation_data.get('window_end')}. Skipping.")
+                        continue
+
                     # Process all allocations including idle for cluster metrics
                     # Create ClusterMetrics entry
                     cluster_entry = {

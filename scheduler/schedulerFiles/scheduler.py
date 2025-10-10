@@ -12,8 +12,8 @@ Env Vars:
   RETRY_ATTEMPTS=3
   RETRY_DELAY_SEC=15
   LOG_LEVEL=INFO
-  MAX_BACKFILL_WINDOWS=7           # max number of 24h windows to backfill in one run
-  MIN_SCHEDULE_INTERVAL_MIN=30     # minimum interval between collections (minutes)
+  MAX_BACKFILL_WINDOWS=15           # max number of 24h windows to backfill in one run
+  MIN_SCHEDULE_INTERVAL_MIN=15     # minimum interval between collections (minutes)
 """
 
 import os
@@ -60,8 +60,8 @@ load_dotenv()
 RETRY_ATTEMPTS = int(os.getenv("RETRY_ATTEMPTS", "3"))
 RETRY_DELAY_SEC = int(os.getenv("RETRY_DELAY_SEC", "15"))
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-MAX_BACKFILL_WINDOWS = int(os.getenv("MAX_BACKFILL_WINDOWS", "7"))
-MIN_SCHEDULE_INTERVAL_MIN = int(os.getenv("MIN_SCHEDULE_INTERVAL_MIN", "30"))
+MAX_BACKFILL_WINDOWS = int(os.getenv("MAX_BACKFILL_WINDOWS", "15"))
+MIN_SCHEDULE_INTERVAL_MIN = int(os.getenv("MIN_SCHEDULE_INTERVAL_MIN", "15"))
 CLUSTER_ID = int(os.getenv("CLUSTER_ID", "1"))
 CLUSTER_NAME = (os.getenv("CLUSTER_NAME", "cluster_one"))
 USER_ID = (os.getenv("USER_ID", "1"))
