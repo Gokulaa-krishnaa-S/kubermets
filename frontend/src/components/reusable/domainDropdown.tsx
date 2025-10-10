@@ -19,7 +19,7 @@ const DomainDropdown: React.FC<DomainDropdownProps> = ({ onSelect }) => {
   const [instances, setInstances] = useState<Instance[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string>("");
-    const { selectedInstance,userId}: any = useCluster();
+  const { selectedInstance, userId }: any = useCluster();
 
 
   useEffect(() => {

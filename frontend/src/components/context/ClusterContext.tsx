@@ -54,8 +54,8 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
 
 
     return (
-      getCookie("token") || 
-      getCookie("auth_token") || 
+      getCookie("token") ||
+      getCookie("auth_token") ||
       getCookie("keycloak_token") ||
       getCookie("access_token")
     );
@@ -65,6 +65,8 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
     try {
       const runtimeConfig = getRuntimeConfig();
       const verify_url = runtimeConfig.VITE_API_VERIFY_URL;
+      console.log("verify url", `${verify_url}/api/verify`)
+
       const response = await fetch(
         `${verify_url}/api/verify`,
         {
@@ -83,7 +85,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
       } else {
         const errorText = await response.text();
         console.error("Token verification failed:", response.status, errorText);
-        
+
         if (response.status === 401) {
           setBackendError("Authentication expired. Please login again.");
         } else {
@@ -100,7 +102,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchInstances = async (userId: string) => {
     try {
-      setBackendError(null); 
+      setBackendError(null);
       const data = await ClusterService.getInstanceList(userId);
 
       console.log("Fetched instances:", data);
@@ -109,7 +111,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
 
 
       if (instanceList.length > 0) {
-        const matched = queryClusterId && 
+        const matched = queryClusterId &&
           instanceList.find((inst) => String(inst.id) === queryClusterId);
 
         setSelectedInstance(
@@ -129,7 +131,7 @@ export const ClusterProvider = ({ children }: { children: ReactNode }) => {
 
   const refreshData = useCallback(async () => {
     if (!userId) return;
-    
+
     setLoading(true);
     await fetchInstances(userId);
     setLoading(false);

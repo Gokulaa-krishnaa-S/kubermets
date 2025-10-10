@@ -652,7 +652,7 @@ const KubecostDashboard = () => {
   };
 
 
-  const processedData = useMemo(() => {
+const processedData = useMemo(() => {
     if (!data?.sets?.[0]?.allocations)
       return { pods: [], idle: null, totalCost: 0 };
 
@@ -661,7 +661,6 @@ const KubecostDashboard = () => {
     const pods = [];
     let idle = null;
     let totalCost = 0;
-
 
     const mockNodes = ["node-1", "node-2", "node-3"];
 
@@ -675,7 +674,6 @@ const KubecostDashboard = () => {
           ...allocation,
           id: key,
           namespace: key.split("-")[0] || "default",
-
           node: mockNodes[index % mockNodes.length],
           ramUsageGB: (
             allocation.ramByteUsageAverage /
@@ -700,7 +698,20 @@ const KubecostDashboard = () => {
       }
       totalCost += allocation.totalCost;
     });
-    console.log(pods);
+    
+    
+    if (!idle) {
+      console.warn("⚠️ No __idle__ data found in API response, using default values");
+      idle = {
+        totalCost: 0,
+        cpuCost: 0,
+        ramCost: 0,
+        pvCost: 0,
+        name: "__idle__",
+      };
+    }
+    
+    console.log("Processed pods:", pods.length, "Idle data:", idle);
     return { pods, idle, totalCost };
   }, [data]);
 
@@ -1474,7 +1485,7 @@ const KubecostDashboard = () => {
                       <Tooltip formatter={(value) => formatCurrency(value)} />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="mt-2 sm:mt-4 space-y-2">
+                  <div className="mt-6 space-y-3">
                     {costBreakdownData.map((item, index) => {
                       const tooltipKey =
                         item.name.toLowerCase() + "Distribution";
@@ -1483,10 +1494,10 @@ const KubecostDashboard = () => {
                           key={index}
                           tooltip={POD_METRIC_TOOLTIPS[tooltipKey]}
                         >
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-between text-sm p-2 hover:bg-slate-50 rounded-lg transition-colors">
+                            <div className="flex items-center gap-3">
                               <div
-                                className="w-3 h-3 rounded-full"
+                                className="w-4 h-4 rounded-full"
                                 style={{ backgroundColor: item.color }}
                               ></div>
                               <span className="text-gray-600">{item.name}</span>
