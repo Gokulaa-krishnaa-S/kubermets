@@ -83,7 +83,9 @@ log = logging.getLogger("kubecost-scheduler")
 def get_latest_timestamp(cluster_id: int) -> Optional[datetime]:
     """
     Get the latest timestamp for a specific cluster from the backend API.
-    Returns None if no data exists (first run scenario).
+    Ignores time — only considers the date — and returns a datetime that is
+    exactly 2 days before that date (00:00 UTC).
+    This ensures daily backfill starts from at least two days earlier.
     """
     url = f"{BACKEND_API_URL}/v1/latest-timestamp"
     try:
@@ -92,27 +94,43 @@ def get_latest_timestamp(cluster_id: int) -> Optional[datetime]:
         resp.raise_for_status()
         data = resp.json()
 
-        # Handle different possible response formats
         if data.get("latest_timestamp"):
             timestamp_str = data["latest_timestamp"]
-            # Parse ISO format timestamp and ensure it's timezone-aware
+            # Parse and ensure timezone awareness
             dt = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
-            return dt
+
+            # ✅ Truncate time portion — only use date
+            date_only = dt.date()
+
+            # ✅ Go 2 days back
+            adjusted_date = date_only - timedelta(days=2)
+
+            # ✅ Return as datetime at midnight UTC
+            adjusted_datetime = datetime.combine(adjusted_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+
+            log.info(
+                "Latest timestamp for cluster_id=%d adjusted to %s (2 days earlier, date-only)",
+                cluster_id,
+                adjusted_datetime.isoformat(),
+            )
+            return adjusted_datetime
         else:
             log.info(
-                "No latest timestamp found for cluster_id=%d, will start from %dh ago",
+                "No latest timestamp found for cluster_id=%d, starting from %dh ago",
                 cluster_id,
                 COLLECTION_WINDOW_HOURS,
             )
             return None
     except Exception as e:
         log.warning(
-            "Failed to get latest timestamp for cluster_id=%d: %s", cluster_id, e
+            "Failed to get latest timestamp for cluster_id=%d: %s",
+            cluster_id,
+            e,
         )
+        
         return None
-
 
 def get_latest_hourly_timestamp(cluster_id: int) -> Optional[datetime]:
     """
